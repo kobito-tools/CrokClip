@@ -14,19 +14,8 @@ struct PanelView: View {
                 if model.mode != .list {
                     Card(title: nil) { ModeView(model: model, focused: $focused) }
                         .frame(height: max(240, geometry.size.height * 0.5))
-                } else if model.showPreview, model.preview != nil {
-                    Card(title: "プレビュー") {
-                        VStack(spacing: 0) {
-                            PreviewView(model: model).frame(maxHeight: .infinity)
-                            if model.styles.count > 1 {
-                                Rectangle().fill(Theme.wellBorder).frame(height: 1)
-                                StyleStrip(model: model)
-                            }
-                        }
-                    }
-                    .frame(height: max(190, geometry.size.height * 0.38))
-                } else if model.styles.count > 1 {
-                    Card(title: nil) { StyleStrip(model: model) }.fixedSize(horizontal: false, vertical: true)
+                } else {
+                    PreviewSection(model: model, state: model.previewState, height: max(190, geometry.size.height * 0.38))
                 }
                 list
                 if let message = model.message {
@@ -38,7 +27,7 @@ struct PanelView: View {
                         .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.accent))
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                FooterHints(model: model)
+                FooterHints(model: model, state: model.previewState)
             }
             .padding(10)
             .animation(.easeOut(duration: 0.15), value: model.message)
@@ -125,8 +114,10 @@ struct PanelView: View {
     }
 
     private func row(_ clip: ClipSummary, index: Int) -> some View {
+        // 中身が変わっていないカードは描き直さない（選択が動いたときに描き直すのは、選択が外れた・付いた2枚だけ）。
         ClipCard(model: model, clip: clip, index: index, selected: model.isHighlighted(clip.id), primary: clip.id == model.selection,
                  tint: model.rowColorMode.color(for: clip))
+            .equatable()
             .id(clip.id)
             .contentShape(Rectangle())
             // ダブルクリックの判定を待たずに、1回目で選ぶ（2回目で貼る）。onTapGesture(count: 2) を付けると、1回目の反応が遅れる。
@@ -136,11 +127,43 @@ struct PanelView: View {
             }
             .onHover { inside in model.hover(clip.id, inside: inside) }
             .onDrag { model.itemProvider(for: clip.id) }
-            .contextMenu {
-                ForEach(model.actionItems(for: model.multi.contains(clip.id) ? model.multi : [clip.id])) { action in
-                    Button { action.run() } label: { Label(action.label, systemImage: action.symbol) }
+            .contextMenu { RowMenu(model: model, id: clip.id) }
+    }
+}
+
+/// プレビューの枠と貼り方の帯。PreviewState だけを見て、中身が届いても一覧は描き直さない。
+private struct PreviewSection: View {
+    let model: PanelModel
+    @ObservedObject var state: PreviewState
+    let height: CGFloat
+
+    var body: some View {
+        if model.showPreview, state.preview != nil {
+            Card(title: "プレビュー") {
+                VStack(spacing: 0) {
+                    PreviewView(model: model, state: state).frame(maxHeight: .infinity)
+                    if state.styles.count > 1 {
+                        Rectangle().fill(Theme.wellBorder).frame(height: 1)
+                        StyleStrip(model: model, state: state)
+                    }
                 }
             }
+            .frame(height: height)
+        } else if state.styles.count > 1 {
+            Card(title: nil) { StyleStrip(model: model, state: state) }.fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// 右クリックのメニュー。中身（できることの一覧）は、メニューを開くときに作る。
+private struct RowMenu: View {
+    let model: PanelModel
+    let id: Int
+
+    var body: some View {
+        ForEach(model.actionItems(for: model.multi.contains(id) ? model.multi : [id])) { action in
+            Button { action.run() } label: { Label(action.label, systemImage: action.symbol) }
+        }
     }
 }
 
@@ -188,7 +211,7 @@ private struct SectionLabel: View {
 }
 
 /// 一覧の1件。左の色の帯（色分け）、サムネかアイコン、見出し、コピー元と時刻、タグ。
-private struct ClipCard: View {
+private struct ClipCard: View, Equatable {
     let model: PanelModel
     let clip: ClipSummary
     let index: Int
@@ -204,6 +227,11 @@ private struct ClipCard: View {
     }()
 
     private var color: Color { tint ?? Theme.subtle }
+
+    /// model は見た目に関わらないので比べない。
+    static func == (lhs: ClipCard, rhs: ClipCard) -> Bool {
+        lhs.clip == rhs.clip && lhs.index == rhs.index && lhs.selected == rhs.selected && lhs.primary == rhs.primary && lhs.tint == rhs.tint
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -254,8 +282,8 @@ private struct ClipCard: View {
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(selected ? Theme.accent.opacity(primary ? 0.16 : 0.09) : Color.clear))
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        // 影はメインスレッドで描かれて重いので、カードには付けず、枠線だけにする。
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(selected ? Theme.accent : Theme.cardBorder, lineWidth: selected && primary ? 2 : 1))
-        .shadow(color: .black.opacity(selected ? 0.1 : 0.05), radius: selected ? 4 : 1.5, y: 1)
     }
 
     @ViewBuilder private var leading: some View {
@@ -277,15 +305,16 @@ private struct ClipCard: View {
 
 /// 貼り方の帯。選んだ項目に合う貼り方だけを並べる。⇥ で切り替え、クリックでも選べる。
 private struct StyleStrip: View {
-    @ObservedObject var model: PanelModel
+    let model: PanelModel
+    @ObservedObject var state: PreviewState
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     Text("貼り方").font(.system(size: 10.5, weight: .semibold)).foregroundStyle(Theme.subtle)
-                    ForEach(Array(model.styles.enumerated()), id: \.element.id) { index, style in
-                        let selected = index == model.styleIndex
+                    ForEach(Array(state.styles.enumerated()), id: \.element.id) { index, style in
+                        let selected = index == state.styleIndex
                         Label(style.label, systemImage: style.symbol)
                             .font(.system(size: 12, weight: selected ? .semibold : .regular))
                             .padding(.horizontal, 9).padding(.vertical, 4)
@@ -303,8 +332,8 @@ private struct StyleStrip: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
             }
-            .onChange(of: model.styleIndex) { index in
-                if model.styles.indices.contains(index) { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(model.styles[index].id, anchor: .center) } }
+            .onChange(of: state.styleIndex) { index in
+                if state.styles.indices.contains(index) { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(state.styles[index].id, anchor: .center) } }
             }
         }
     }
@@ -313,6 +342,7 @@ private struct StyleStrip: View {
 /// いまの画面で使えるキーの案内。一覧では3つだけにし、ほかは → の一覧で見つけられるようにする。
 private struct FooterHints: View {
     @ObservedObject var model: PanelModel
+    @ObservedObject var state: PreviewState
 
     private var items: [(String, String)] {
         switch model.mode {
@@ -350,6 +380,9 @@ private struct FooterHints: View {
     }
 }
 
+/// いまのクリックが何回目か（ダブルクリックなら 2）。
+var clickCount: Int { NSApp.currentEvent?.clickCount ?? 1 }
+
 struct PanelBackground: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -361,6 +394,3 @@ struct PanelBackground: NSViewRepresentable {
 
     func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
-/// いまのクリックが何回目か（ダブルクリックなら 2）。
-var clickCount: Int { NSApp.currentEvent?.clickCount ?? 1 }
-

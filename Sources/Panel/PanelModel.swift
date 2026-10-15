@@ -42,9 +42,18 @@ final class PanelModel: ObservableObject {
     /// 複数選択（選んだ順）。空なら selection の1件だけが対象。
     @Published var multi: [Int] = [] { didSet { if multi != oldValue, multi.count > 1 || oldValue.count > 1 { updateStyles() } } }
     /// カーソルを当てている行。当てている間はこちらをプレビューする。
-    @Published var hovered: Int? { didSet { if hovered != oldValue { updatePreview() } } }
-    @Published private(set) var preview: ClipDetail?
-    @Published private(set) var previewImage: NSImage?
+    /// カーソルを当てている行。一覧の描き直しはいらないので、変わっても知らせない（プレビューだけ読み直す）。
+    var hovered: Int? { didSet { if hovered != oldValue { updatePreview() } } }
+    /// プレビューと貼り方。これだけが変わったときは、プレビューの枠だけを描き直す（一覧は描き直さない）。
+    let previewState = PreviewState()
+    var preview: ClipDetail? {
+        get { previewState.preview }
+        set { previewState.preview = newValue }
+    }
+    var previewImage: CGImage? {
+        get { previewState.image }
+        set { previewState.image = newValue }
+    }
     @Published var focus: Field? = .search
     /// 変えると、focus の欄にフォーカスを移す。
     @Published private(set) var focusRequest = 0
@@ -53,10 +62,23 @@ final class PanelModel: ObservableObject {
     @Published var rowColorMode: RowColorMode = .app
 
     // 貼り方（⇥ で切り替え、⏎ でこの貼り方で貼る）
-    @Published private(set) var styles: [PasteStyle] = []
-    @Published var styleIndex = 0 { didSet { if styleIndex != oldValue { updateStyleResult() } } }
+    var styles: [PasteStyle] {
+        get { previewState.styles }
+        set { previewState.styles = newValue }
+    }
+    var styleIndex: Int {
+        get { previewState.styleIndex }
+        set {
+            let old = previewState.styleIndex
+            previewState.styleIndex = newValue
+            if newValue != old { updateStyleResult() }
+        }
+    }
     /// いまの貼り方で貼られる文字（元の形のときは nil。プレビューに出す）。
-    @Published private(set) var styleResult: String?
+    var styleResult: String? {
+        get { previewState.styleResult }
+        set { previewState.styleResult = newValue }
+    }
     /// 選んだ貼り方。ほかの項目に移っても、その項目に同じ貼り方があれば続けて使う。
     private var preferredStyleID = "original"
 
@@ -274,12 +296,14 @@ final class PanelModel: ObservableObject {
         guard force || preview?.summary.id != id else { return }
         previewGeneration += 1
         let generation = previewGeneration, store = store, latest = latest
+        // 表示する画面の色空間。画像をこの形に描いておくと、画面に出すときにメインスレッドで色を変換しない。
+        let displaySpace = NSScreen.main?.colorSpace?.cgColorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
         latest.preview = generation
         Self.loader.asyncAfter(deadline: .now() + Self.settle) {
             guard latest.preview == generation else { return }  // もう別の項目に移った
             let detail = try? store.detail(id)
             guard latest.preview == generation else { return }
-            let image = detail?.imageData.flatMap { Self.downsample($0, maxPixels: 1400) }
+            let image = detail?.imageData.flatMap { Self.downsample($0, maxPixels: 900, colorSpace: displaySpace) }
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.previewGeneration == generation else { return }
                 self.preview = detail
@@ -292,13 +316,29 @@ final class PanelModel: ObservableObject {
     private func reloadPreview() { updatePreview(force: true) }
 
     /// 画面に出す大きさに縮めて読む（大きな画像をそのまま開かない）。PDF はそのまま。
-    nonisolated static func downsample(_ data: Data, maxPixels: Int) -> NSImage? {
-        if data.starts(with: Array("%PDF".utf8)) { return NSImage(data: data) }
-        guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
-        let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxPixels,
-                                        kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceShouldCacheImmediately: true]
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+    /// 画面に出す大きさに縮め、画面の色空間の 8bit・アルファ前乗算のビットマップに描いておく（すべて裏のスレッドで）。
+    /// こうしておかないと、画面に出すときに Core Animation がメインスレッドで色の変換をして、一覧が止まる。
+    nonisolated static func downsample(_ data: Data, maxPixels: Int, colorSpace: CGColorSpace) -> CGImage? {
+        let image: CGImage?
+        if data.starts(with: Array("%PDF".utf8)) {
+            image = Capture(items: [[Representation(type: "com.adobe.pdf", data: data)]]).makeThumbnailImage(maxPixels: maxPixels)
+        } else if let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary) {
+            let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxPixels,
+                                            kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceShouldCacheImmediately: true]
+            image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        } else {
+            image = nil
+        }
+        guard let image else { return nil }
+        return prepareForDisplay(image, colorSpace: colorSpace)
+    }
+
+    nonisolated static func prepareForDisplay(_ image: CGImage, colorSpace: CGColorSpace) -> CGImage? {
+        guard let context = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue) else { return image }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return context.makeImage() ?? image
     }
 
     func thumbnail(for clip: ClipSummary) -> NSImage? {
@@ -842,4 +882,15 @@ final class LatestRequests: @unchecked Sendable {
         get { lock.lock(); defer { lock.unlock() }; return values.style }
         set { lock.lock(); values.style = newValue; lock.unlock() }
     }
+}
+
+/// プレビューの枠と貼り方の帯が見る状態。PanelModel から分けて、ここが変わっても一覧を描き直さないようにする。
+@MainActor
+final class PreviewState: ObservableObject {
+    @Published var preview: ClipDetail?
+    /// SwiftUI には CGImage のまま渡す（NSImage にすると、描くたびにメインスレッドで縮め直す）。
+    @Published var image: CGImage?
+    @Published var styles: [PasteStyle] = []
+    @Published var styleIndex = 0
+    @Published var styleResult: String?
 }

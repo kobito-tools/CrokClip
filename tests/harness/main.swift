@@ -339,7 +339,8 @@ MainActor.assumeIsolated {
     check(elapsed < 0.02, "重い画像（\(heavyPNG.count / 1_048_576)MB）を選んでも、選択はすぐに動く（\(Int(elapsed * 1000))ms）")
     wait { model.preview?.summary.id == heavyID && model.previewImage != nil }
     check(model.preview?.summary.id == heavyID, "プレビューは少し遅れて出る")
-    check(max(model.previewImage?.size.width ?? .infinity, model.previewImage?.size.height ?? .infinity) <= 1400, "プレビューの画像は画面の大きさに縮めて読む")
+    check(max(model.previewImage?.width ?? .max, model.previewImage?.height ?? .max) <= 900, "プレビューの画像は画面の大きさに縮めて読む")
+    check(model.previewImage.map { $0.bitsPerComponent == 8 && $0.alphaInfo == .premultipliedFirst } == true, "プレビューの画像は、画面に出すときに変換がいらない形で用意する")
     // 移った直後（貼り方を読み終える前）に ⏎ を押しても、いまの項目の貼り方で貼る。
     model.selection = textID
     model.pasteSelected()

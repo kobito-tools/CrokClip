@@ -3,7 +3,8 @@ import SwiftUI
 
 /// 選んだ・カーソルを当てた項目の中身を、パネルの上部に大きく出す。
 struct PreviewView: View {
-    @ObservedObject var model: PanelModel
+    let model: PanelModel
+    @ObservedObject var state: PreviewState
 
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -60,7 +61,7 @@ struct PreviewView: View {
             }
         } else if let image = model.previewImage {
             VStack(alignment: .leading, spacing: 6) {
-                Image(nsImage: image)
+                Image(decorative: image, scale: 2)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .background(Checkerboard())

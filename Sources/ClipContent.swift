@@ -216,6 +216,15 @@ struct Capture {
 
     /// 一覧用のサムネ（長い辺が maxPixels のPNG）。どのスレッドからでも呼べる。
     func makeThumbnail(maxPixels: Int = 320) -> Data? {
+        guard let image = makeThumbnailImage(maxPixels: maxPixels) else { return nil }
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(output, "public.png" as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(destination, image, nil)
+        return CGImageDestinationFinalize(destination) ? output as Data : nil
+    }
+
+    /// 長い辺が maxPixels の画像（PDF は描いて、ビットマップは縮めて）。どのスレッドからでも呼べる。
+    func makeThumbnailImage(maxPixels: Int) -> CGImage? {
         guard let data = imageData else { return nil }
         let image: CGImage?
         if data.starts(with: Array("%PDF".utf8)) {
@@ -226,11 +235,7 @@ struct Capture {
         } else {
             image = nil
         }
-        guard let image else { return nil }
-        let output = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(output, "public.png" as CFString, 1, nil) else { return nil }
-        CGImageDestinationAddImage(destination, image, nil)
-        return CGImageDestinationFinalize(destination) ? output as Data : nil
+        return image
     }
 
     private static func renderPDF(_ data: Data, maxPixels: Int) -> CGImage? {
