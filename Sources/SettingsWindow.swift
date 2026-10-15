@@ -307,10 +307,10 @@ struct SettingsView: View {
     private var companions: some View {
         Form {
             Section {
-                ExplainBox(title: "連携でできること", text: "InGoodPaste! は単独で使えます。同じシリーズ（kobito-tools）のアプリも使っているなら、次のことができるようになります。\n・タグを Tomelet・PopNote! と共有する\n・⌘S で残したクリップを、Tomelet のカレンダーに日ごとのメモとして並べる\n・⇧⌘N で選んだクリップを PopNote! のメモにする\n・OpenSesame! から1キーで InGoodPaste! を開く")
+                ExplainBox(title: "連携でできること", text: "InGoodPaste! は単独で使えます。kobito シリーズのほかのアプリも使っているなら、次のことができるようになります。\n・タグをシリーズのアプリと共有する\n・⌘S で残したクリップを、kobito-workspace に日ごとのカードとして並べる\n・⇧⌘N で選んだクリップを、受け取れるアプリへ送る（送り先は、入っているアプリから自動で並びます）")
                 VStack(alignment: .leading, spacing: 4) {
                     Text("はじめかた").font(.system(size: 12, weight: .semibold))
-                    Text("1. 下の「基準パス」で、Tomelet・PopNote! と同じフォルダを選びます（Tomelet の基準パスが見つかれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。\n3. PopNote! と OpenSesame! は、入っていればそのまま使えます（設定はいりません）。")
+                    Text("1. 下の「基準パス」で、シリーズのアプリと共有するフォルダを選びます（シリーズのアプリで使っているフォルダがあれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。\n3. 送り先は設定いりません。受け取れるアプリを一度起動しておけば、⇧⌘N の一覧に並びます。")
                         .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -341,7 +341,7 @@ struct SettingsView: View {
             } header: {
                 Text("基準パス（シリーズで共有するフォルダ）")
             } footer: {
-                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や Tomelet への受け渡しに使います。InGoodPaste! の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
+                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や「workspace に残す」に使います。InGoodPaste! の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
@@ -357,16 +357,10 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
-                ForEach(SeriesApp.all) { app in SeriesAppRow(app: app) }
-                HStack(spacing: 10) {
-                    SeriesIcon(name: "kobito-tools").frame(width: 32, height: 32)
-                    Text("kobito-tools は、同じ小人が毎日の作業を少しずつ手伝う、macOS 向けの小さなアプリのシリーズです。")
-                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    Spacer()
-                    Link("GitHub", destination: URL(string: "https://github.com/kobito-tools")!).font(.system(size: 12))
+                Link(destination: URL(string: "https://github.com/kobito-tools/kobito-workspace#readme")!) {
+                    Label("kobito シリーズについて（kobito-workspace の README を開く）", systemImage: "arrow.up.right.square")
                 }
-            } header: {
-                Text("シリーズのアプリ")
+                .font(.system(size: 12))
             }
             Section {
                 Toggle("新しくコピーした物から順に貼る", isOn: $model.settings.reverseStack)
@@ -378,76 +372,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-    }
-}
-
-/// シリーズのアプリの紹介。
-struct SeriesApp: Identifiable {
-    let id: String
-    let name: String
-    let bundleID: String
-    let tagline: String
-    let english: String
-    /// InGoodPaste! と一緒に使うと何ができるか。
-    let together: String
-    let url: URL
-
-    static let all = [
-        SeriesApp(id: "tomelet", name: "Tomelet", bundleID: "local.ticktocktome.desktop",
-                  tagline: "日記・時間割・Todo・関連ファイルを一括管理", english: "Journal, timetable, todos and files in one place.",
-                  together: "⌘S で残したクリップが、その日の「09月28日のクリップ」というメモになって、Tomelet のカレンダーや検索に並びます。タグも共有します。",
-                  url: URL(string: "https://github.com/kobito-tools/Tomelet")!),
-        SeriesApp(id: "popnote", name: "PopNote!", bundleID: "io.github.kobito-tools.popnote",
-                  tagline: "押したらポンッと出てくる、クイックメモ。", english: "A memo that pops up when you need it.",
-                  together: "⇧⌘N で選んだクリップ（文字と画像）を新しいメモに、⌥⇧⌘N で開いているメモに足せます。タグも共有します。",
-                  url: URL(string: "https://github.com/kobito-tools/PopNote")!),
-        SeriesApp(id: "opensesame", name: "OpenSesame!", bundleID: "io.github.kobito-tools.opensesame",
-                  tagline: "アプリ・フォルダ・画面分割のショートカットランチャー", english: "A shortcut launcher for apps, folders and window layouts.",
-                  together: "ingoodpaste://open・ingoodpaste://latex・ingoodpaste://stack/toggle などを登録すると、1キーで履歴や数式の画面を開けます。",
-                  url: URL(string: "https://github.com/kobito-tools/OpenSesame")!),
-    ]
-
-    var isInstalled: Bool { NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil }
-}
-
-private struct SeriesIcon: View {
-    let name: String
-
-    var body: some View {
-        if let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "series"), let image = NSImage(contentsOf: url) {
-            Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
-        } else {
-            Image(systemName: "app").resizable().aspectRatio(contentMode: .fit).foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct SeriesAppRow: View {
-    let app: SeriesApp
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            SeriesIcon(name: app.id).frame(width: 44, height: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Text(app.name).font(.system(size: 14, weight: .semibold))
-                    Text(app.isInstalled ? "インストール済み" : "未インストール")
-                        .font(.system(size: 10, weight: .medium))
-                        .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(Capsule().fill(app.isInstalled ? Color.green.opacity(0.18) : Color.secondary.opacity(0.15)))
-                        .foregroundStyle(app.isInstalled ? Color.green : Color.secondary)
-                }
-                Text(app.tagline).font(.system(size: 12))
-                Text(app.english).font(.system(size: 11)).foregroundStyle(.secondary)
-                Text("InGoodPaste! と一緒に：\(app.together)")
-                    .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 2)
-            }
-            Spacer(minLength: 8)
-            Link(destination: app.url) { Label("GitHub", systemImage: "arrow.up.right.square") }
-                .font(.system(size: 12))
-        }
-        .padding(.vertical, 4)
     }
 }
 

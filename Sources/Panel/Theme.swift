@@ -26,10 +26,10 @@ enum Theme {
     /// キーの印の地。
     static let keycap = dynamic("#E8E3D7", "#3E4644")
 
-    /// 色分けに使う色（PopNote! のタグの色と同じ並び）。
+    /// 色分けに使う色（シリーズ共通のタグの色と同じ並び）。
     static let palette = ["#477B70", "#C75543", "#9B7432", "#5C668F", "#7B587D", "#416B7C", "#8A6A4F", "#6D7A45"]
 
-    /// PopNote! の tagColor と同じハッシュ（hash = hash * 31 + 文字のコード）で、同じ名前にはいつも同じ色を返す。
+    /// シリーズ共通のタグの色と同じハッシュ（hash = hash * 31 + 文字のコード）で、同じ名前にはいつも同じ色を返す。
     static func paletteIndex(for key: String) -> Int {
         var hash: UInt32 = 0
         for scalar in key.unicodeScalars { hash = hash &* 31 &+ scalar.value }

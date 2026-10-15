@@ -6,14 +6,13 @@ InGoodPaste! は、コック帽の小人が味見してから貼ってくれる�
 
 `⌘C` でコピーした文字・画像・表・ファイル・パワポの図形などを元の形のまま覚えておき、`⌥⌘V` で画面の端から呼び出して貼れます。貼る前に「改行を消す」「表 → LaTeX」などの貼り方を選んで、貼られる内容を先に確かめられます。タグ、定型文、数式画像、画像の文字認識、順番に貼るペーストスタックもそろっています。
 
-[OpenSesame!](https://github.com/kobito-tools/OpenSesame) に登録すると1キーで開けます。共有タグで [Tomelet](https://github.com/kobito-tools/Tomelet)・[PopNote!](https://github.com/kobito-tools/PopNote) とつながり、選んだ項目をそのままメモに送れます。
+kobito シリーズの1つです。ほかのアプリとの連携は [kobito-workspace](https://github.com/kobito-tools/kobito-workspace) を参照してください。
 
 ![デモ](docs/images/demo.gif)
 
 ## 動作環境
 
 - macOS 13 以降（Apple Silicon / Intel）
-- Tomelet・PopNote! は任意です（連携する場合だけ使います）
 
 ## ダウンロード
 
@@ -42,11 +41,11 @@ xattr -dr com.apple.quarantine "/Applications/InGoodPaste!.app"
 
 #### Pastephant から乗り換える場合
 
-InGoodPaste! は以前 Pastephant という名前でした。初めて起動すると、Pastephant の履歴と設定（`~/Library/Application Support/Pastephant/`）を `InGoodPaste/` へ移して、そのまま使えます。Tomelet に残したクリップ（`.kobito-tools/Pastephant/`）も、次に書き出すときに `.kobito-tools/InGoodPaste/` へ移します。
+InGoodPaste! は以前 Pastephant という名前でした。初めて起動すると、Pastephant の履歴と設定（`~/Library/Application Support/Pastephant/`）を `InGoodPaste/` へ移して、そのまま使えます。基準パスに残したクリップ（`.kobito-tools/Pastephant/`）も、次に開くときに `.kobito-tools/InGoodPaste/` へ移します。
 
 - Pastephant を終了してから `Pastephant.app` をゴミ箱に入れ、アクセシビリティ・入力監視の一覧からも「－」で削除してください。InGoodPaste! には改めて許可が必要です。
 - ログイン時に開く設定も、InGoodPaste! の設定でオンにし直してください。
-- URL は `pastephant://` から `ingoodpaste://` に変わりました。OpenSesame! などに登録している場合は登録し直してください。
+- URL は `pastephant://` から `ingoodpaste://` に変わりました。ランチャーなどに登録している場合は登録し直してください。
 
 ソースから作る場合は、このリポジトリをクローンして `InGoodPaste-Setup.command` を実行します（Xcode Command Line Tools が必要です。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)）。
 
@@ -64,7 +63,7 @@ InGoodPaste! は以前 Pastephant という名前でした。初めて起動す�
 
 コピーすると自動で履歴に入ります。`⌥⌘V` を押すと、画面の右端（設定で左端にも変えられます）からパネルが出てきます。貼り先のアプリのフォーカスはそのままなので、選んで `⏎` を押すだけで貼れます。
 
-パネルは上から、検索欄、「プレビュー」の枠（選んでいる項目の中身と、その下に貼り方）、履歴のカード、いま使えるキーの案内です。カードの左の色の帯はコピー元のアプリごとの色（PopNote! のタグと同じ決め方）で、設定で種類ごと・タグごとにも変えられます。パネルの縁には、コック帽の小人がしがみついています（設定で隠せます）。
+パネルは上から、検索欄、「プレビュー」の枠（選んでいる項目の中身と、その下に貼り方）、履歴のカード、いま使えるキーの案内です。カードの左の色の帯はコピー元のアプリごとの色（シリーズ共通のタグの色と同じ決め方）で、設定で種類ごと・タグごとにも変えられます。パネルの縁には、コック帽の小人がしがみついています（設定で隠せます）。
 
 ### 基本操作
 
@@ -107,8 +106,8 @@ InGoodPaste! は以前 Pastephant という名前でした。初めて起動す�
 | `R` | 変換を選ぶ（つなげる・保存する） | |
 | `L` | 数式画像を作る | `⌘L` |
 | `K` | ペーストスタックに積む | |
-| `S` | Tomelet に残す | `⌘S` |
-| `N` / `A` | PopNote! の新しいメモにする / 開いているメモに足す | `⇧⌘N` / `⌥⇧⌘N` |
+| `S` | workspace に残す | `⌘S` |
+| `N` | 送る…（送り先を選ぶ。最後に使った送り先へは `⌥⇧⌘N`） | `⇧⌘N` |
 | `Q` | Quick Look | `⌘Y` |
 | `D` | 履歴から削除 | `⌘⌫` |
 
@@ -139,13 +138,14 @@ InGoodPaste! は以前 Pastephant という名前でした。初めて起動す�
 | `app:Word` | コピー元のアプリ |
 | `is:pinned` | ピン留めした物 |
 | `after:2026-09-01`・`before:2026-09-30` | コピーした日 |
-| `exported:2026-09-28` | その日に Tomelet に残した物 |
+| `kept:2026-09-28` | その日に workspace に残した物 |
+| `id:123` | その項目だけ |
 
 ### タグ
 
 `⌘T` で付けます。候補を `↑↓` で選んで `⏎`、候補が無ければ `⏎` で新しいタグを作ります。`⌫` で最後のタグを外します。
 
-- 設定の「連携」で基準パス（Tomelet と同じフォルダ）を選ぶと、タグは Tomelet・PopNote! と共有されます（`.kobito-tools/Tags/tags.json`）。
+- 設定の「連携」で基準パス（kobito シリーズで共有するフォルダ）を選ぶと、タグはシリーズのアプリと共有されます（`.kobito-tools/Tags/tags.json`）。
 - 設定の「取得とタグ」で、コピー元のアプリ（例：TeXShop → `#latex`）やリンクのドメイン（例：arxiv.org → `#論文`）で自動でタグを付ける規則も作れます。
 
 ### 変換
@@ -182,14 +182,14 @@ LaTeX の式を書くと、その場でプレビューが出ます。`⏎` で�
 
 始めてから順にコピーすると、画面の上に「スタック N 件」と出て積まれます。あとは `⌘V` を押すたびに、積んだ順に1つずつ貼られます。パネルで選んで `→` の `K` でも積めます。最後まで貼るか、もう一度 `⌃⌘C` を押すと終わります（設定で新しい物から順にもできます）。
 
-### Tomelet・PopNote! とつなげる
+### workspace に残す・送る
 
-- `⌘S` で選んだ項目を Tomelet に残します。その日の分は「09月28日のクリップ」という1つのメモにまとまり、Tomelet のカレンダーや検索に出ます（Tomelet で表示するかを一度尋ねられます）。設定で「このタグが付いたら自動で残す」こともできます。
-- `⇧⌘N` で選んだ項目（文字と画像）を PopNote! の新しいメモにします。`⌥⇧⌘N` なら開いているメモの末尾に足します。
+- `⌘S` で選んだ項目を、基準パスに残します。その日の分は「9月28日のクリップ」という1枚のカードになり、kobito-workspace の HOME・カレンダー・検索に並びます。設定で「このタグが付いたら自動で残す」こともでき、使わなければ設定で隠せます。
+- `⇧⌘N` で、選んだ項目（文字・画像・ファイル）を受け取れるアプリの一覧が出ます。送り先は、このMacで起動したことのあるアプリから自動で並びます。
 
 ### ランチャーから開く
 
-OpenSesame! などのランチャーには `InGoodPaste!.app` を登録します。URL にも対応しています。
+ランチャーには `InGoodPaste!.app` を登録します。URL にも対応しています。
 
 | URL | 動作 |
 |---|---|
@@ -199,6 +199,10 @@ OpenSesame! などのランチャーには `InGoodPaste!.app` を登録します
 | `ingoodpaste://stack/toggle`（`start`・`stop`） | ペーストスタックを始める・終える |
 | `ingoodpaste://pause`（`?minutes=15`）・`ingoodpaste://resume` | 取得を一時停止・再開 |
 | `ingoodpaste://settings` | 設定を開く |
+| `kobito://ingoodpaste/day/2026-09-28` | その日に残した項目で履歴を開く（workspace のカードから） |
+| `kobito://ingoodpaste/open/123` | その項目を選んで履歴を開く |
+
+`kobito://` の URL は、`open -b io.github.kobito-tools.ingoodpaste "kobito://ingoodpaste/…"` のようにアプリを指定して渡します。
 
 ### 保存しない物と消える期限
 
@@ -227,7 +231,7 @@ OpenSesame! などのランチャーには `InGoodPaste!.app` を登録します
 
 ### `⌥⌘V` を押してもパネルが出ない
 
-ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、OpenSesame! などのランチャーから `ingoodpaste://open` で開いてください。
+ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、ランチャーなどから `ingoodpaste://open` で開いてください。
 
 ## アンインストール
 
@@ -236,11 +240,11 @@ OpenSesame! などのランチャーには `InGoodPaste!.app` を登録します
 
 ### 履歴の削除
 
-履歴も消す場合は、`~/Library/Application Support/InGoodPaste/` を削除してください。Tomelet に残したメモは、基準パスの `.kobito-tools/InGoodPaste/` にあります。
+履歴も消す場合は、`~/Library/Application Support/InGoodPaste/` を削除してください。workspace に残した物は、基準パスの `.kobito-tools/InGoodPaste/` にあります。
 
 ## プライバシー
 
-InGoodPaste! は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/InGoodPaste/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などで Tomelet に残した物だけです。
+InGoodPaste! は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/InGoodPaste/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などで workspace に残した物だけです。
 
 ## ライセンス
 

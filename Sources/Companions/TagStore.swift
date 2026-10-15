@@ -1,7 +1,7 @@
 import Foundation
 
-/// シリーズ（Tomelet・PopNote!・InGoodPaste!）で共有するタグ。PopNote! の TagStore.swift を写したもの。正本は .kobito-tools/Tags/tags.json で、DBの tags / tag_categories はその写し。
-/// Tomeletの scripts/tag-store.js と同じ規則で統合する。
+/// kobito シリーズで共有するタグ（約束 ⓪-2）。正本は .kobito-tools/Tags/tags.json で、DBの tags / tag_categories はその写し。
+/// シリーズ共通の規則で統合する。
 /// - 同じIDは revision の大きい方。同じ revision なら、項目を決まった順に並べた文字列（UTF-16の並び）が大きい方。
 /// - タグは完全削除せず、アーカイブだけにする。
 /// - 同じ名前が2つあれば、IDの順で後になる方の名前に印を付け、revisionを上げる。
@@ -163,6 +163,6 @@ enum TagStore {
                                    "categories": categories.map(\.json), "tags": tags.map(\.json)], to: url)
             return
         }
-        throw StoreError(status: 409, message: "共有タグがTomeletで更新中です。少し待ってからもう一度お試しください。")
+        throw StoreError(status: 409, message: "共有タグがほかのアプリで更新中です。少し待ってからもう一度お試しください。")
     }
 }

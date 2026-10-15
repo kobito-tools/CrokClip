@@ -149,8 +149,8 @@ const CLIPS = [
     body: () => "https://arxiv.org/abs/2609.01234", foot: "2026/09/29 16:40・コピー1回・貼り付け0回・32 バイト・32文字" },
 ];
 const ACTIONS = [["C", "コピーだけ（貼らない）", "⌘⏎"], ["T", "タグを付ける・外す", "⌘T"], ["P", "ピン留めする", "⌘P"], ["E", "編集してから貼る", "⌘E"],
-  ["R", "変換を選ぶ（つなげる・保存する）", ""], ["L", "数式画像を作る", "⌘L"], ["K", "ペーストスタックに積む", ""], ["S", "Tomelet に残す", "⌘S"],
-  ["N", "PopNote! の新しいメモにする", "⇧⌘N"], ["A", "PopNote! の開いているメモに足す", "⌥⇧⌘N"]];
+  ["R", "変換を選ぶ（つなげる・保存する）", ""], ["L", "数式画像を作る", "⌘L"], ["K", "ペーストスタックに積む", ""], ["S", "workspace に残す", "⌘S"],
+  ["N", "送る…", "⇧⌘N"]];
 
 function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -166,7 +166,7 @@ const CAPTIONS = [
   [10.8, 12.3, ["⏎"], "そのまま貼り付け", 11.0],
   [12.4, 14.9, ["#論文"], "タグ・type:画像・app:Word で絞り込み", 13.2],
   [15.0, 16.5, ["→"], "できることは1文字で", 15.3],
-  [16.6, 18.4, ["N"], "PopNote! のメモにも、Tomelet にも", 16.8],
+  [16.6, 18.4, ["N"], "workspace に残す・ほかのアプリへ送る", 16.8],
 ];
 const DOWNS = [5.4, 6.0, 6.6], UPS = [7.3, 7.55, 7.8];
 
@@ -242,7 +242,7 @@ function panelHTML(t) {
   const styleIndex = !second && t >= 8.9 ? 1 : 0;
   const mode = second && t >= 15.3 && t < 17.0 ? "actions" : "list";
   const actIndex = t >= 16.8 ? 8 : 0;
-  const toast = second && t >= 17.0 ? "PopNote! の新しいメモにしました" : null;
+  const toast = second && t >= 17.0 ? "送りました" : null;
 
   let h = `<div class="search"><div class="field"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#7A817D" stroke-width="1.6"><circle cx="6" cy="6" r="4.5"/><path d="M9.5 9.5 13 13"/></svg>`
     + (typed ? `<span class="q">${typed}</span><span class="caret" style="height:15px;visibility:${Math.floor(t * 2) % 2 ? "hidden" : "visible"}"></span>` : `<span class="ph">検索（#タグ type:画像 app:Word …）</span>`)

@@ -1,5 +1,5 @@
 # InGoodPaste! のアイコン（assets/icon/icon.svg）を、kobito-tools シリーズの小人で描く。
-# 小人の描き方は Tomelet の assets/icon/kobito-series/kobito_icons.py と同じ（元の座標系 viewBox 0 0 49 44 を translate + scale で置く）。
+# 小人の描き方はシリーズ共通（kobito-workspace の assets/ を参照。元の座標系 viewBox 0 0 49 44 を translate + scale で置く）。
 # 使い方: scripts/make-icon.sh から呼ぶ（SVG → PNG・icns への変換もそちらで行う）。
 import sys
 

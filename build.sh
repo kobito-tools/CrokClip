@@ -4,7 +4,7 @@ set -euo pipefail
 cd "${0:A:h}"
 
 APP_NAME="InGoodPaste!"
-# 実行ファイルの名前（PopNote! と同じく「!」を付けない）。
+# 実行ファイルの名前（「!」を付けない）。
 EXEC_NAME="InGoodPaste"
 VERSION="0.1.0"
 BUILD_DIR=".build"

@@ -9,17 +9,16 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 ```bash
 ./build.sh                                 # フォルダ直下に InGoodPaste!.app（ユニバーサルバイナリ）を作成
 ./scripts/package-release.sh               # Releases 用の dist/InGoodPaste_<版>.dmg と dist/InGoodPaste_<版>_universal.zip を作成
-./tests/run.sh                             # 取得から書き戻し・検索・タグ・変換・文字認識・数式・Tomelet への書き出しまでのテスト
+./tests/run.sh                             # 取得から書き戻し・検索・タグ・変換・文字認識・数式・シリーズの約束（起動情報・送る・カード）までのテスト
 ./scripts/make-icon.sh                     # アイコンを描き直す（make-icon.py → icon.svg → icon-1024.png・AppIcon.icns）
-./scripts/sync-schema.sh <Tomeletのフォルダ> # Tomelet の DB 更新を schema/tomelet/ へ写す
-./scripts/social-preview.sh                # シリーズの紹介画像（assets/icon/InGoodPaste-1280x640.png）を作り直す（Google Chrome と Tomelet のフォントを使う）
+./scripts/social-preview.sh [フォント]     # シリーズの紹介画像（assets/icon/InGoodPaste-1280x640.png）を作り直す（Google Chrome と Noto Sans JP を使う）
 ```
 
 版番号は `build.sh` の `VERSION` で指定します。`InGoodPaste-Setup.command` は `build.sh` を呼び出すだけの、ソースから使う人向けの入口です。
 
 `package-release.sh` の dmg は、アプリ・Applications へのリンク・背景（`assets/dmg/`。`scripts/make-icon.sh` で描き直せる）を置き、窓の並べ方を Finder に頼んでから圧縮します。初回は「Finder を操作する許可」を求められることがあります。許可しないと、背景なし（並べ方なし）の dmg になります。
 
-`tests/run.sh` は名前付きの NSPasteboard と一時フォルダを使うので、実際のクリップボード・履歴・基準パスには触れません。数式のテストは同梱の KaTeX を画面外の WKWebView で動かします。
+`tests/run.sh` は名前付きの NSPasteboard と一時フォルダを使い、`KOBITO_CONFIG_DIR`・`KOBITO_SHARE_DIR` も一時フォルダに向けるので、実際のクリップボード・履歴・基準パス・シリーズの設定には触れません。数式のテストは同梱の KaTeX を画面外の WKWebView で動かします。
 
 ### 許可について
 
@@ -44,10 +43,10 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 | `Sources/Panel/` | パネル（フォーカスを奪わない NSPanel）、一覧、プレビュー、作業の画面（タグ・編集・変換・まとめる・数式・定型文）、キー操作、Quick Look、ドラッグ |
 | `Sources/Transforms/` | 改行を消す処理、貼る前の変換・パス・まとめる区切り・定型文の差し込み（F-07, F-09, F-11, F-12） |
 | `Sources/Latex/` | 数式の元の式と描き方、KaTeX での描画と PDF・PNG・TIFF の作成（F-06） |
-| `Sources/Companions/` | 基準パス（`.kobito-tools/`）の扱いと使用中の印・共有タグ（PopNote! の `Dataset.swift`・`TagStore.swift` の写し）、Tomelet への書き出し、PopNote! への受け渡し（F-04, F-16, F-17） |
+| `Sources/Companions/` | 基準パス（`.kobito-tools/`）の扱いと使用中の印・共有タグ（`Dataset.swift`・`TagStore.swift`）、シリーズの約束（`Series.swift`：起動情報・基準パスの履歴・受け付ける URL）、送る（`Share.swift`）、workspace に残す（`WorkspaceCards.swift`）（F-04, F-16〜F-18） |
 | `Resources/katex/` | 同梱の KaTeX（MIT）と描画ページ `render.html` |
 | `schema/` | 履歴のDBの作成と更新（ファイル名順に、まだの物だけ適用） |
-| `schema/tomelet/` | Tomelet の DB 更新の写し（Tomelet への書き出し用のDBを作る） |
+| `schema/kept/` | 基準パスの、workspace に残したクリップのDBの作成と更新 |
 | `tests/` | `run.sh` とハーネス（`harness/main.swift`） |
 
 ## 保存の仕組み
@@ -69,20 +68,28 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 
 ## シリーズとのつながり
 
-基準パスは任意です。設定の「連携」で選ぶと、次の2つにだけ使います。仕様は Tomelet の `docs/BASE_PATH_FOR_COMPANIONS.md`（4章・5a章）にあります。
+ほかのアプリとは、kobito-workspace の `docs/CONTRACTS.md` の約束（データの形）だけでつながります。ほかのアプリの名前は、コード・画面・文書のどこにも書きません（「名指ししない規則」）。シリーズの全体は kobito-workspace を参照してください。
 
 ```text
+~/Library/Application Support/kobito-tools/   （KOBITO_CONFIG_DIR で変えられる）
+├── apps/ingoodpaste.json           ④ 起動情報。起動のたびに書く（open -b <バンドルID>。embed・receive は持たない）
+├── apps/*.json                     ほかのアプリの起動情報。receive を集めて「送る」の送り先にする
+└── datasets.json                   ⑥ 基準パスの履歴。基準パスの候補にし、開いたら自分の1件を書く
+
 <基準パス>/.kobito-tools/
-├── dataset.json                    読むだけ（無ければ ID を尋ねて作る）
-├── Tags/tags.json                  共有タグ。このMacの履歴DBの tags・tag_categories はその写し
-└── InGoodPaste/                     Tomelet への書き出し（⌘S・自動で残すタグ）
-    ├── lock.json                   書き出す間だけ置く使用中の印
-    ├── database/ingoodpaste.sqlite3 日ごとのクリップのメモ（Tomelet の memos 表と同じ形・DELETE モード）
-    └── uploads/                    メモに添付した画像
+├── dataset.json                    ⓪-1 読むだけ（無ければ ID を尋ねて作る）
+├── Tags/tags.json                  ⓪-2 共有タグ。このMacの履歴DBの tags・tag_categories はその写し
+└── InGoodPaste/                    workspace に残す（⌘S・自動で残すタグ）
+    ├── lock.json                   書く間だけ置く使用中の印
+    ├── database/kept.sqlite3       残したクリップの写し（schema/kept/・DELETE モード）
+    ├── uploads/                    残した画像（PNG）
+    └── cards.jsonl                 ③ 日ごとに1枚のカード
+
+$TMPDIR/kobito-share/<UUID>.json    ⑦ 送る中身（KOBITO_SHARE_DIR で変えられる）
 ```
 
-- **共有タグ**：起動時、基準パスを変えたとき、タグを付け外ししたときに、PopNote! と同じ規則（`TagStore.swift`）で `tags.json` と統合します。
-- **Tomelet**：`scripts/popnote-memos.js` の `mirrorCompanionMemos` が、PopNote! のメモと一緒に `ingoodpaste.sqlite3` のメモを読み取り専用で写します。表示するかは `dataset.json` の `settings.showInGoodPasteMemos`。Tomelet でメモを開くと `ingoodpaste://open?query=exported:<日付>` で呼ばれます。
-- **PopNote!**：選んだ項目を `$TMPDIR/InGoodPaste-PopNote/<UUID>.json`（`format: "ingoodpaste-clip"`、文字と Base64 の画像）に書き、`popnote://import?file=<パス>` で渡します。PopNote! はこのフォルダのファイルだけを読み、読んだら消します。
-
-Tomelet の DB 更新が増えたら `scripts/sync-schema.sh` で `schema/tomelet/` を更新し、`tests/run.sh` を実行してください。
+- **共有タグ**：起動時、基準パスを変えたとき、タグを付け外ししたときに、シリーズ共通の規則（`TagStore.swift`）で `tags.json` と統合します。
+- **URL**：`kobito://ingoodpaste/day/<日付>`・`kobito://ingoodpaste/open/<ID>` は「URL を開く」Apple Event（`kAEGetURL`）で届きます。`applicationWillFinishLaunching` で受け口を作るので、未起動から開かれても届きます。`kobito` スキームは Info.plist に登録しません。
+- **送る**：送り先は起動情報の `receive` から実行時に作ります。口が受け取れる種類（`accepts`）だけを入れて受け渡しファイルを書き、口の `url` の `{file}` を置き換えて、送り先の起動情報の `command` で開きます。
+- **workspace に残す**：残した物は基準パスの `kept.sqlite3` に写し（複数のMacで同じ基準パスを使えるように、このMacの履歴ではなく基準パスに置く）、そのたびに `cards.jsonl` を全件書き直します。以前の書き出し先（`database/ingoodpaste.sqlite3` の日ごとのメモ）は、初めて開いたときに一度だけ写します（元のファイルは消しません）。
+- **約束の確かめ**：`InGoodPaste!.app/Contents/MacOS/InGoodPaste --write-launch-info` は起動情報だけを書いて終わります。`KOBITO_CONFIG_DIR` を一時フォルダに向けて実行し、kobito-workspace の `uv run scripts/check_contracts.py --apps`（カードは `--base <基準パス>`）で確かめられます。

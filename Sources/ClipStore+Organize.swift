@@ -74,7 +74,7 @@ struct ClipQuery: Equatable {
     var isEmpty: Bool { self == ClipQuery("") }
 }
 
-/// 共有タグ（Tomelet・PopNote! と同じ tags 表）の1件。
+/// 共有タグ（.kobito-tools/Tags/tags.json の写し）の1件。
 struct Tag: Identifiable, Equatable, Hashable {
     let id: String
     let name: String
@@ -179,7 +179,7 @@ extension ClipStore {
         }
     }
 
-    /// 名前の同じタグがあればそれを、無ければ「その他」の分類に新しく作る（PopNote! の findOrCreateTag と同じ）。アーカイブ済みなら戻す。
+    /// 名前の同じタグがあればそれを、無ければ「その他」の分類に新しく作る（シリーズ共通の規則）。アーカイブ済みなら戻す。
     func findOrCreateTag(_ name: String) throws -> Tag {
         let value = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
         guard !value.isEmpty else { throw DatabaseError(message: "タグの名前を入力してください。") }
@@ -325,7 +325,7 @@ extension ClipStore {
         try locked { (try database.first("SELECT latex FROM clips WHERE id = ?", id)?["latex"] as? String).flatMap(LatexSource.init(json:)) }
     }
 
-    // MARK: - Tomelet への書き出し（F-17）
+    // MARK: - workspace に残す（F-17）
 
     func markExported(_ ids: [Int], at date: Date = Date()) throws {
         try locked {

@@ -285,7 +285,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func createDataset(_ basePath: String) -> Bool {
         let alert = NSAlert()
         alert.messageText = "基準パスに共有フォルダを作ります"
-        alert.informativeText = "「\(basePath)」に .kobito-tools を作り、Tomelet・PopNote! と共有します。このデータセットの ID（名前）を入力してください。"
+        alert.informativeText = "「\(basePath)」に .kobito-tools を作り、kobito シリーズのアプリと共有します。このデータセットの ID（名前）を入力してください。"
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
         field.stringValue = (basePath as NSString).lastPathComponent
         alert.accessoryView = field
@@ -301,7 +301,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let open = NSOpenPanel()
         open.canChooseDirectories = true
         open.canChooseFiles = false
-        open.message = "基準パス（Tomelet と同じフォルダ）を選んでください"
+        open.message = "基準パス（kobito シリーズで共有するフォルダ）を選んでください"
         NSApplication.shared.activate(ignoringOtherApps: true)
         guard open.runModal() == .OK, let url = open.url else { return }
         let basePath = Dataset.basePath(for: url)

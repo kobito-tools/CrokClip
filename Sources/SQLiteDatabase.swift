@@ -8,7 +8,7 @@ struct DatabaseError: Error, CustomStringConvertible {
 
 private let transientDestructor = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
-/// macOS標準のSQLiteを使う薄いラッパー（PopNote!の SQLiteDatabase.swift と同じ使い方）。
+/// macOS標準のSQLiteを使う薄いラッパー。
 /// 履歴のDBはこのMacの中だけに置くのでWALで開く。基準パスに置くDBはシリーズと同じDELETEモードで開く。
 final class SQLiteDatabase {
     enum Journal: String { case wal = "WAL", delete = "DELETE" }

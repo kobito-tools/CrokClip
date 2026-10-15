@@ -350,8 +350,8 @@ check(styleIDs(.text, TransformContext(text: "$x^2$")).contains("latexImage"), "
 check(styleIDs(.text, TransformContext(text: "abc"), combos: [TransformCombo(name: "組", steps: [.uppercase])]).contains { $0.hasPrefix("combo-") }, "保存した組み合わせも並べる")
 check(styleIDs(.text, TransformContext(text: "a"), multiple: true) == ["original", "plain", "joinLines"], "複数選んでいるときは文字をつなぐ貼り方だけ")
 
-// 16. カードの色分け：PopNote! の tagColor と同じハッシュで、同じ名前にはいつも同じ色
-check(Theme.paletteIndex(for: "com.apple.Safari") == 1, "PopNote! と同じハッシュで色を選ぶ")
+// 16. カードの色分け：シリーズ共通のタグの色と同じハッシュで、同じ名前にはいつも同じ色
+check(Theme.paletteIndex(for: "com.apple.Safari") == 1, "シリーズ共通のハッシュで色を選ぶ")
 check(Theme.paletteIndex(for: "論文") == Theme.paletteIndex(for: "論文") && (0..<Theme.palette.count).contains(Theme.paletteIndex(for: "🐘長い名前のアプリ")), "日本語・絵文字でも色が決まる")
 let kindColors = Set(ClipKind.allCases.map { kind in ClipKind.allCases.firstIndex(of: kind)! % Theme.palette.count })
 check(kindColors.count == ClipKind.allCases.count, "種類ごとの色は重ならない")

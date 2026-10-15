@@ -1,11 +1,10 @@
 #!/bin/zsh
-# シリーズの紹介画像（1280×640。Tomelet の assets/icon/kobito-series/social_preview.py と同じ作り）を
-# assets/icon/InGoodPaste-1280x640.png に書き出す。Google Chrome と Tomelet（フォント）が必要。
-# 使い方: scripts/social-preview.sh [Tomeletのフォルダ（既定 ../DailyLog）]
+# シリーズの紹介画像（1280×640。作りはシリーズ共通で、kobito-workspace の assets/ を参照）を
+# assets/icon/InGoodPaste-1280x640.png に書き出す。Google Chrome と Noto Sans JP のフォントファイルが必要。
+# 使い方: scripts/social-preview.sh [NotoSansJP.ttf のパス（既定 ../kobito-workspace/assets/fonts/NotoSansJP.ttf）]
 set -euo pipefail
 cd "${0:A:h}/.."
-tomelet="${1:-../DailyLog}"
-font="${tomelet:A}/assets/fonts/NotoSansJP.ttf"
+font="${${1:-../kobito-workspace/assets/fonts/NotoSansJP.ttf}:A}"
 [[ -f "$font" ]] || { echo "フォントが見つかりません: $font" >&2; exit 1; }
 chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 work="$(mktemp -d)"

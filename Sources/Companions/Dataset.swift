@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-/// 共有フォルダ・連携APIのエラー（PopNote! と同じ形）。
+/// 共有フォルダ・連携のエラー。
 struct StoreError: Error, CustomStringConvertible {
     let status: Int
     let message: String
@@ -11,12 +11,12 @@ struct StoreError: Error, CustomStringConvertible {
     var description: String { message }
 }
 
-/// こびとツール共通の保存フォルダ（Tomeletの scripts/dataset.js と同じ規則。PopNote! の Dataset.swift から写したもの）で基準パスを扱う。
-/// InGoodPaste! の履歴はこのMacの中に置き、基準パスには共有タグと Tomelet への書き出しだけを置く。
+/// kobito シリーズ共通の保存フォルダ（約束 ⓪-1。kobito-workspace の docs/CONTRACTS.md）で基準パスを扱う。
+/// InGoodPaste! の履歴はこのMacの中に置き、基準パスには共有タグと「workspace に残す」の分だけを置く。
 ///
 ///   <基準パス>/.kobito-tools/
-///     dataset.json   format: "kobito-tools-dataset"・ID（Tomeletと共通）
-///     InGoodPaste/    lock.json・database/ingoodpaste.sqlite3・uploads/（InGoodPaste! だけが書き込む。Tomelet が読み取り専用で表示する）
+///     dataset.json   format: "kobito-tools-dataset"・ID（シリーズ共通）
+///     InGoodPaste/   lock.json・database/kept.sqlite3・uploads/・cards.jsonl（InGoodPaste! だけが書き込む。WorkspaceCards.swift）
 ///     Tags/tags.json シリーズで共有するタグ（TagStore.swift）
 struct DatasetInfo {
     let basePath: String
@@ -35,17 +35,17 @@ enum Dataset {
 
     // MARK: - 場所と識別子
 
-    /// 選んだフォルダを本体と同じ規則で絶対パスにする（シンボリックリンクを解決し、.kobito-tools・その中のアプリのフォルダ・旧.TickTockTomeなら基準パスへ読み替える）。
+    /// 選んだフォルダをシリーズ共通の規則で絶対パスにする（シンボリックリンクを解決し、.kobito-tools・その中のアプリのフォルダ・旧.TickTockTomeなら基準パスへ読み替える）。
     static func basePath(for url: URL) -> String {
         var resolved = url.standardizedFileURL.path
         if let real = realpath(resolved, nil) { resolved = String(cString: real); free(real) }
         let name = (resolved as NSString).lastPathComponent, parent = (resolved as NSString).deletingLastPathComponent
         if name == rootName || name == legacyDirectoryName { return parent }
-        if (parent as NSString).lastPathComponent == rootName, ["Tomelet", "PopNote", directoryName, renamedDirectoryName, "Tags"].contains(name) { return (parent as NSString).deletingLastPathComponent }
+        if (parent as NSString).lastPathComponent == rootName { return (parent as NSString).deletingLastPathComponent }
         return resolved
     }
 
-    /// 本体のdatasetKey()と同じく、基準パスのSHA-256の先頭16桁。
+    /// データセットキー（シリーズ共通）。基準パスのSHA-256の先頭16桁。
     static func key(for basePath: String) -> String {
         SHA256.hash(data: Data(basePath.utf8)).map { String(format: "%02x", $0) }.joined().prefix(16).description
     }
@@ -70,8 +70,8 @@ enum Dataset {
         FileManager.default.fileExists(atPath: URL(fileURLWithPath: basePath).appendingPathComponent(legacyDirectoryName).appendingPathComponent("dataset.json").path)
     }
 
-    /// 旧形式（.TickTockTome）は、Tomeletが開くときに移行する。InGoodPaste! は移行しない。
-    private static let legacyError = StoreError(status: 409, message: "このフォルダには以前の形式（.TickTockTome）のデータがあります。Tomeletでこのフォルダを一度開くと、新しい形式（.kobito-tools）へ移行されます。", extra: ["legacyLayout": true])
+    /// 旧形式（.TickTockTome）は InGoodPaste! では移行しない。移し方は kobito-workspace の docs/MIGRATION_FROM_TOMELET.md にある。
+    private static let legacyError = StoreError(status: 409, message: "このフォルダには以前の形式（.TickTockTome）のデータがあります。新しい形式（.kobito-tools）への移し方は、kobito-workspace の docs/MIGRATION_FROM_TOMELET.md を参照してください。", extra: ["legacyLayout": true])
 
     // MARK: - dataset.json
 
@@ -125,7 +125,7 @@ enum Dataset {
         for name in subdirectories { try FileManager.default.createDirectory(at: directory(basePath).appendingPathComponent(name), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]) }
     }
 
-    /// 以前の名前（Pastephant）で書き出したフォルダとDBを、この名前に移す（Tomelet も新しい名前の方を読む）。
+    /// 以前の名前（Pastephant）で書き出したフォルダとDBを、この名前に移す。
     private static func moveRenamedDirectory(_ basePath: String) throws {
         let manager = FileManager.default
         let legacy = root(basePath).appendingPathComponent(renamedDirectoryName, isDirectory: true)
@@ -165,7 +165,7 @@ enum Dataset {
 }
 
 /// 同じ基準パスへ複数のPCの InGoodPaste! が同時に書き出さないための使用中の印（.kobito-tools/InGoodPaste/lock.json）。
-/// 本体の印は Tomelet/ にあるため、本体とは干渉しない。
+/// 印は InGoodPaste/ の中に置くので、ほかのアプリの印とは干渉しない。
 final class DatasetLock {
     enum State {
         case free

@@ -1,7 +1,7 @@
 #!/bin/zsh
 # GitHubのReleasesへ添付するファイルを作る。
 #   dist/InGoodPaste_<版>.dmg                開くと「Applications へドラッグ」の画面が出る（ふつうはこちら）
-#   dist/InGoodPaste_<版>_universal.zip      PopNote! と同じ形式
+#   dist/InGoodPaste_<版>_universal.zip      アプリだけを zip にしたもの
 # dmg の窓の並べ方は Finder に頼む（初回は「Finder を操作する許可」を求められることがある）。
 set -euo pipefail
 cd "${0:A:h}/.."
