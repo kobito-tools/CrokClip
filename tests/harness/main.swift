@@ -377,5 +377,23 @@ check(Series.route(URL(string: "kobito://another/open/1")!) == nil && Series.rou
 check(try store2.recent(query: "id:\(wordID)").map(\.id) == [wordID], "id: でその項目だけにする")
 check(Series.timestamp(Date(timeIntervalSince1970: 0)).range(of: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})$", options: .regularExpression) != nil, "日時は時差付きの ISO 8601")
 
+// 19. ⑥ 基準パスの履歴
+let otherBase = work.appendingPathComponent("other-base").path
+try FileManager.default.createDirectory(atPath: otherBase, withIntermediateDirectories: true)
+_ = try Dataset.create(otherBase, datasetId: "別の")
+let goneBase = work.appendingPathComponent("gone-base").path
+// ほかのアプリが書いた1件と、壊れた1件・もう無い基準パスの1件。
+try Series.writeJSON(["v": 1, "datasets": [["path": otherBase, "id": "別の", "app": "another", "opened": "2026-10-01T09:00:00+09:00"],
+                                         ["path": goneBase, "id": "消えた", "app": "another", "opened": "2026-10-02T09:00:00+09:00"],
+                                         ["path": base, "id": 3]]], to: Series.datasetsFile)
+check(Series.datasetCandidates().map(\.path) == [otherBase], "履歴から、dataset.json が今もある基準パスだけを候補にする")
+try Series.recordDataset(path: base, id: "テスト", now: Date(timeIntervalSince1970: 1_800_000_000))
+try Series.recordDataset(path: base, id: "テスト", now: Date(timeIntervalSince1970: 1_800_000_100))
+let history = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Series.datasetsFile))) as? [String: Any]
+let historyItems = history?["datasets"] as? [[String: Any]] ?? []
+check(history?["v"] as? Int == 1 && historyItems.filter { $0["path"] as? String == base }.count == 1, "同じ基準パスは1件にまとめる")
+check(historyItems.first?["app"] as? String == "ingoodpaste" && historyItems.first?["id"] as? String == "テスト" && historyItems.contains { $0["app"] as? String == "another" }, "自分の1件を先頭に足し、ほかのアプリの分は残す")
+check(Series.datasetCandidates().map(\.path) == [base, otherBase], "最後に開いた順に並べる")
+
 print(failures == 0 ? "すべて成功" : "\(failures) 件失敗")
 exit(failures == 0 ? 0 : 1)

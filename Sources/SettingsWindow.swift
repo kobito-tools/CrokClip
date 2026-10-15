@@ -21,16 +21,8 @@ final class SettingsModel: ObservableObject {
 
     init(settings: Settings) { self.settings = settings }
 
-    /// Tomelet がこのMacで開いている基準パス（~/Library/Application Support/TickTockTome/config/setting.json。古い版は DailyLog/）。
-    static var tomeletBasePath: String? {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        for name in ["TickTockTome", "DailyLog"] {
-            let url = support.appendingPathComponent(name).appendingPathComponent("config/setting.json")
-            if let data = try? Data(contentsOf: url), let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let path = object["basePath"] as? String, FileManager.default.fileExists(atPath: path) { return path }
-        }
-        return nil
-    }
+    /// kobito シリーズのアプリがこのMacで開いた基準パス（⑥ 基準パスの履歴）。設定を開くたびに読み直す。
+    @Published var datasetCandidates: [Series.DatasetEntry] = []
 }
 
 @MainActor
@@ -48,6 +40,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         model.usage = model.refreshUsage()
         model.availableTags = model.loadTags()
         model.datasetID = model.settings.basePath.flatMap { try? Dataset.read($0)?.datasetId }
+        model.datasetCandidates = Series.datasetCandidates()
         if window == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 640), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
             window.title = "InGoodPaste! の設定"
@@ -334,15 +327,15 @@ struct SettingsView: View {
                     Button(model.settings.basePath == nil ? "フォルダを選ぶ…" : "変える…") { model.onChooseBasePath() }
                     if model.settings.basePath != nil { Button("やめる") { model.settings.basePath = nil; model.datasetID = nil } }
                 }
-                if let candidate = SettingsModel.tomeletBasePath, candidate != model.settings.basePath {
+                ForEach(model.datasetCandidates.filter { $0.path != model.settings.basePath }, id: \.path) { candidate in
                     HStack {
                         Image(systemName: "lightbulb").foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Tomelet が使っているフォルダが見つかりました").font(.system(size: 12, weight: .medium))
-                            Text(candidate).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                            Text("kobito シリーズで使っているフォルダ「\(candidate.id)」").font(.system(size: 12, weight: .medium))
+                            Text(candidate.path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                         }
                         Spacer()
-                        Button("これを使う") { model.settings.basePath = candidate; model.datasetID = try? Dataset.read(candidate)?.datasetId }
+                        Button("これを使う") { model.settings.basePath = candidate.path; model.datasetID = try? Dataset.read(candidate.path)?.datasetId }
                     }
                 }
             } header: {

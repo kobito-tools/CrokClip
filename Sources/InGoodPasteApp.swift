@@ -101,6 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         cleanupTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.runCleanup() } }
         scheduleOCR()
         syncTags()
+        recordDataset()
 
         launched = true
         pendingURLs.forEach(handle)
@@ -198,6 +199,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    /// ⑥ 基準パスの履歴に、開いている基準パスを記録する（ほかのアプリが保存先を選ぶときの候補になる）。
+    private func recordDataset() {
+        guard let basePath = settings.basePath, let info = try? Dataset.read(basePath) else { return }
+        do { try Series.recordDataset(path: basePath, id: info.datasetId) } catch { NSLog("InGoodPaste: 基準パスの履歴に書けません: \(error)") }
+    }
+
     private func tagsChanged(_ ids: [Int]) {
         syncTags()
         // 自動で残すタグが付いた物は、まだなら Tomelet に残す。
@@ -271,7 +278,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         alert.addButton(withTitle: "やめる")
         NSApplication.shared.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return false }
-        do { _ = try Dataset.create(basePath, datasetId: field.stringValue); return true }
+        do { _ = try Dataset.create(basePath, datasetId: field.stringValue); recordDataset(); return true }
         catch { self.alert("共有フォルダを作れませんでした", (error as? StoreError)?.message ?? "\(error)"); return false }
     }
 
@@ -324,7 +331,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settings = new
         settings.save(to: settingsURL)
         if old.openPanelHotKey != new.openPanelHotKey || old.stackHotKey != new.stackHotKey { registerHotKeys(alertOnFailure: true) }
-        if old.basePath != new.basePath { syncTags() }
+        if old.basePath != new.basePath { syncTags(); recordDataset() }
         // パネルの見た目を変えたら、設定の画面の横に実物を出して、すぐに反映する。
         let looks = { (value: Settings) in [value.panelWidth, value.panelEdge == .right ? 1 : 0, value.panelScreen == .mouse ? 1 : 0, value.showPreview ? 1 : 0, value.showKobito ? 1 : 0, Double(RowColorMode.allCases.firstIndex(of: value.rowColorMode) ?? 0)] }
         if looks(old) != looks(new), settingsWindow?.isVisible == true { panel.showForSettings() }
