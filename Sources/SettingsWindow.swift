@@ -50,7 +50,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         model.datasetID = model.settings.basePath.flatMap { try? Dataset.read($0)?.datasetId }
         if window == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 640), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-            window.title = "Pastephant の設定"
+            window.title = "InGoodPaste! の設定"
             window.contentView = NSHostingView(rootView: SettingsView(model: model))
             window.isReleasedWhenClosed = false
             window.center()
@@ -96,7 +96,7 @@ struct SettingsView: View {
             } header: {
                 Text("許可")
             } footer: {
-                Text("ビルドし直したあとは許可が外れることがあります。その場合は、システム設定の一覧で Pastephant を一度削除（−）してから、もう一度オンにしてください。")
+                Text("ビルドし直したあとは許可が外れることがあります。その場合は、システム設定の一覧で InGoodPaste! を一度削除（−）してから、もう一度オンにしてください。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("ショートカット") {
@@ -144,7 +144,7 @@ struct SettingsView: View {
     private var capture: some View {
         Form {
             Section {
-                ExplainBox(title: "どのコピーを取っておくか", text: "Pastephant は ⌘C でコピーした物を、自動で履歴に取っておきます。ここでは、取っておかないアプリと、コピーしたときに自動で付けるタグを決めます。")
+                ExplainBox(title: "どのコピーを取っておくか", text: "InGoodPaste! は ⌘C でコピーした物を、自動で履歴に取っておきます。ここでは、取っておかないアプリと、コピーしたときに自動で付けるタグを決めます。")
             }
             Section {
                 ForEach(model.settings.excludedBundleIDs, id: \.self) { bundleID in
@@ -233,7 +233,7 @@ struct SettingsView: View {
                     Button("今すぐ整理") { model.onCleanup() }
                     Button("Finder で表示") { NSWorkspace.shared.activateFileViewerSelecting([ClipStore.defaultDirectory]) }
                 }
-                Text("履歴はこのMacの ~/Library/Application Support/Pastephant/ にだけ保存します。").font(.caption).foregroundStyle(.secondary)
+                Text("履歴はこのMacの ~/Library/Application Support/InGoodPaste/ にだけ保存します。").font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -314,7 +314,7 @@ struct SettingsView: View {
     private var companions: some View {
         Form {
             Section {
-                ExplainBox(title: "連携でできること", text: "Pastephant は単独で使えます。同じシリーズ（kobito-tools）のアプリも使っているなら、次のことができるようになります。\n・タグを Tomelet・PopNote! と共有する\n・⌘S で残したクリップを、Tomelet のカレンダーに日ごとのメモとして並べる\n・⇧⌘N で選んだクリップを PopNote! のメモにする\n・OpenSesame! から1キーで Pastephant を開く")
+                ExplainBox(title: "連携でできること", text: "InGoodPaste! は単独で使えます。同じシリーズ（kobito-tools）のアプリも使っているなら、次のことができるようになります。\n・タグを Tomelet・PopNote! と共有する\n・⌘S で残したクリップを、Tomelet のカレンダーに日ごとのメモとして並べる\n・⇧⌘N で選んだクリップを PopNote! のメモにする\n・OpenSesame! から1キーで InGoodPaste! を開く")
                 VStack(alignment: .leading, spacing: 4) {
                     Text("はじめかた").font(.system(size: 12, weight: .semibold))
                     Text("1. 下の「基準パス」で、Tomelet・PopNote! と同じフォルダを選びます（Tomelet の基準パスが見つかれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。\n3. PopNote! と OpenSesame! は、入っていればそのまま使えます（設定はいりません）。")
@@ -348,7 +348,7 @@ struct SettingsView: View {
             } header: {
                 Text("基準パス（シリーズで共有するフォルダ）")
             } footer: {
-                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や Tomelet への受け渡しに使います。Pastephant の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
+                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や Tomelet への受け渡しに使います。InGoodPaste! の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
@@ -391,7 +391,7 @@ struct SeriesApp: Identifiable {
     let bundleID: String
     let tagline: String
     let english: String
-    /// Pastephant と一緒に使うと何ができるか。
+    /// InGoodPaste! と一緒に使うと何ができるか。
     let together: String
     let url: URL
 
@@ -406,7 +406,7 @@ struct SeriesApp: Identifiable {
                   url: URL(string: "https://github.com/kobito-tools/PopNote")!),
         SeriesApp(id: "opensesame", name: "OpenSesame!", bundleID: "io.github.kobito-tools.opensesame",
                   tagline: "アプリ・フォルダ・画面分割のショートカットランチャー", english: "A shortcut launcher for apps, folders and window layouts.",
-                  together: "pastephant://open・pastephant://latex・pastephant://stack/toggle などを登録すると、1キーで履歴や数式の画面を開けます。",
+                  together: "ingoodpaste://open・ingoodpaste://latex・ingoodpaste://stack/toggle などを登録すると、1キーで履歴や数式の画面を開けます。",
                   url: URL(string: "https://github.com/kobito-tools/OpenSesame")!),
     ]
 
@@ -442,7 +442,7 @@ private struct SeriesAppRow: View {
                 }
                 Text(app.tagline).font(.system(size: 12))
                 Text(app.english).font(.system(size: 11)).foregroundStyle(.secondary)
-                Text("Pastephant と一緒に：\(app.together)")
+                Text("InGoodPaste! と一緒に：\(app.together)")
                     .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
             }

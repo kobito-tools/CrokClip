@@ -120,7 +120,7 @@ const CHART = w => `<svg width="${w}" height="${w * .62}" viewBox="0 0 100 62"><
 const APPS = {
   "com.apple.Preview": ["プレビュー", "#3E8EE8", "P"], "com.apple.screencaptureui": ["スクリーンショット", "#6B7479", "S"],
   "com.microsoft.Excel": ["Microsoft Excel", "#1F7A45", "X"], "com.apple.finder": ["Finder", "#3C9BF0", "F"],
-  "io.github.kobito-tools.pastephant": ["Pastephant", "#5F7A90", "P"], "com.apple.Safari": ["Safari", "#2F86E8", "S"],
+  "io.github.kobito-tools.ingoodpaste": ["InGoodPaste!", "#5F7A90", "I"], "com.apple.Safari": ["Safari", "#2F86E8", "S"],
 };
 const appIcon = b => `<span class="appi" style="background:${APPS[b][1]}">${APPS[b][2]}</span>`;
 
@@ -140,7 +140,7 @@ const CLIPS = [
     styles: ["ファイル", "パス", "~ のパス", "基準パスから", "ファイル名", "file://"],
     body: () => `<div style="display:flex;gap:8px;align-items:flex-start;white-space:normal"><span style="color:#5C668F">${ICON.file.replace(/20/g, "28")}</span><div><div>実験データ.csv</div><div style="font-size:11px;color:#8A8F8B">/Users/taku/研究/2026</div></div></div>`,
     foot: "2026/09/30 09:20・コピー1回・貼り付け0回・1 KB" },
-  { id: "formula", kind: "formula", kindLabel: "数式", bundle: "io.github.kobito-tools.pastephant", time: "昨日", tags: ["論文"], display: "\\int_0^1 f(x)\\,dx = F(1) - F(0)",
+  { id: "formula", kind: "formula", kindLabel: "数式", bundle: "io.github.kobito-tools.ingoodpaste", time: "昨日", tags: ["論文"], display: "\\int_0^1 f(x)\\,dx = F(1) - F(0)",
     styles: ["数式画像", "LaTeX の式", "ほかの変換…"],
     body: () => `<div class="mathimg">∫<sub style="font-size:15px">0</sub><sup style="font-size:15px">1</sup> f(x) dx = F(1) − F(0)</div><div style="font:11px Menlo,monospace;color:#8A8F8B">\\int_0^1 f(x)\\,dx = F(1) - F(0)</div>`,
     foot: "2026/09/29 17:05・コピー1回・貼り付け3回・38 KB" },

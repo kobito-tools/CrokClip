@@ -1,6 +1,6 @@
 import Foundation
 
-/// シリーズ（Tomelet・PopNote!・Pastephant）で共有するタグ。PopNote! の TagStore.swift を写したもの。正本は .kobito-tools/Tags/tags.json で、DBの tags / tag_categories はその写し。
+/// シリーズ（Tomelet・PopNote!・InGoodPaste!）で共有するタグ。PopNote! の TagStore.swift を写したもの。正本は .kobito-tools/Tags/tags.json で、DBの tags / tag_categories はその写し。
 /// Tomeletの scripts/tag-store.js と同じ規則で統合する。
 /// - 同じIDは revision の大きい方。同じ revision なら、項目を決まった順に並べた文字列（UTF-16の並び）が大きい方。
 /// - タグは完全削除せず、アーカイブだけにする。

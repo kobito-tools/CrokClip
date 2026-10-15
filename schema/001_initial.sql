@@ -1,4 +1,4 @@
--- このMacの履歴（~/Library/Application Support/Pastephant/database/history.sqlite3）。
+-- このMacの履歴（~/Library/Application Support/InGoodPaste/database/history.sqlite3）。
 -- 生データは blobs/ に中身のハッシュ名で置き、ここには型と名前だけを記録する。
 
 CREATE TABLE clips (

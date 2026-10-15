@@ -1,7 +1,7 @@
 import Foundation
 
 /// Tomelet に残す（F-17）。その日の分を「09月28日のクリップ」という1つのメモにまとめ、
-/// <基準パス>/.kobito-tools/Pastephant/database/pastephant.sqlite3（Tomelet の memos 表と同じ形）に保存する。
+/// <基準パス>/.kobito-tools/InGoodPaste/database/ingoodpaste.sqlite3（Tomelet の memos 表と同じ形）に保存する。
 /// Tomelet は PopNote! のメモと同じように、このDBを読み取り専用で開いて表示する。
 struct TomeletExporter {
     /// 書き出す1件。

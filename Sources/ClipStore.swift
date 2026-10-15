@@ -56,7 +56,7 @@ struct ClipDetail {
     let latex: LatexSource?
 }
 
-/// このMacの履歴（~/Library/Application Support/Pastephant/）の読み書きと整理（F-01, F-15）。
+/// このMacの履歴（~/Library/Application Support/InGoodPaste/）の読み書きと整理（F-01, F-15）。
 ///
 ///   database/history.sqlite3   項目・型の一覧・タグの写し・全文検索
 ///   blobs/ab/<sha256>.bin      生データ（中身のハッシュ名。同じデータは1つだけ）
@@ -79,9 +79,16 @@ final class ClipStore: @unchecked Sendable {
 
     struct CleanupReport { var removedClips = 0; var removedBlobs = 0 }
 
-    static var defaultDirectory: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Pastephant", isDirectory: true)
-    }
+    /// 以前の名前（Pastephant）の履歴があれば、初めて使うときにこの名前のフォルダへ移す。
+    static let defaultDirectory: URL = {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let directory = support.appendingPathComponent("InGoodPaste", isDirectory: true)
+        let legacy = support.appendingPathComponent("Pastephant", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: directory.path), FileManager.default.fileExists(atPath: legacy.path) {
+            do { try FileManager.default.moveItem(at: legacy, to: directory) } catch { NSLog("InGoodPaste: 以前の履歴（Pastephant）を移せませんでした: \(error)") }
+        }
+        return directory
+    }()
 
     init(directory: URL, schemaDirectory: URL) throws {
         self.directory = directory

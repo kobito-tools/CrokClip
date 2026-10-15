@@ -2,7 +2,7 @@
 
 kobito-tools シリーズのクリップボード履歴アプリの要件です。Paste の代わりとして、それ以上に使えることを目指します。
 
-アプリ名は **Pastephant**（paste ＋ elephant。「象は決して忘れない（An elephant never forgets）」から、コピーした物を忘れない象）です。
+アプリ名は **InGoodPaste!**（「in good taste（趣味よく・おいしく）」と paste を掛けたもの。コック帽の小人が、コピーした物を味見して＝貼られる内容を先に確かめてから、いい具合に貼る）です。以前の名前は Pastephant で、そのときの履歴・設定・Tomelet への書き出しは、初めて起動・書き出しをしたときに新しい名前のフォルダへ移します。
 
 ## 1. 前提
 
@@ -11,8 +11,8 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 | 対応OS | macOS 13 以降（Apple Silicon / Intel のユニバーサルバイナリ） |
 | 実装 | Swift ネイティブ（SwiftUI ＋ AppKit）。PopNote! と同じく `build.sh` と `swiftc` でビルド（Xcode プロジェクトは作らない） |
 | 同期 | しない。iCloud や他の端末との同期はなし |
-| 保存 | 履歴はすべてこのMacの `~/Library/Application Support/Pastephant/` に保存（SQLite ＋ 生データはファイル）。クラウドに上がらず、Macごとに別の履歴になる（→ 6章） |
-| 基準パス | 任意。指定すると、共有タグ（`.kobito-tools/Tags/tags.json`）と Tomelet への書き出し（`.kobito-tools/Pastephant/`）に使う。履歴の保存には使わない |
+| 保存 | 履歴はすべてこのMacの `~/Library/Application Support/InGoodPaste/` に保存（SQLite ＋ 生データはファイル）。クラウドに上がらず、Macごとに別の履歴になる（→ 6章） |
+| 基準パス | 任意。指定すると、共有タグ（`.kobito-tools/Tags/tags.json`）と Tomelet への書き出し（`.kobito-tools/InGoodPaste/`）に使う。履歴の保存には使わない |
 | 画面 | 画面の右端から出てくる縦のリスト。右か左かは設定で切り替え（→ 3章） |
 | ネットワーク | 使わない。LaTeX の描画もオフラインで行う |
 | 配布 | PopNote! と同じ（公証なし、Releases で zip、`xattr` の案内） |
@@ -53,7 +53,7 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 - **フォーカスを奪わない** `NSPanel`（`.nonactivatingPanel`）を使います。ペースト先のアプリはアクティブなまま、キー入力だけをパネルが受け取ります。
 - 画面を広く使わないよう、**1つのパネルの上部をプレビュー、その下を一覧**にします。プレビューは枠（カード）で囲み、その下辺に貼り方の帯を付けて、一覧との境目をはっきりさせます。
 - 見た目は kobito-tools シリーズに合わせます（紙の色の地、小人の墨色の文字、アイコンの青みがかった灰色のアクセント。暗い画面にも対応）。一覧の1件はカードにし、左の帯で色分けします（コピー元のアプリ・種類・最初のタグ・なし。色は PopNote! のタグと同じハッシュでシリーズの色から選ぶ）。
-- パネルの内側の縁に、象の耳の小人がしがみつき、ゆっくり揺れます（パネルの子ウィンドウでクリックは下へ通す。左端のときは反転。設定で隠せる）。
+- パネルの内側の縁に、コック帽の小人がしがみつき、ゆっくり揺れます（パネルの子ウィンドウでクリックは下へ通す。左端のときは反転。設定で隠せる）。
 - 設定の画面でパネルの幅・出る側・プレビュー・色分け・小人を変えている間は、実物のパネルを画面の端に出したままにし、変えるたびにすぐ反映します（設定を閉じると隠れる）。作業の画面（タグ・編集・変換・まとめる・数式・定型文）は、プレビューの場所に出します。
 - 出てくる側（右か左か）、幅、どのディスプレイに出すか（マウスのある画面 / メインの画面）、プレビューを出すかは設定で変えられます。
 - 各行には種類のアイコンかサムネ、見出し（テキストの冒頭 / 定型文とピンの名前）、コピー元のアプリのアイコン、経過時間、タグを表示します。
@@ -95,7 +95,7 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 - 一緒に記録する情報：コピーした日時、コピー元のアプリ（コピーされた瞬間の最前面のアプリの bundle ID と名前）、代表の種類、プレビュー用のテキストとサムネ。
 - 代表の種類：`text` / `richText` / `image` / `file` / `url` / `color` / `office`（パワポなど独自の型が主）/ `formula`（F-06 で作ったもの）。
 - **重複の扱い**：全ての型のデータから計算したハッシュが同じなら新しい項目を作らず、既存の項目を先頭に移して「コピーした回数」を増やします。
-- 自分がクリップボードに書いたもの（ペーストのために戻したときなど）は、独自の型 `io.github.kobito-tools.pastephant.own` を付けておき、履歴に二重に入れないようにします。
+- 自分がクリップボードに書いたもの（ペーストのために戻したときなど）は、独自の型 `io.github.kobito-tools.ingoodpaste.own` を付けておき、履歴に二重に入れないようにします。
 - 1項目の上限を設定します（初期値 100MB）。超えた項目は、プレビューだけを残して生データは保存しません。一覧でもそれとわかるように表示します。
 
 ### F-02 取得しないもの（プライバシー）
@@ -134,7 +134,7 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 - 描画には **KaTeX をアプリに同梱**し（MIT ライセンス）、WKWebView で描きます。KaTeX が対応していない命令は、エラーの場所を表示します。
 - クリップボードに載せる型：**PDF（ベクター）＋ PNG（Retina 解像度）＋ TIFF**。
 - オプション：文字色、文字の大きさ（pt）、背景（透明 / 白 / 任意の色）、インライン / ディスプレイ、余白。設定はよく使う組み合わせを「プリセット」として保存できます（例：「暗いスライド用（白文字）」）。
-- **元の式を埋め込む**：PDF のメタデータ、PNG の `iTXt` チャンク、独自の型 `io.github.kobito-tools.pastephant.latex` の3か所に元の式とオプションを入れます。
+- **元の式を埋め込む**：PDF のメタデータ、PNG の `iTXt` チャンク、独自の型 `io.github.kobito-tools.ingoodpaste.latex` の3か所に元の式とオプションを入れます。
   - 履歴の数式の項目から、元の式を開き直して直せます。
   - 作った画像がほかのアプリからコピーされて戻ってきたときも、埋め込まれた式を読み取り、`formula` として扱います。
 - よく使う式やマクロ（`\newcommand`）は設定に登録でき、全ての式の前に付けて描画します。
@@ -216,7 +216,7 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 ### F-16 PopNote! に送る
 
 - 選んだ項目から、PopNote! の新しいメモを作ります（テキストは本文、画像は添付）。PopNote! が開いていれば、今開いているメモに追加することもできます。
-- 選んだ項目の文字と画像（PNG）を一時ファイル（`$TMPDIR/Pastephant-PopNote/<UUID>.json`、`format: "pastephant-clip"`）に書き、`popnote://import?file=<パス>` で PopNote! に渡します。PopNote! はこのフォルダのファイルだけを読み、読んだら消します（PopNote! 側に追加済み）。
+- 選んだ項目の文字と画像（PNG）を一時ファイル（`$TMPDIR/InGoodPaste-PopNote/<UUID>.json`、`format: "ingoodpaste-clip"`）に書き、`popnote://import?file=<パス>` で PopNote! に渡します。PopNote! はこのフォルダのファイルだけを読み、読んだら消します（PopNote! 側に追加済み）。
 
 ### F-17 Tomelet に残す
 
@@ -225,25 +225,25 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
   - 1項目ごとに、時刻・コピー元のアプリ・タグの行と本文（テキスト、LaTeX の式、ファイルのパス、OCR の文字）を書き、区切り線でつなぎます。画像はアップロードとして添付し、本文から参照します。
   - メモの作成日時はその日の最初の書き出しの時刻、メモのタグは項目のタグをまとめたものにします。
   - 日付の区切りは、項目を**書き出した日**で判断します（コピーした日ではありません）。
-- 書き出し先は `<基準パス>/.kobito-tools/Pastephant/` です。シリーズの規則（1つのSQLiteを2つのアプリから書き込まない）に従い、Tomelet や PopNote! のDBには書き込みません。
-  - `database/pastephant.sqlite3`：Tomelet の `memos` 表と同じ形の表を持つDB。PopNote! と同じく、Tomelet の `migrations/*.sql` の写し（`schema/tomelet/`）をファイル名順に適用して作ります。PRAGMA も同じ（`foreign_keys=ON`・`journal_mode=DELETE`・`synchronous=FULL`・`busy_timeout=5000`）。
+- 書き出し先は `<基準パス>/.kobito-tools/InGoodPaste/` です。シリーズの規則（1つのSQLiteを2つのアプリから書き込まない）に従い、Tomelet や PopNote! のDBには書き込みません。
+  - `database/ingoodpaste.sqlite3`：Tomelet の `memos` 表と同じ形の表を持つDB。PopNote! と同じく、Tomelet の `migrations/*.sql` の写し（`schema/tomelet/`）をファイル名順に適用して作ります。PRAGMA も同じ（`foreign_keys=ON`・`journal_mode=DELETE`・`synchronous=FULL`・`busy_timeout=5000`）。
   - `uploads/`：メモに添付する画像。
-  - `lock.json`：使用中の印（`app: "pastephant"`、30秒ごとに更新、2分で期限切れ）。別のPCの印が有効な間は書き出さず、「『PC名』で使用中です」と案内します。
+  - `lock.json`：使用中の印（`app: "ingoodpaste"`、30秒ごとに更新、2分で期限切れ）。別のPCの印が有効な間は書き出さず、「『PC名』で使用中です」と案内します。
 - Tomelet は PopNote! のメモと同じように、このDBを**読み取り専用**で開いて表示します（→ 8章）。
 - 「このタグが付いたら自動で残す」という規則も設定できます。
 - 書き出した項目には印を付け、二重に書き出さないようにします。
 
 ### F-18 OpenSesame! からの呼び出し
 
-- URL スキーム `pastephant://` で、次の操作をアプリの外から呼べるようにします。OpenSesame! に登録すれば1キーで使えます。
+- URL スキーム `ingoodpaste://` で、次の操作をアプリの外から呼べるようにします。OpenSesame! に登録すれば1キーで使えます。
 
 | URL | 動作 |
 |---|---|
-| `pastephant://open` | 履歴パネルを開く |
-| `pastephant://open?tag=論文` | タグで絞り込んで開く |
-| `pastephant://latex` | LaTeX 入力を開く |
-| `pastephant://stack/toggle` | ペーストスタックを始める / 終える |
-| `pastephant://pause` | 取得を一時停止 / 再開 |
+| `ingoodpaste://open` | 履歴パネルを開く |
+| `ingoodpaste://open?tag=論文` | タグで絞り込んで開く |
+| `ingoodpaste://latex` | LaTeX 入力を開く |
+| `ingoodpaste://stack/toggle` | ペーストスタックを始める / 終える |
+| `ingoodpaste://pause` | 取得を一時停止 / 再開 |
 
 ### F-19 メニューバーと設定
 
@@ -267,7 +267,7 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 ## 6. 保存の設計
 
 ```text
-~/Library/Application Support/Pastephant/
+~/Library/Application Support/InGoodPaste/
 ├── database/history.sqlite3   項目・型の一覧・タグの写し・全文検索
 ├── blobs/ab/abcdef….bin       生データ（中身のハッシュ名。同じデータは1つだけ）
 ├── thumbs/<項目ID>.png        一覧用のサムネ
@@ -280,9 +280,9 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 <基準パス>/.kobito-tools/
 ├── dataset.json                    読むだけ（無ければ PopNote! と同じ手順で作る）
 ├── Tags/tags.json                  共有タグ（F-04）
-└── Pastephant/                     Tomelet への書き出し（F-17）
+└── InGoodPaste/                     Tomelet への書き出し（F-17）
     ├── lock.json
-    ├── database/pastephant.sqlite3 Tomelet の memos 表と同じ形
+    ├── database/ingoodpaste.sqlite3 Tomelet の memos 表と同じ形
     └── uploads/
 ```
 
@@ -304,7 +304,7 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 
 | パス | 内容 |
 |---|---|
-| `Sources/PastephantApp.swift` | 起動、メニューバー、URL の受け取り、ショートカット |
+| `Sources/InGoodPasteApp.swift` | 起動、メニューバー、URL の受け取り、ショートカット |
 | `Sources/PasteboardWatcher.swift` | クリップボードの監視と取得（F-01, F-02） |
 | `Sources/ClipStore.swift` | SQLite と `blobs/` の読み書き、整理（F-15） |
 | `Sources/Paster.swift` | 書き戻しと `⌘V` の送信、ペーストスタック（F-03, F-14） |
@@ -320,7 +320,7 @@ kobito-tools シリーズのクリップボード履歴アプリの要件です�
 ## 8. ほかのアプリ側で必要になるかもしれない変更
 
 - **PopNote!**（実装済み）：`popnote://import?file=…` の受け口（`PopNoteApp.swift`）と、文字と画像をメモに入れる `window.PopNote.importClip`（`web/app.js`）を加えました（F-16）。
-- **Tomelet**（実装済み）：`scripts/popnote-memos.js` を `mirrorCompanionMemos` に広げ、PopNote! のメモと一緒に `pastephant.sqlite3` のメモを読み取り専用で写します。表示するかは PopNote! と同じように一度だけ尋ね、`settings.showPastephantMemos` に保存します（設定画面にも切り替えを追加）。画像は `Pastephant/uploads/` からも配信し、Pastephant のメモを開くと `pastephant://open?query=exported:<日付>` を呼びます。`docs/BASE_PATH_FOR_COMPANIONS.md` に 5a章を加えました。
+- **Tomelet**（実装済み）：`scripts/popnote-memos.js` を `mirrorCompanionMemos` に広げ、PopNote! のメモと一緒に `ingoodpaste.sqlite3` のメモを読み取り専用で写します。表示するかは PopNote! と同じように一度だけ尋ね、`settings.showInGoodPasteMemos` に保存します（設定画面にも切り替えを追加）。画像は `InGoodPaste/uploads/` からも配信し、InGoodPaste! のメモを開くと `ingoodpaste://open?query=exported:<日付>` を呼びます。`docs/BASE_PATH_FOR_COMPANIONS.md` に 5a章を加えました。
 
 ## 9. 作る順番
 

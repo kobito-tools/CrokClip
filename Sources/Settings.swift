@@ -39,7 +39,7 @@ struct AutoTagRule: Codable, Equatable, Identifiable {
     var tag: String
 }
 
-/// このMacの設定（~/Library/Application Support/Pastephant/settings.json）。
+/// このMacの設定（~/Library/Application Support/InGoodPaste/settings.json）。
 /// 項目が足りない古いファイルでも読めるよう、無い項目は初期値にする。
 struct Settings: Codable, Equatable {
     enum Edge: String, Codable { case right, left }

@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const [out, fpsArg, ...times] = process.argv.slice(2);
 const fps = Number(fpsArg || 15);
 const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const profile = mkdtempSync(join(tmpdir(), "pastephant-demo-"));
+const profile = mkdtempSync(join(tmpdir(), "ingoodpaste-demo-"));
 const port = 9333;
 const proc = spawn(chrome, ["--headless=new", "--disable-gpu", "--hide-scrollbars", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "--allow-file-access-from-files", "about:blank"], { stdio: "ignore" });
 

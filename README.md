@@ -1,8 +1,8 @@
-# Pastephant
+# InGoodPaste!
 
 <img src="assets/icon/icon-1024.png" width="96" align="right" alt="">
 
-Pastephant は、コピーした物を忘れない象の、macOS 用クリップボード履歴アプリです。
+InGoodPaste! は、コック帽の小人が味見してから貼ってくれる、macOS 用クリップボード履歴アプリです。名前は「in good taste（趣味よく・おいしく）」と paste を掛けています。
 
 `⌘C` でコピーした文字・画像・表・ファイル・パワポの図形などを元の形のまま覚えておき、`⌥⌘V` で画面の端から呼び出して貼れます。貼る前に「改行を消す」「表 → LaTeX」などの貼り方を選んで、貼られる内容を先に確かめられます。タグ、定型文、数式画像、画像の文字認識、順番に貼るペーストスタックもそろっています。
 
@@ -21,15 +21,15 @@ Pastephant は、コピーした物を忘れない象の、macOS 用クリップ
 
 | 形式 | ファイル |
 |---|---|
-| dmg（おすすめ） | `Pastephant_x.y.z.dmg` |
-| zip | `Pastephant_x.y.z_universal.zip` |
+| dmg（おすすめ） | `InGoodPaste_x.y.z.dmg` |
+| zip | `InGoodPaste_x.y.z_universal.zip` |
 
 `x.y.z` にはバージョン番号が入ります。
 
 ## インストール
 
-1. ダウンロードした `.dmg` ファイルを開き、表示された `Pastephant` を右の `Applications` フォルダにドラッグします（zip の場合は、展開された `Pastephant.app` を Applications フォルダに移動します）。
-2. アプリケーションフォルダから Pastephant を起動します。Dock には出ず、メニューバーにクリップボードのアイコンが出ます。
+1. ダウンロードした `.dmg` ファイルを開き、表示された `InGoodPaste!` を右の `Applications` フォルダにドラッグします（zip の場合は、展開された `InGoodPaste!.app` を Applications フォルダに移動します）。
+2. アプリケーションフォルダから InGoodPaste! を起動します。Dock には出ず、メニューバーにクリップボードのアイコンが出ます。
 3. dmg は Finder のサイドバーの「⏏」で取り出して、ゴミ箱に入れて構いません。
 
 本アプリは Apple の公証を受けていないため、初回起動時に「開発元を確認できません」などの警告が表示されます。その場合は警告を閉じ、「システム設定」→「プライバシーとセキュリティ」を開いて、画面下部の「このまま開く」をクリックしてください。2 回目以降は通常どおり起動できます。
@@ -37,14 +37,22 @@ Pastephant は、コピーした物を忘れない象の、macOS 用クリップ
 「壊れているため開けません」と表示される場合は、ターミナルで次のコマンドを実行してから、再度起動してください。
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Pastephant.app"
+xattr -dr com.apple.quarantine "/Applications/InGoodPaste!.app"
 ```
 
-ソースから作る場合は、このリポジトリをクローンして `Pastephant-Setup.command` を実行します（Xcode Command Line Tools が必要です。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)）。
+#### Pastephant から乗り換える場合
+
+InGoodPaste! は以前 Pastephant という名前でした。初めて起動すると、Pastephant の履歴と設定（`~/Library/Application Support/Pastephant/`）を `InGoodPaste/` へ移して、そのまま使えます。Tomelet に残したクリップ（`.kobito-tools/Pastephant/`）も、次に書き出すときに `.kobito-tools/InGoodPaste/` へ移します。
+
+- Pastephant を終了してから `Pastephant.app` をゴミ箱に入れ、アクセシビリティ・入力監視の一覧からも「－」で削除してください。InGoodPaste! には改めて許可が必要です。
+- ログイン時に開く設定も、InGoodPaste! の設定でオンにし直してください。
+- URL は `pastephant://` から `ingoodpaste://` に変わりました。OpenSesame! などに登録している場合は登録し直してください。
+
+ソースから作る場合は、このリポジトリをクローンして `InGoodPaste-Setup.command` を実行します（Xcode Command Line Tools が必要です。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)）。
 
 #### アクセシビリティの許可
 
-選んだ項目を前のアプリに貼り込むために、アクセシビリティの許可を使います。初めて貼るときに求められるので、「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で Pastephant をオンにしてください。許可が無い間は、選んだ項目をクリップボードに戻すだけになります（自分で `⌘V` を押せば貼れます）。
+選んだ項目を前のアプリに貼り込むために、アクセシビリティの許可を使います。初めて貼るときに求められるので、「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で InGoodPaste! をオンにしてください。許可が無い間は、選んだ項目をクリップボードに戻すだけになります（自分で `⌘V` を押せば貼れます）。
 
 #### 入力監視の許可
 
@@ -56,7 +64,7 @@ xattr -dr com.apple.quarantine "/Applications/Pastephant.app"
 
 コピーすると自動で履歴に入ります。`⌥⌘V` を押すと、画面の右端（設定で左端にも変えられます）からパネルが出てきます。貼り先のアプリのフォーカスはそのままなので、選んで `⏎` を押すだけで貼れます。
 
-パネルは上から、検索欄、「プレビュー」の枠（選んでいる項目の中身と、その下に貼り方）、履歴のカード、いま使えるキーの案内です。カードの左の色の帯はコピー元のアプリごとの色（PopNote! のタグと同じ決め方）で、設定で種類ごと・タグごとにも変えられます。パネルの縁には、象の耳の小人がしがみついています（設定で隠せます）。
+パネルは上から、検索欄、「プレビュー」の枠（選んでいる項目の中身と、その下に貼り方）、履歴のカード、いま使えるキーの案内です。カードの左の色の帯はコピー元のアプリごとの色（PopNote! のタグと同じ決め方）で、設定で種類ごと・タグごとにも変えられます。パネルの縁には、コック帽の小人がしがみついています（設定で隠せます）。
 
 ### 基本操作
 
@@ -181,16 +189,16 @@ LaTeX の式を書くと、その場でプレビューが出ます。`⏎` で�
 
 ### ランチャーから開く
 
-OpenSesame! などのランチャーには `Pastephant.app` を登録します。URL にも対応しています。
+OpenSesame! などのランチャーには `InGoodPaste!.app` を登録します。URL にも対応しています。
 
 | URL | 動作 |
 |---|---|
-| `pastephant://open` | 履歴を開く（`?tag=論文`・`?query=…` で絞り込んで開く） |
-| `pastephant://latex` | 数式画像の画面を開く |
-| `pastephant://snippet` | 新しい定型文 |
-| `pastephant://stack/toggle`（`start`・`stop`） | ペーストスタックを始める・終える |
-| `pastephant://pause`（`?minutes=15`）・`pastephant://resume` | 取得を一時停止・再開 |
-| `pastephant://settings` | 設定を開く |
+| `ingoodpaste://open` | 履歴を開く（`?tag=論文`・`?query=…` で絞り込んで開く） |
+| `ingoodpaste://latex` | 数式画像の画面を開く |
+| `ingoodpaste://snippet` | 新しい定型文 |
+| `ingoodpaste://stack/toggle`（`start`・`stop`） | ペーストスタックを始める・終える |
+| `ingoodpaste://pause`（`?minutes=15`）・`ingoodpaste://resume` | 取得を一時停止・再開 |
+| `ingoodpaste://settings` | 設定を開く |
 
 ### 保存しない物と消える期限
 
@@ -200,17 +208,17 @@ OpenSesame! などのランチャーには `Pastephant.app` を登録します�
 
 ### 終了する
 
-メニューバーのクリップボードのアイコンをクリックし、「Pastephant を終了」を選択します。
+メニューバーのクリップボードのアイコンをクリックし、「InGoodPaste! を終了」を選択します。
 
 ## トラブルシューティング
 
 ### `⏎` を押しても貼られない
 
-アクセシビリティの許可が無いと、選んだ項目をクリップボードに戻すだけになります。「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で Pastephant がオンになっているか確認してください。アプリを更新した後に動作しなくなった場合は、一覧から Pastephant を「－」で削除し、再度追加してください。
+アクセシビリティの許可が無いと、選んだ項目をクリップボードに戻すだけになります。「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で InGoodPaste! がオンになっているか確認してください。アプリを更新した後に動作しなくなった場合は、一覧から InGoodPaste! を「－」で削除し、再度追加してください。
 
 ### ペーストスタックで `⌘V` を押しても次の項目にならない
 
-「システム設定」→「プライバシーとセキュリティ」→「入力監視」で Pastephant がオンになっているか確認してください。
+「システム設定」→「プライバシーとセキュリティ」→「入力監視」で InGoodPaste! がオンになっているか確認してください。
 
 ### コピーした物が履歴に入らない
 
@@ -219,20 +227,20 @@ OpenSesame! などのランチャーには `Pastephant.app` を登録します�
 
 ### `⌥⌘V` を押してもパネルが出ない
 
-ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、OpenSesame! などのランチャーから `pastephant://open` で開いてください。
+ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、OpenSesame! などのランチャーから `ingoodpaste://open` で開いてください。
 
 ## アンインストール
 
-1. メニューバーのアイコンから Pastephant を終了し、アプリケーションフォルダの `Pastephant.app` をゴミ箱へ移動します。
-2. 「システム設定」→「プライバシーとセキュリティ」の「アクセシビリティ」「入力監視」の一覧から Pastephant を選択し、「－」で削除します。
+1. メニューバーのアイコンから InGoodPaste! を終了し、アプリケーションフォルダの `InGoodPaste!.app` をゴミ箱へ移動します。
+2. 「システム設定」→「プライバシーとセキュリティ」の「アクセシビリティ」「入力監視」の一覧から InGoodPaste! を選択し、「－」で削除します。
 
 ### 履歴の削除
 
-履歴も消す場合は、`~/Library/Application Support/Pastephant/` を削除してください。Tomelet に残したメモは、基準パスの `.kobito-tools/Pastephant/` にあります。
+履歴も消す場合は、`~/Library/Application Support/InGoodPaste/` を削除してください。Tomelet に残したメモは、基準パスの `.kobito-tools/InGoodPaste/` にあります。
 
 ## プライバシー
 
-Pastephant は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/Pastephant/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などで Tomelet に残した物だけです。
+InGoodPaste! は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/InGoodPaste/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などで Tomelet に残した物だけです。
 
 ## ライセンス
 

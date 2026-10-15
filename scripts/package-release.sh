@@ -1,7 +1,7 @@
 #!/bin/zsh
 # GitHubのReleasesへ添付するファイルを作る。
-#   dist/Pastephant_<版>.dmg                開くと「Applications へドラッグ」の画面が出る（ふつうはこちら）
-#   dist/Pastephant_<版>_universal.zip      PopNote! と同じ形式
+#   dist/InGoodPaste_<版>.dmg                開くと「Applications へドラッグ」の画面が出る（ふつうはこちら）
+#   dist/InGoodPaste_<版>_universal.zip      PopNote! と同じ形式
 # dmg の窓の並べ方は Finder に頼む（初回は「Finder を操作する許可」を求められることがある）。
 set -euo pipefail
 cd "${0:A:h}/.."
@@ -10,19 +10,19 @@ version=$(sed -n 's/^VERSION="\(.*\)"$/\1/p' build.sh)
 mkdir -p dist
 
 # zip：Finderの「圧縮」と同じ形式（拡張属性・署名を保ったまま）で固める。
-archive="dist/Pastephant_${version}_universal.zip"
+archive="dist/InGoodPaste_${version}_universal.zip"
 rm -f "$archive"
-ditto -c -k --keepParent "Pastephant.app" "$archive"
+ditto -c -k --keepParent "InGoodPaste!.app" "$archive"
 echo "$PWD/$archive"
 
 # dmg：アプリ・Applications へのリンク・背景を置き、窓の並べ方を決めてから、読み取り専用に圧縮する。
-volume="Pastephant"
-image="dist/Pastephant_${version}.dmg"
+volume="InGoodPaste!"
+image="dist/InGoodPaste_${version}.dmg"
 work="$(mktemp -d)"
 trap 'hdiutil detach "/Volumes/$volume" -quiet 2>/dev/null || true; rm -rf "$work"' EXIT
 stage="$work/stage"
 mkdir -p "$stage/.background"
-ditto "Pastephant.app" "$stage/Pastephant.app"
+ditto "InGoodPaste!.app" "$stage/InGoodPaste!.app"
 ln -s /Applications "$stage/Applications"
 tiffutil -cathidpicheck assets/dmg/background.png assets/dmg/background@2x.png -out "$stage/.background/background.tiff" >/dev/null
 cp assets/icon/AppIcon.icns "$stage/.VolumeIcon.icns"
@@ -51,7 +51,7 @@ tell application "Finder"
     set icon size of viewOptions to 96
     set text size of viewOptions to 12
     set background picture of viewOptions to file ".background:background.tiff"
-    set position of item "Pastephant.app" of container window to {150, 195}
+    set position of item "InGoodPaste!.app" of container window to {150, 195}
     set position of item "Applications" of container window to {450, 195}
     update without registering applications
     delay 1

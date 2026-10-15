@@ -39,8 +39,8 @@ func contents(of pasteboard: NSPasteboard) -> [[Representation]] {
     }
 }
 
-let source = NSPasteboard(name: NSPasteboard.Name("pastephant-test-source-\(UUID().uuidString)"))
-let destination = NSPasteboard(name: NSPasteboard.Name("pastephant-test-destination-\(UUID().uuidString)"))
+let source = NSPasteboard(name: NSPasteboard.Name("ingoodpaste-test-source-\(UUID().uuidString)"))
+let destination = NSPasteboard(name: NSPasteboard.Name("ingoodpaste-test-destination-\(UUID().uuidString)"))
 defer { source.releaseGlobally(); destination.releaseGlobally() }
 
 MainActor.assumeIsolated {
@@ -200,7 +200,7 @@ keepAll.maxItems = 0
 try store2.cleanup(settings: keepAll)
 check(Set(try store2.pinned().map(\.id)) == [snippetID, wordID], "整理してもピンと定型文は消さない")
 MainActor.assumeIsolated {
-    let pasteboard = NSPasteboard(name: NSPasteboard.Name("pastephant-test-snippet-\(UUID().uuidString)"))
+    let pasteboard = NSPasteboard(name: NSPasteboard.Name("ingoodpaste-test-snippet-\(UUID().uuidString)"))
     defer { pasteboard.releaseGlobally() }
     try! store2.updateSnippet(snippetID, title: "署名", body: "ab{cursor}cd")
     let resolved = Paster(store: store2, pasteboard: pasteboard) { Settings() }.items(for: snippetID, mode: .original)
@@ -224,17 +224,19 @@ func textImage(_ text: String) -> Data {
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }
-let screenshotID = try store2.save(Capture(items: [[Representation(type: "public.png", data: textImage("Pastephant 画像の文字"))]], sourceAppName: "スクリーンショット"), maxItemBytes: 1 << 24).id
+let screenshotID = try store2.save(Capture(items: [[Representation(type: "public.png", data: textImage("InGoodPaste 画像の文字"))]], sourceAppName: "スクリーンショット"), maxItemBytes: 1 << 24).id
 let pending = try store2.pendingOCR()
 check(pending.map(\.id) == [screenshotID], "まだ文字を読んでいない画像を返す")
 let recognized = OCR.recognize(pending[0].data) ?? ""
-check(recognized.contains("Pastephant"), "画像の文字を読む（\(recognized.replacingOccurrences(of: "\n", with: " "))）")
+check(recognized.contains("InGoodPaste"), "画像の文字を読む（\(recognized.replacingOccurrences(of: "\n", with: " "))）")
 try store2.setOCR(screenshotID, text: recognized)
-check(try store2.pendingOCR().isEmpty && (try store2.recent(query: "Pastephant").map(\.id)) == [screenshotID], "読んだ文字で検索できる")
+check(try store2.pendingOCR().isEmpty && (try store2.recent(query: "InGoodPaste").map(\.id)) == [screenshotID], "読んだ文字で検索できる")
 
 // 13. 数式（F-06）
 let latex = LatexSource(source: "\\frac{a}{b}", options: LatexOptions())
 check(LatexSource(embedded: latex.embedded) == latex && LatexSource(json: latex.json) == latex, "元の式を埋め込み・取り出せる")
+check(LatexSource(embedded: latex.embedded.replacingOccurrences(of: LatexSource.marker, with: LatexSource.renamedMarker)) == latex, "以前の名前（Pastephant）で描いた画像からも元の式を取り出せる")
+check(Capture(items: [[Representation(type: Capture.renamedLatexType, data: Data(latex.json.utf8))]]).kind == .formula, "以前の名前（Pastephant）の数式の型も数式として扱う")
 check(LatexSource.looksLikeLatex("$x^2$") && LatexSource.looksLikeLatex("\\frac{1}{2}") && !LatexSource.looksLikeLatex("ふつうの文章"), "LaTeX らしい文字を見分ける")
 check(LatexSource.stripDelimiters("\\[ x \\]") == "x" && LatexSource.stripDelimiters("$$y$$") == "y", "囲みを外す")
 _ = NSApplication.shared
@@ -257,7 +259,7 @@ case .success(let image)?:
         let capture = Capture(items: [representations])
         var read = capture
         read.latex = nil
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("pastephant-test-latex-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ingoodpaste-test-latex-\(UUID().uuidString)"))
         put([representations.map { ($0.type, $0.data) }], on: pasteboard)
         let captured = Capture.read(from: pasteboard)
         pasteboard.releaseGlobally()
@@ -292,6 +294,15 @@ let todayFormatter = DateFormatter()
 todayFormatter.locale = Locale(identifier: "en_US_POSIX"); todayFormatter.calendar = Calendar(identifier: .gregorian); todayFormatter.dateFormat = "yyyy-MM-dd"
 check(try store2.recent(query: "exported:\(todayFormatter.string(from: exportTime))").map(\.id) == [wordID] && (try store2.recent(query: "exported:2000-01-01")).isEmpty, "exported: でその日に残した物を絞り込む（Tomelet から開くとき）")
 check(!FileManager.default.fileExists(atPath: Dataset.directory(base).appendingPathComponent("lock.json").path), "書き出し終えたら使用中の印を外す")
+// 以前の名前（Pastephant）で書き出したフォルダとDBは、新しい名前へ移す。
+let renamedBase = work.appendingPathComponent("renamed-base").path
+let renamedDatabase = URL(fileURLWithPath: renamedBase).appendingPathComponent(".kobito-tools/Pastephant/database/pastephant.sqlite3")
+try FileManager.default.createDirectory(at: renamedDatabase.deletingLastPathComponent(), withIntermediateDirectories: true)
+try Data("db".utf8).write(to: renamedDatabase)
+try Dataset.ensureDirectories(renamedBase)
+check((try? Data(contentsOf: URL(fileURLWithPath: Dataset.databasePath(renamedBase))))  == Data("db".utf8) && !FileManager.default.fileExists(atPath: renamedDatabase.deletingLastPathComponent().deletingLastPathComponent().path), "以前の名前（Pastephant）の書き出し先を InGoodPaste/ へ移す")
+try FileManager.default.createDirectory(atPath: renamedBase + "/.kobito-tools/Pastephant", withIntermediateDirectories: true)
+check(Dataset.basePath(for: URL(fileURLWithPath: renamedBase).appendingPathComponent(".kobito-tools/Pastephant")) == Dataset.basePath(for: URL(fileURLWithPath: renamedBase)), "以前の名前のフォルダを選んでも基準パスに読み替える")
 print("EXPORT_DB=\(Dataset.databasePath(base))")
 print("EXPORT_MEMO=\(memoID)")
 print("EXPORT_TITLE=\(TomeletExporter.title(for: exportTime))")

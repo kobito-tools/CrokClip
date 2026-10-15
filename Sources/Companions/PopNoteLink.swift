@@ -9,7 +9,7 @@ enum PopNoteLink {
             let mimeType: String
             let base64: String
         }
-        let format = "pastephant-clip"
+        let format = "ingoodpaste-clip"
         let version = 1
         let append: Bool
         let text: String
@@ -22,7 +22,7 @@ enum PopNoteLink {
     @discardableResult
     static func send(text: String, images: [(data: Data, mimeType: String)], append: Bool) throws -> Bool {
         guard isInstalled else { return false }
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Pastephant-PopNote", isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("InGoodPaste-PopNote", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let ext = ["image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/heic": "heic"]
         let payload = Payload(append: append, text: text, images: images.enumerated().map { index, image in

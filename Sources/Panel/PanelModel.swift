@@ -137,7 +137,7 @@ final class PanelModel: ObservableObject {
     private var applyingStyles = false
     /// styles・styleResult がどの項目（と複数選択）のものか。⏎ のときに、いまの選択と合っているかを確かめる。
     private var stylesTarget: [Int] = []
-    private static let loader = DispatchQueue(label: "io.github.kobito-tools.pastephant.preview", qos: .userInitiated, attributes: .concurrent)
+    private static let loader = DispatchQueue(label: "io.github.kobito-tools.ingoodpaste.preview", qos: .userInitiated, attributes: .concurrent)
     /// 矢印キーを押し続けている間は読まない（最後に止まった項目だけ読む）。
     private static let settle: TimeInterval = 0.05
 
@@ -648,7 +648,7 @@ final class PanelModel: ObservableObject {
     /// 編集した物を新しい項目として保存し、貼る（copyOnly なら載せるだけ）。
     func commitEdit(copyOnly: Bool) {
         guard !editText.isEmpty else { NSSound.beep(); return }
-        _ = try? store.saveText(editText, sourceName: "Pastephant（編集）")
+        _ = try? store.saveText(editText, sourceName: "InGoodPaste!（編集）")
         onCommand(.pasteText(editText, copyOnly: copyOnly))
     }
 
@@ -762,7 +762,7 @@ final class PanelModel: ObservableObject {
     /// 貼る。saveAsNew なら新しい項目として保存し、クリップボードに載せるだけにする。
     func commitMerge(saveAsNew: Bool) {
         guard !mergePreview.isEmpty else { NSSound.beep(); return }
-        if saveAsNew { _ = try? store.saveText(mergePreview, sourceName: "Pastephant（まとめ）") }
+        if saveAsNew { _ = try? store.saveText(mergePreview, sourceName: "InGoodPaste!（まとめ）") }
         onCommand(.pasteText(mergePreview, copyOnly: saveAsNew))
     }
 

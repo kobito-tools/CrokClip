@@ -1,13 +1,13 @@
 #!/bin/zsh
 # 取得・保存・書き戻し・整理・改行の処理を、本物の NSPasteboard（名前付き）と一時フォルダで確かめる。
-# 実際のクリップボードと履歴（~/Library/Application Support/Pastephant）には触れない。
+# 実際のクリップボードと履歴（~/Library/Application Support/InGoodPaste）には触れない。
 set -euo pipefail
 cd "${0:A:h}/.."
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-# PastephantApp.swift（@main）以外をハーネスと一緒にコンパイルする。
+# InGoodPasteApp.swift（@main）以外をハーネスと一緒にコンパイルする。
 sources=(Sources/**/*.swift)
-sources=(${sources:#Sources/PastephantApp.swift})
+sources=(${sources:#Sources/InGoodPasteApp.swift})
 if ! xcrun swiftc -o "$work/harness" $sources tests/harness/main.swift \
   -framework Cocoa -framework SwiftUI -framework Carbon -framework WebKit -framework PDFKit -framework Vision -framework Quartz -framework ServiceManagement -lsqlite3 > "$work/build.log" 2>&1; then
   cat "$work/build.log"; exit 1

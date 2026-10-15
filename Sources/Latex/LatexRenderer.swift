@@ -123,7 +123,7 @@ final class LatexRenderer: NSObject, WKNavigationDelegate {
         var attributes = document.documentAttributes ?? [:]
         attributes[PDFDocumentAttribute.keywordsAttribute] = latex.embedded
         attributes[PDFDocumentAttribute.subjectAttribute] = latex.source
-        attributes[PDFDocumentAttribute.creatorAttribute] = "Pastephant"
+        attributes[PDFDocumentAttribute.creatorAttribute] = "InGoodPaste!"
         document.documentAttributes = attributes
         guard let pdf = document.dataRepresentation() else { throw LatexError(message: "数式の PDF を作れませんでした。") }
         let bounds = page.bounds(for: .mediaBox)

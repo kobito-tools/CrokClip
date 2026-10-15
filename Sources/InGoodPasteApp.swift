@@ -2,12 +2,12 @@ import AppKit
 import Carbon
 import ServiceManagement
 
-// Pastephant — コピーした物を忘れない象。クリップボードの履歴をこのMacに保存し、⌥⌘V で画面の端から呼び出す。
-// Dock には出さず、メニューバーに常駐する（LSUIElement）。pastephant:// でも呼べる（F-18）。
+// InGoodPaste! — コック帽の小人が味見してから貼る（in good taste）。クリップボードの履歴をこのMacに保存し、⌥⌘V で画面の端から呼び出す。
+// Dock には出さず、メニューバーに常駐する（LSUIElement）。ingoodpaste:// でも呼べる（F-18）。
 
 @main
 @MainActor
-struct PastephantApplication {
+struct InGoodPasteApplication {
     static func main() {
         let application = NSApplication.shared
         let delegate = AppDelegate()
@@ -36,9 +36,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var launched = false
     private var ocrRunning = false
     /// 保存・整理・タグの同期・書き出しは裏の1本のキューで順に行う。
-    private let storeQueue = DispatchQueue(label: "io.github.kobito-tools.pastephant.store", qos: .utility)
+    private let storeQueue = DispatchQueue(label: "io.github.kobito-tools.ingoodpaste.store", qos: .utility)
     /// 文字認識は重いので別のキューで行う。
-    private let ocrQueue = DispatchQueue(label: "io.github.kobito-tools.pastephant.ocr", qos: .background)
+    private let ocrQueue = DispatchQueue(label: "io.github.kobito-tools.ingoodpaste.ocr", qos: .background)
 
     // MARK: - 起動
 
@@ -106,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let id = try store.save(capture, maxItemBytes: maxItemBytes).id
                 for name in autoTags { try store.addTag(try store.findOrCreateTag(name), to: [id], source: "auto") }
                 savedID = id
-            } catch { NSLog("Pastephant: 保存できませんでした: \(error)") }
+            } catch { NSLog("InGoodPaste: 保存できませんでした: \(error)") }
             DispatchQueue.main.async {
                 guard let self else { return }
                 if let savedID, self.stack.isActive { self.stack.push([savedID]) }
@@ -182,7 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let basePath = settings.basePath, (try? Dataset.read(basePath)) != nil else { return }
         let store = store!
         storeQueue.async {
-            do { try store.syncTags(basePath: basePath) } catch { NSLog("Pastephant: 共有タグを同期できません: \(error)") }
+            do { try store.syncTags(basePath: basePath) } catch { NSLog("InGoodPaste: 共有タグを同期できません: \(error)") }
         }
     }
 
@@ -226,7 +226,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     self?.panel.refreshIfVisible()
                 case .failure(let error):
                     let message = (error as? StoreError)?.message ?? "\(error)"
-                    if automatic { NSLog("Pastephant: Tomelet に残せませんでした: \(message)") }
+                    if automatic { NSLog("InGoodPaste: Tomelet に残せませんでした: \(message)") }
                     else { self?.alert("Tomelet に残せませんでした", message) }
                 }
             }
@@ -358,7 +358,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - URL（OpenSesame! などから。F-18）
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        for url in urls where url.scheme?.lowercased() == "pastephant" {
+        for url in urls where url.scheme?.lowercased() == "ingoodpaste" {
             if launched { handle(url) } else { pendingURLs.append(url) }
         }
     }
@@ -400,7 +400,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateStatusIcon() {
         let name = stack?.isActive == true ? "square.stack.3d.up.fill" : watcher.effectivelyPaused ? "pause.rectangle" : "list.clipboard"
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Pastephant")
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "InGoodPaste!")
         image?.isTemplate = true
         statusItem?.button?.image = image
     }
@@ -435,7 +435,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(item("今すぐ整理", #selector(cleanupFromMenu)))
         menu.addItem(item("設定…", #selector(openSettings), key: ","))
         menu.addItem(.separator())
-        menu.addItem(item("Pastephant を終了", #selector(quit), key: "q"))
+        menu.addItem(item("InGoodPaste! を終了", #selector(quit), key: "q"))
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
