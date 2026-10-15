@@ -363,5 +363,19 @@ MainActor.assumeIsolated {
     if case .paste(let ids, let mode)? = commands.last { check(ids == [textID] && mode == .joinLines, "⇥ で選んだ貼り方で貼る") } else { check(false, "⇥ で選んだ貼り方で貼る") }
 }
 
+// 18. kobito シリーズの約束：④ 起動情報と、受け付ける URL
+check(Series.directory.path == ProcessInfo.processInfo.environment["KOBITO_CONFIG_DIR"], "PC 固有領域は KOBITO_CONFIG_DIR で変えられる")
+try Series.writeLaunchInfo(bundleID: "io.github.kobito-tools.ingoodpaste")
+let launchJSON = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Series.appsDirectory.appendingPathComponent("ingoodpaste.json")))) as? [String: Any]
+check(launchJSON?["app"] as? String == "ingoodpaste" && launchJSON?["name"] as? String == "InGoodPaste!" && launchJSON?["command"] as? [String] == ["/usr/bin/open", "-b", "io.github.kobito-tools.ingoodpaste"], "起動情報を書き出す（open -b <バンドルID>）")
+check(launchJSON?["embed"] == nil && launchJSON?["receive"] == nil, "起動情報に embed・receive は持たない")
+check(Series.launchInfos().map(\.app) == ["ingoodpaste"], "書いた起動情報を約束どおりに読める")
+check(Series.route(URL(string: "kobito://ingoodpaste/day/2026-10-15")!) == .day("2026-10-15"), "kobito://ingoodpaste/day/<日付> を受け付ける")
+check(Series.route(URL(string: "kobito://ingoodpaste/open/42?dataset=abc")!) == .open(42), "kobito://ingoodpaste/open/<ID> を受け付ける")
+check(Series.route(URL(string: "kobito://ingoodpaste/day/昨日")!) == .panel && Series.route(URL(string: "kobito://ingoodpaste")!) == .panel, "知らない形はパネルを開くだけ")
+check(Series.route(URL(string: "kobito://another/open/1")!) == nil && Series.route(URL(string: "ingoodpaste://open")!) == nil, "ほかのアプリ宛ての URL は受け取らない")
+check(try store2.recent(query: "id:\(wordID)").map(\.id) == [wordID], "id: でその項目だけにする")
+check(Series.timestamp(Date(timeIntervalSince1970: 0)).range(of: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})$", options: .regularExpression) != nil, "日時は時差付きの ISO 8601")
+
 print(failures == 0 ? "すべて成功" : "\(failures) 件失敗")
 exit(failures == 0 ? 0 : 1)

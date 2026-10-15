@@ -3,12 +3,17 @@ import Carbon
 import ServiceManagement
 
 // InGoodPaste! — コック帽の小人が味見してから貼る（in good taste）。クリップボードの履歴をこのMacに保存し、⌥⌘V で画面の端から呼び出す。
-// Dock には出さず、メニューバーに常駐する（LSUIElement）。ingoodpaste:// でも呼べる（F-18）。
+// Dock には出さず、メニューバーに常駐する（LSUIElement）。ingoodpaste:// と、kobito シリーズの約束の kobito://ingoodpaste/… で呼べる（F-18）。
 
 @main
 @MainActor
 struct InGoodPasteApplication {
     static func main() {
+        // 起動情報（④）だけを書いて終わる（開発中に約束の確かめに使う。履歴やクリップボードには触れない）。
+        if CommandLine.arguments.contains("--write-launch-info") {
+            do { try Series.writeLaunchInfo(bundleID: Bundle.main.bundleIdentifier ?? Series.defaultBundleID); exit(0) }
+            catch { FileHandle.standardError.write(Data("\(error)\n".utf8)); exit(1) }
+        }
         let application = NSApplication.shared
         let delegate = AppDelegate()
         application.delegate = delegate
@@ -41,6 +46,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let ocrQueue = DispatchQueue(label: "io.github.kobito-tools.ingoodpaste.ocr", qos: .background)
 
     // MARK: - 起動
+
+    /// URL は「URL を開く」Apple Event で届く。未起動から開かれたときは didFinishLaunching より前に届くので、ここで受け口を作る。
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(handleGetURL(_:withReply:)),
+                                                     forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL))
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let directory = ClipStore.defaultDirectory
@@ -83,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         registerHotKeys(alertOnFailure: true)
         configureStatusItem()
+        writeLaunchInfo()
 
         // 期限切れの整理は、起動時と1時間ごとに行う。文字認識の残りと共有タグもここで進める。
         runCleanup()
@@ -355,15 +367,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    // MARK: - URL（OpenSesame! などから。F-18）
+    // MARK: - URL（F-18）
 
-    func application(_ application: NSApplication, open urls: [URL]) {
-        for url in urls where url.scheme?.lowercased() == "ingoodpaste" {
-            if launched { handle(url) } else { pendingURLs.append(url) }
-        }
+    /// ④ 起動情報。workspace などが、これを使って InGoodPaste! を起動し、kobito://ingoodpaste/… を渡す。
+    private func writeLaunchInfo() {
+        do { try Series.writeLaunchInfo(bundleID: Bundle.main.bundleIdentifier ?? Series.defaultBundleID) }
+        catch { NSLog("InGoodPaste: 起動情報を書き出せません: \(error)") }
+    }
+
+    @objc private func handleGetURL(_ event: NSAppleEventDescriptor, withReply reply: NSAppleEventDescriptor) {
+        guard let text = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue, let url = URL(string: text) else { return }
+        let scheme = url.scheme?.lowercased()
+        // kobito:// はこのアプリ宛て（kobito://ingoodpaste/…）だけを受け取る。
+        guard scheme == "ingoodpaste" || Series.route(url) != nil else { return }
+        if launched { handle(url) } else { pendingURLs.append(url) }
     }
 
     private func handle(_ url: URL) {
+        if url.scheme?.lowercased() == "kobito" { handleSeriesURL(url); return }
         let parameters = Dictionary((URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []).map { ($0.name, $0.value ?? "") }) { _, last in last }
         let path = ([url.host ?? ""] + url.pathComponents.filter { $0 != "/" }).filter { !$0.isEmpty }.map { $0.lowercased() }
         switch path.first {
@@ -385,6 +406,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "resume": setPaused(false, until: nil)
         case "settings": settingsWindow.show()
         default: panel.show()
+        }
+    }
+
+    private func handleSeriesURL(_ url: URL) {
+        switch Series.route(url) {
+        case .day(let day): panel.show(query: "kept:\(day)")
+        case .open(let id): panel.show(query: "id:\(id)")
+        case .panel, nil: panel.show()
         }
     }
 

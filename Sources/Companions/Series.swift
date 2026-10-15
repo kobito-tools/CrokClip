@@ -1,0 +1,179 @@
+import Foundation
+
+/// kobito シリーズの約束（kobito-workspace の docs/CONTRACTS.md）のうち、PC 固有領域に置くもの。
+///
+///   ~/Library/Application Support/kobito-tools/
+///     apps/<アプリID>.json   ④ 起動情報（自分の分を起動のたびに書き、ほかの分は「送る」の送り先を作るのに読む）
+///     datasets.json          ⑥ 基準パスの履歴（基準パスの候補にし、開いたら自分の1件を書く）
+///
+/// テストでは実際の設定に触れないよう、環境変数 KOBITO_CONFIG_DIR で場所を変えられる（シリーズ共通の決まり）。
+/// ほかのアプリの名前は書かない。何ができるかは、実行時に起動情報から知る。
+enum Series {
+    static let appID = "ingoodpaste"
+    static let appName = "InGoodPaste!"
+    static let defaultBundleID = "io.github.kobito-tools.ingoodpaste"
+
+    static var directory: URL {
+        if let override = ProcessInfo.processInfo.environment["KOBITO_CONFIG_DIR"], !override.isEmpty {
+            return URL(fileURLWithPath: override, isDirectory: true)
+        }
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return support.appendingPathComponent("kobito-tools", isDirectory: true)
+    }
+
+    static var appsDirectory: URL { directory.appendingPathComponent("apps", isDirectory: true) }
+    static var datasetsFile: URL { directory.appendingPathComponent("datasets.json") }
+
+    // MARK: - 共通
+
+    /// このMacの時差つきの ISO 8601（約束③・⑥・⑦の日時）。例：2026-10-15T09:00:00+09:00
+    static func timestamp(_ date: Date = Date()) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.timeZone = .current
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: date)
+    }
+
+    /// その日の YYYY-MM-DD（このMacの日付。和暦の設定でも西暦）。
+    static func day(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    /// 一時ファイルに書いてから置き換える（途中で止まっても壊れたファイルを残さない）。権限は 600。
+    static func writeAtomic(_ data: Data, to url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let temporary = url.deletingLastPathComponent().appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString.lowercased()).tmp")
+        guard FileManager.default.createFile(atPath: temporary.path, contents: data, attributes: [.posixPermissions: 0o600]) else {
+            throw StoreError(status: 500, message: "\(url.path) を書き込めません。")
+        }
+        guard rename(temporary.path, url.path) == 0 else {
+            let message = String(cString: strerror(errno))
+            try? FileManager.default.removeItem(at: temporary)
+            throw StoreError(status: 500, message: "\(url.path) を置き換えられません（\(message)）。")
+        }
+    }
+
+    static func writeJSON(_ value: Any, to url: URL) throws {
+        var data = try JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        data.append(0x0a)
+        try writeAtomic(data, to: url)
+    }
+
+    private static func readJSON(_ url: URL) -> [String: Any]? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+
+    // MARK: - ④ 起動情報
+
+    /// 受け渡しの口（receive）の1つ。
+    struct Receive: Equatable {
+        let id: String
+        let label: String
+        let accepts: Set<String>
+        let url: String
+    }
+
+    /// 起動情報1件（読む側で使う項目だけ）。
+    struct LaunchInfo: Equatable {
+        let app: String
+        let name: String
+        let command: [String]
+        let receive: [Receive]
+    }
+
+    static let shareKinds: Set<String> = ["text", "image", "file"]
+
+    /// 自分の起動情報を書く。起動のたびに呼ぶ（入れ替えてバンドルIDや場所が変わっても追いつくように）。
+    /// embed・receive は持たない（workspace の中には表示せず、受け渡しも受け付けない）。
+    static func writeLaunchInfo(bundleID: String) throws {
+        let record: [String: Any] = ["app": appID, "name": appName, "command": ["/usr/bin/open", "-b", bundleID]]
+        try writeJSON(record, to: appsDirectory.appendingPathComponent("\(appID).json"))
+    }
+
+    /// 起動情報を確かめる。必須の項目が欠けていれば nil。形の合わない口だけを捨てる。
+    static func launchInfo(_ object: [String: Any]) -> LaunchInfo? {
+        guard let app = object["app"] as? String, app.range(of: "^[a-z][a-z0-9-]{0,39}$", options: .regularExpression) != nil,
+              let name = object["name"] as? String, !name.isEmpty,
+              let command = object["command"] as? [String], !command.isEmpty, command.allSatisfy({ !$0.isEmpty }) else { return nil }
+        let receive = (object["receive"] as? [Any] ?? []).compactMap { item -> Receive? in
+            guard let item = item as? [String: Any], let id = item["id"] as? String, !id.isEmpty,
+                  let label = item["label"] as? String, !label.isEmpty,
+                  let accepts = item["accepts"] as? [Any], let url = item["url"] as? String,
+                  url.hasPrefix("kobito://"), url.contains("{file}") else { return nil }
+            let kinds = Set(accepts.compactMap { $0 as? String }).intersection(shareKinds)
+            return kinds.isEmpty ? nil : Receive(id: id, label: label, accepts: kinds, url: url)
+        }
+        return LaunchInfo(app: app, name: name, command: command, receive: receive)
+    }
+
+    /// このMacのすべての起動情報。ファイル名とアプリIDが合わないもの・読めないものは捨てる。
+    static func launchInfos() -> [LaunchInfo] {
+        let files = (try? FileManager.default.contentsOfDirectory(at: appsDirectory, includingPropertiesForKeys: nil)) ?? []
+        return files.filter { $0.pathExtension == "json" }.sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { file in
+            guard let info = readJSON(file).flatMap(launchInfo), info.app == file.deletingPathExtension().lastPathComponent else { return nil }
+            return info
+        }
+    }
+
+    // MARK: - 受け付ける URL
+
+    enum Route: Equatable {
+        /// kobito://ingoodpaste/day/<YYYY-MM-DD>：その日に残したクリップで絞り込む。
+        case day(String)
+        /// kobito://ingoodpaste/open/<クリップID>：そのクリップを選ぶ。
+        case open(Int)
+        /// そのほか：パネルを開くだけ。
+        case panel
+    }
+
+    /// 自分宛て（kobito://ingoodpaste/…）の URL を読む。ほかのアプリ宛てなら nil。
+    /// 一度受け付けた形は、作りを変えても受け付け続ける（約束②）。
+    static func route(_ url: URL) -> Route? {
+        guard url.scheme?.lowercased() == "kobito", url.host?.lowercased() == appID else { return nil }
+        let path = url.pathComponents.filter { $0 != "/" }
+        switch (path.first?.lowercased(), path.dropFirst().first) {
+        case ("day", let day?) where day.range(of: "^\\d{4}-\\d{2}-\\d{2}$", options: .regularExpression) != nil: return .day(day)
+        case ("open", let id?) where Int(id) != nil: return .open(Int(id)!)
+        default: return .panel
+        }
+    }
+
+    // MARK: - ⑥ 基準パスの履歴
+
+    struct DatasetEntry: Equatable {
+        let path: String
+        let id: String
+        let app: String
+        let opened: String
+    }
+
+    static let maxDatasetEntries = 50
+
+    private static func datasetEntries() -> [DatasetEntry] {
+        (readJSON(datasetsFile)?["datasets"] as? [Any] ?? []).compactMap { item in
+            guard let item = item as? [String: Any], let path = item["path"] as? String, !path.isEmpty, let id = item["id"] as? String, !id.isEmpty,
+                  let app = item["app"] as? String, !app.isEmpty, let opened = item["opened"] as? String, !opened.isEmpty else { return nil }
+            return DatasetEntry(path: path, id: id, app: app, opened: opened)
+        }
+    }
+
+    /// 基準パスを開いたときに呼ぶ。読み直して自分の1件を先頭に足し、同じ path は1件にまとめる。
+    static func recordDataset(path: String, id: String, now: Date = Date()) throws {
+        let entry = DatasetEntry(path: path, id: id, app: appID, opened: timestamp(now))
+        let entries = ([entry] + datasetEntries().filter { $0.path != path }).prefix(maxDatasetEntries)
+        let record: [String: Any] = ["v": 1, "datasets": entries.map { ["path": $0.path, "id": $0.id, "app": $0.app, "opened": $0.opened] }]
+        try writeJSON(record, to: datasetsFile)
+    }
+
+    /// 今も .kobito-tools/dataset.json がある基準パスを、最後に開いた順に返す（保存先を選ぶ画面の候補）。
+    static func datasetCandidates() -> [DatasetEntry] {
+        datasetEntries()
+            .sorted { (Dataset.parseTimestamp($0.opened) ?? .distantPast) > (Dataset.parseTimestamp($1.opened) ?? .distantPast) }
+            .filter { FileManager.default.fileExists(atPath: Dataset.root($0.path).appendingPathComponent("dataset.json").path) }
+    }
+}
