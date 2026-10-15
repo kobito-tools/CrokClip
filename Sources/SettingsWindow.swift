@@ -345,11 +345,15 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
-                TagChips(tags: $model.settings.autoExportTags, available: model.availableTags)
+                Toggle("「workspace に残す」を使う（⌘S）", isOn: $model.settings.workspaceKeep)
+                if model.settings.workspaceKeep {
+                    Text("自動で残すタグ").font(.system(size: 12, weight: .medium))
+                    TagChips(tags: $model.settings.autoExportTags, available: model.availableTags)
+                }
             } header: {
-                Text("自動で Tomelet に残すタグ")
+                Text("workspace に残す")
             } footer: {
-                Text("ここで選んだタグをクリップに付けると、⌘S を押さなくても、その日の「○月○日のクリップ」のメモに自動で加わります。例：#論文 を選んでおくと、論文のリンクにタグを付けるだけで Tomelet の日々の記録に残ります。基準パスを選んでいるときだけ働きます。")
+                Text("⌘S で残したクリップは、日ごとに「10月15日のクリップ」という1枚のカードになり、kobito-workspace の HOME・カレンダー・検索に並びます。カードを押すと、その日に残したクリップでパネルが開きます。「自動で残すタグ」を選んでおくと、そのタグを付けるだけで残ります（例：#論文）。基準パスを選んでいるときだけ働きます。workspace を使わないなら、オフにすると操作の一覧からも消えます。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {

@@ -275,7 +275,7 @@ Task { @MainActor in
 while broken == nil, Date() < deadline.addingTimeInterval(10) { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
 if case .failure(let error)? = broken { check(error is LatexError, "書き方の誤りを知らせる（\(error)）") } else { check(false, "書き方の誤りを知らせる") }
 
-// 14. 共有タグと Tomelet への書き出し（F-04・F-17）
+// 14. 共有タグと workspace に残す（F-04・F-17）
 let base = work.appendingPathComponent("base").path
 try FileManager.default.createDirectory(atPath: base, withIntermediateDirectories: true)
 _ = try Dataset.create(base, datasetId: "テスト")
@@ -284,28 +284,57 @@ try store2.addTag(exportTag, to: [wordID])
 try store2.syncTags(basePath: base)
 let tagsJSON = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Dataset.tagsFile(base)))) as? [String: Any]
 check((tagsJSON?["tags"] as? [[String: Any]])?.contains { $0["name"] as? String == "書き出し" } == true, "共有タグ（tags.json）に書き出す")
-let exporter = TomeletExporter(schemaDirectory: schema.appendingPathComponent("tomelet"))
-let exportTime = Date()
-let memoID = try exporter.export([TomeletExporter.Item(clipID: safariID, copiedAt: exportTime, appName: "Safari", tags: ["書き出し"], text: "https://arxiv.org/abs/1234\n<b>", latex: nil, filePaths: [], ocrText: nil, image: (makePNG(width: 10, height: 10), "image/png"))], basePath: base, now: exportTime)
-let again2 = try exporter.export([TomeletExporter.Item(clipID: wordID, copiedAt: exportTime, appName: "Word", tags: [], text: "2件目", latex: nil, filePaths: [], ocrText: nil, image: nil)], basePath: base, now: exportTime)
-check(memoID == again2, "同じ日の書き出しは1つのメモに追記する")
-try store2.markExported([wordID], at: exportTime)
-let todayFormatter = DateFormatter()
-todayFormatter.locale = Locale(identifier: "en_US_POSIX"); todayFormatter.calendar = Calendar(identifier: .gregorian); todayFormatter.dateFormat = "yyyy-MM-dd"
-check(try store2.recent(query: "exported:\(todayFormatter.string(from: exportTime))").map(\.id) == [wordID] && (try store2.recent(query: "exported:2000-01-01")).isEmpty, "exported: でその日に残した物を絞り込む（Tomelet から開くとき）")
-check(!FileManager.default.fileExists(atPath: Dataset.directory(base).appendingPathComponent("lock.json").path), "書き出し終えたら使用中の印を外す")
+// 以前の書き出し先（日ごとのメモの DB）に、9月28日の分が残っている。
+let legacy = try SQLiteDatabase(path: Dataset.legacyDatabasePath(base), journal: .delete)
+try legacy.exec("""
+CREATE TABLE memos (id TEXT PRIMARY KEY, title TEXT, body_html TEXT, body_text TEXT, created_at TEXT, updated_at TEXT, deleted_at TEXT);
+CREATE TABLE memo_tags (memo_id TEXT, tag_id TEXT);
+INSERT INTO memos VALUES ('memo-old', '09月28日のクリップ', '<div>x</div>', '10:00・Safari\n以前に残した文字', '2026-09-28T01:00:00.000Z', '2026-09-28T03:00:00.000Z', NULL);
+INSERT INTO memos VALUES ('memo-gone', '09月29日のクリップ', '', '消したメモ', '2026-09-29T01:00:00.000Z', '2026-09-29T01:00:00.000Z', '2026-09-30T00:00:00.000Z');
+INSERT INTO memo_tags VALUES ('memo-old', 'tag-old');
+""")
+let keptSchema = schema.appendingPathComponent("kept")
+let keepTime = Date()
+let today = Series.day(keepTime)
+func entry(_ id: Int, text: String, tags: [Tag], image: Data? = nil) -> WorkspaceCards.Entry {
+    WorkspaceCards.Entry(clipID: id, copiedAt: keepTime, appName: "Safari", tagNames: tags.map(\.name), tagIDs: tags.map(\.id), text: text, latex: nil, filePaths: [], ocrText: nil, image: image)
+}
+try WorkspaceCards.keep([entry(safariID, text: "https://arxiv.org/abs/1234", tags: [exportTag], image: makePNG(width: 10, height: 10))], basePath: base, schemaDirectory: keptSchema, now: keepTime)
+try WorkspaceCards.keep([entry(wordID, text: "2件目", tags: [exportTag]), entry(safariID, text: "https://arxiv.org/abs/1234 直した", tags: [exportTag])], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(1))
+try store2.markExported([wordID], at: keepTime)
+let cardLines = (try? String(contentsOf: WorkspaceCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").map(String.init) ?? []
+let cardList = cardLines.compactMap { (try? JSONSerialization.jsonObject(with: Data($0.utf8))) as? [String: Any] }
+check(cardList.map { $0["id"] as? String } == ["clips-2026-09-28", "clips-\(today)"], "日ごとに1枚のカードを書く（以前の書き出し先から移した日と、今日。消したメモは移さない）")
+let todayCard = cardList.last ?? [:]
+check(todayCard["v"] as? Int == 1 && todayCard["app"] as? String == "ingoodpaste" && todayCard["kind"] as? String == "クリップ" && todayCard["date"] as? String == today, "カードは約束③の形（v・app・kind・date）")
+check(todayCard["title"] as? String == WorkspaceCards.title(day: today) && WorkspaceCards.title(day: "2026-10-05") == "10月5日のクリップ", "見出しは「10月5日のクリップ」")
+check(todayCard["url"] as? String == "kobito://ingoodpaste/day/\(today)" && Series.route(URL(string: todayCard["url"] as! String)!) == .day(today), "カードの URL で、その日に残した物を開ける")
+check(todayCard["tags"] as? [String] == [exportTag.id], "タグは tags.json のタグID（重複を除く）")
+check((todayCard["text"] as? String).map { $0.contains("直した") && $0.contains("2件目") && !$0.contains("abs/1234\n") } == true, "同じ項目をもう一度残したら中身を新しくする")
+check((todayCard["updated"] as? String).map { Dataset.parseTimestamp($0) != nil && $0.range(of: "(Z|[+-]\\d{2}:\\d{2})$", options: .regularExpression) != nil } == true, "更新日時は時差付き")
+check(cardList.first?["tags"] as? [String] == ["tag-old"] && (cardList.first?["text"] as? String)?.contains("以前に残した文字") == true, "以前の書き出し先のメモを、文字とタグごと移す")
+let uploads = (try? FileManager.default.contentsOfDirectory(atPath: Dataset.uploadsDirectory(base).path)) ?? []
+check(uploads.count == 1 && uploads[0].hasSuffix(".png"), "画像は PNG で uploads/ に保存する（カードには入れない）")
+check(cardLines.allSatisfy { !$0.contains("base64") && !$0.contains("\\/") }, "カードは1行1件の JSON")
+let longText = String(repeating: "あ", count: 2500)
+try WorkspaceCards.keep([entry(snippetID, text: longText, tags: [])], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(2))
+let longCard = ((try? String(contentsOf: WorkspaceCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").last).flatMap { (try? JSONSerialization.jsonObject(with: Data($0.utf8))) as? [String: Any] }
+check((longCard?["text"] as? String)?.unicodeScalars.count == 2000, "本文は2000文字まで")
+try WorkspaceCards.refresh(basePath: base, schemaDirectory: keptSchema)
+check(((try? String(contentsOf: WorkspaceCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").count) == 2, "書き直しても移し替えは一度だけ")
+check(try store2.recent(query: "kept:\(today)").map(\.id) == [wordID] && (try store2.recent(query: "exported:\(today)").map(\.id)) == [wordID] && (try store2.recent(query: "kept:2000-01-01")).isEmpty, "kept: でその日に残した物を絞り込む（カードから開くとき）")
+check(!FileManager.default.fileExists(atPath: Dataset.directory(base).appendingPathComponent("lock.json").path), "残し終えたら使用中の印を外す")
 // 以前の名前（Pastephant）で書き出したフォルダとDBは、新しい名前へ移す。
 let renamedBase = work.appendingPathComponent("renamed-base").path
 let renamedDatabase = URL(fileURLWithPath: renamedBase).appendingPathComponent(".kobito-tools/Pastephant/database/pastephant.sqlite3")
 try FileManager.default.createDirectory(at: renamedDatabase.deletingLastPathComponent(), withIntermediateDirectories: true)
 try Data("db".utf8).write(to: renamedDatabase)
 try Dataset.ensureDirectories(renamedBase)
-check((try? Data(contentsOf: URL(fileURLWithPath: Dataset.databasePath(renamedBase))))  == Data("db".utf8) && !FileManager.default.fileExists(atPath: renamedDatabase.deletingLastPathComponent().deletingLastPathComponent().path), "以前の名前（Pastephant）の書き出し先を InGoodPaste/ へ移す")
+check((try? Data(contentsOf: URL(fileURLWithPath: Dataset.legacyDatabasePath(renamedBase))))  == Data("db".utf8) && !FileManager.default.fileExists(atPath: renamedDatabase.deletingLastPathComponent().deletingLastPathComponent().path), "以前の名前（Pastephant）の書き出し先を InGoodPaste/ へ移す")
 try FileManager.default.createDirectory(atPath: renamedBase + "/.kobito-tools/Pastephant", withIntermediateDirectories: true)
 check(Dataset.basePath(for: URL(fileURLWithPath: renamedBase).appendingPathComponent(".kobito-tools/Pastephant")) == Dataset.basePath(for: URL(fileURLWithPath: renamedBase)), "以前の名前のフォルダを選んでも基準パスに読み替える")
-print("EXPORT_DB=\(Dataset.databasePath(base))")
-print("EXPORT_MEMO=\(memoID)")
-print("EXPORT_TITLE=\(TomeletExporter.title(for: exportTime))")
+print("KEPT_DB=\(Dataset.keptDatabasePath(base))")
+print("CARDS=\(WorkspaceCards.cardsFile(base).path)")
 
 // 15. 貼り方（⇥）：項目の中身に合う物だけを並べる
 func styleIDs(_ kind: ClipKind, _ context: TransformContext?, combos: [TransformCombo] = [], multiple: Bool = false) -> [String] {

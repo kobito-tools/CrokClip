@@ -32,8 +32,6 @@ enum Dataset {
     static let legacyDirectoryName = ".TickTockTome"
     static let format = "kobito-tools-dataset"
     static let subdirectories = ["database", "uploads"]
-    /// 書き出しに必要なDB更新（メモの表）。
-    static let requiredMigration = "015_memos.sql"
 
     // MARK: - 場所と識別子
 
@@ -60,7 +58,11 @@ enum Dataset {
 
     static func tagsFile(_ basePath: String) -> URL { root(basePath).appendingPathComponent("Tags", isDirectory: true).appendingPathComponent("tags.json") }
 
-    static func databasePath(_ basePath: String) -> String { directory(basePath).appendingPathComponent("database").appendingPathComponent("ingoodpaste.sqlite3").path }
+    /// workspace に残したクリップ（WorkspaceCards）。
+    static func keptDatabasePath(_ basePath: String) -> String { directory(basePath).appendingPathComponent("database").appendingPathComponent("kept.sqlite3").path }
+
+    /// 以前の書き出し先の DB。初めて kept.sqlite3 を開いたときに中身を移す（WorkspaceCards.importLegacy）。
+    static func legacyDatabasePath(_ basePath: String) -> String { directory(basePath).appendingPathComponent("database").appendingPathComponent("ingoodpaste.sqlite3").path }
 
     private static func datasetFile(_ basePath: String) -> URL { root(basePath).appendingPathComponent("dataset.json") }
 
@@ -133,33 +135,9 @@ enum Dataset {
         let legacyDatabase = database.appendingPathComponent("pastephant.sqlite3")
         if manager.fileExists(atPath: legacyDatabase.path) {
             for suffix in ["", "-journal"] where manager.fileExists(atPath: legacyDatabase.path + suffix) {
-                try manager.moveItem(atPath: legacyDatabase.path + suffix, toPath: databasePath(basePath) + suffix)
+                try manager.moveItem(atPath: legacyDatabase.path + suffix, toPath: legacyDatabasePath(basePath) + suffix)
             }
         }
-    }
-
-    // MARK: - データベース
-
-    /// 新しいDBは本体と同じDB更新（アプリに同梱したmigrations）で作る。既存のDBは更新せず、メモの表があるかだけを確かめる。
-    /// 表の形を本体と同じにしておくと、本体は PopNote! のメモと同じように読み取り専用で開いて表示できる。
-    static func openDatabase(_ basePath: String, schemaDirectory: URL) throws -> SQLiteDatabase {
-        try ensureDirectories(basePath)
-        let database = try SQLiteDatabase(path: databasePath(basePath), journal: .delete)
-        try database.exec("CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL) STRICT;")
-        let applied = Set(try database.query("SELECT version FROM schema_migrations").compactMap { $0["version"] as? String })
-        if applied.contains(requiredMigration) { return database }
-        guard applied.isEmpty, try database.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'schema_migrations'").isEmpty else {
-            throw StoreError(status: 409, message: "書き出し先のデータを読み取れません（DB更新の記録がありません）。")
-        }
-        let files = (try FileManager.default.contentsOfDirectory(atPath: schemaDirectory.path)).filter { $0.range(of: "^\\d+_[A-Za-z0-9_-]+\\.sql$", options: .regularExpression) != nil }.sorted()
-        for file in files {
-            let sql = try String(contentsOf: schemaDirectory.appendingPathComponent(file), encoding: .utf8)
-            try database.transaction {
-                try database.exec(sql)
-                try database.run("INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)", file, timestamp())
-            }
-        }
-        return database
     }
 
     // MARK: - 共通

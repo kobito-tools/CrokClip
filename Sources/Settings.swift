@@ -79,9 +79,11 @@ struct Settings: Codable, Equatable {
     var latexMacros = ""
     /// ペーストスタックを積んだ逆の順（新しい物から）に貼るか（F-14）。
     var reverseStack = false
-    /// 共有タグと Tomelet への書き出しに使う基準パス（任意）。
+    /// 共有タグと「workspace に残す」に使う基準パス（任意）。
     var basePath: String?
-    /// このタグが付いたら、Tomelet へ自動で書き出す（F-17）。
+    /// 「workspace に残す」（⌘S・自動で残すタグ）を使うか（F-17）。使わない人は設定で隠せる。
+    var workspaceKeep = true
+    /// このタグが付いたら、workspace に自動で残す（F-17）。
     var autoExportTags: [String] = []
     /// 最後に使った送り先（「アプリID/口のID」。F-16）。⌥⇧⌘N で一覧を出さずにここへ送る。
     var lastShareTarget: String?
@@ -105,7 +107,7 @@ struct Settings: Codable, Equatable {
         read(.retentionDays, &s.retentionDays); read(.maxItems, &s.maxItems); read(.maxTotalBytes, &s.maxTotalBytes); read(.maxItemBytes, &s.maxItemBytes)
         read(.expireTagged, &s.expireTagged); read(.transformCombos, &s.transformCombos)
         read(.latexPresets, &s.latexPresets); read(.latexOptions, &s.latexOptions); read(.latexMacros, &s.latexMacros)
-        read(.reverseStack, &s.reverseStack); read(.autoExportTags, &s.autoExportTags)
+        read(.reverseStack, &s.reverseStack); read(.workspaceKeep, &s.workspaceKeep); read(.autoExportTags, &s.autoExportTags)
         s.basePath = try? c.decode(String.self, forKey: .basePath)
         s.lastShareTarget = try? c.decode(String.self, forKey: .lastShareTarget)
         self = s

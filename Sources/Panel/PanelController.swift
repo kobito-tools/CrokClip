@@ -202,7 +202,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         switch command {
         case .paste, .copyOnly, .pasteText, .pasteLatex, .share, .openSettings, .pushToStack:
             hide(animated: false)
-        case .exportToTomelet, .tagsChanged:
+        case .keep, .tagsChanged:
             break
         }
         onCommand(command, target)
@@ -301,7 +301,7 @@ final class PanelController: NSObject, NSWindowDelegate {
                 case "l": model.beginLatex()
                 case "m": model.beginMerge()
                 case "k": model.beginActions()
-                case "s": perform(.exportToTomelet(model.targets))
+                case "s": perform(.keep(model.targets))
                 case "y": quickLook()
                 case "/": model.toggleHelp()
                 default:

@@ -32,7 +32,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var panel: PanelController!
     private var stack: PasteStack!
     private var settingsWindow: SettingsWindowController!
-    private var exporter: TomeletExporter!
+    /// workspace に残したクリップの DB の形（schema/kept/）。
+    private var keptSchema: URL!
     private var openHotKey: HotKey?
     private var stackHotKey: HotKey?
     private var statusItem: NSStatusItem!
@@ -68,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NSApplication.shared.terminate(nil)
             return
         }
-        exporter = TomeletExporter(schemaDirectory: resources.appendingPathComponent("schema/tomelet"))
+        keptSchema = resources.appendingPathComponent("schema/kept")
         paster = Paster(store: store) { [unowned self] in settings }
         watcher = PasteboardWatcher(excludedBundleIDs: { [unowned self] in settings.excludedBundleIDs }) { [unowned self] capture in save(capture) }
         paster.didWrite = { [unowned self] in watcher.skipCurrentChange() }
@@ -103,6 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         scheduleOCR()
         syncTags()
         recordDataset()
+        refreshCards()
 
         launched = true
         pendingURLs.forEach(handle)
@@ -176,8 +178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let store = store!
             storeQueue.async { _ = try? store.save(capture, maxItemBytes: .max) }
             if copyOnly { paster.write([image.representations]) } else { paster.deliver([image.representations], into: target, cursorOffset: nil) }
-        case .exportToTomelet(let ids):
-            exportToTomelet(ids, automatic: false)
+        case .keep(let ids):
+            keep(ids, automatic: false)
         case .share(let ids, let target):
             share(ids, to: target)
         case .pushToStack(let ids):
@@ -208,18 +210,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func tagsChanged(_ ids: [Int]) {
         syncTags()
-        // 自動で残すタグが付いた物は、まだなら Tomelet に残す。
-        guard !settings.autoExportTags.isEmpty, settings.basePath != nil else { return }
+        // 自動で残すタグが付いた物は、まだなら workspace に残す。
+        guard settings.workspaceKeep, !settings.autoExportTags.isEmpty, settings.basePath != nil else { return }
         let wanted = Set(settings.autoExportTags.map { $0.lowercased() })
         let targets = ids.filter { id in
             (try? store.exportedAt(id)) == nil && ((try? store.tags(of: id)) ?? []).contains { wanted.contains($0.name.lowercased()) }
         }
-        if !targets.isEmpty { exportToTomelet(targets, automatic: true) }
+        if !targets.isEmpty { keep(targets, automatic: true) }
     }
 
-    // MARK: - Tomelet に残す（F-17）
+    // MARK: - workspace に残す（F-17）
 
-    private func exportToTomelet(_ ids: [Int], automatic: Bool) {
+    private func keep(_ ids: [Int], automatic: Bool) {
+        guard settings.workspaceKeep else { if !automatic { NSSound.beep() }; return }
         guard let basePath = settings.basePath else {
             if !automatic {
                 panel.model.show("先に設定の「連携」で基準パスを選んでください")
@@ -229,39 +232,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         guard (try? Dataset.read(basePath)) != nil || (!automatic && createDataset(basePath)) else { return }
-        let store = store!, exporter = exporter!
+        let store = store!, schema = keptSchema!
         let pending = ids.filter { (try? store.exportedAt($0)) == nil }
-        guard !pending.isEmpty else { panel.model.show("選んだ項目はもう Tomelet に残してあります"); return }
-        let items = pending.compactMap(exportItem)
+        guard !pending.isEmpty else { panel.model.show("選んだ項目はもう workspace に残してあります"); return }
         storeQueue.async { [weak self] in
+            let now = Date()
             let result: Result<Void, Error> = Result {
+                // 共有タグを先にそろえて、カードには tags.json のタグIDを入れる。
                 try? store.syncTags(basePath: basePath)
-                try exporter.export(items, basePath: basePath)
-                try store.markExported(pending)
+                try WorkspaceCards.keep(pending.compactMap { Self.keptEntry($0, store: store) }, basePath: basePath, schemaDirectory: schema, now: now)
+                try store.markExported(pending, at: now)
             }
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    self?.panel.model.show("Tomelet に残しました（\(TomeletExporter.title(for: Date()))・\(pending.count)件）")
+                    self?.panel.model.show("workspace に残しました（\(WorkspaceCards.title(day: Series.day(now)))・\(pending.count)件）")
                     self?.panel.refreshIfVisible()
                 case .failure(let error):
                     let message = (error as? StoreError)?.message ?? "\(error)"
-                    if automatic { NSLog("InGoodPaste: Tomelet に残せませんでした: \(message)") }
-                    else { self?.alert("Tomelet に残せませんでした", message) }
+                    if automatic { NSLog("InGoodPaste: workspace に残せませんでした: \(message)") }
+                    else { self?.alert("workspace に残せませんでした", message) }
                 }
             }
         }
     }
 
-    private func exportItem(_ id: Int) -> TomeletExporter.Item? {
+    private nonisolated static func keptEntry(_ id: Int, store: ClipStore) -> WorkspaceCards.Entry? {
         guard let detail = try? store.detail(id, maxTextLength: ClipStore.maxStoredTextLength) else { return nil }
-        return TomeletExporter.Item(clipID: id, copiedAt: detail.summary.copiedAt, appName: detail.summary.isSnippet ? "定型文" : detail.summary.sourceAppName,
-                                    tags: detail.summary.tags, text: detail.text, latex: detail.latex?.source, filePaths: detail.filePaths,
-                                    ocrText: detail.ocrText, image: detail.imageData.flatMap(Self.png).map { ($0, "image/png") })
+        let tags = (try? store.tags(of: id)) ?? []
+        return WorkspaceCards.Entry(clipID: id, copiedAt: detail.summary.copiedAt, appName: detail.summary.isSnippet ? "定型文" : detail.summary.sourceAppName,
+                                    tagNames: tags.map(\.name), tagIDs: tags.map(\.id), text: detail.text, latex: detail.latex?.source,
+                                    filePaths: detail.filePaths, ocrText: detail.ocrText, image: detail.imageData.flatMap(png))
     }
 
-    /// 画像を PNG にそろえる（Tomelet・PopNote! に貼る画像）。
-    private static func png(_ data: Data) -> Data? {
+    /// 起動時と基準パスを変えたときに、カードを書き直す（以前の書き出し先からの移し替えも、ここで一度だけ行う）。
+    private func refreshCards() {
+        guard settings.workspaceKeep, let basePath = settings.basePath, (try? Dataset.read(basePath)) != nil else { return }
+        let schema = keptSchema!
+        storeQueue.async {
+            do { try WorkspaceCards.refresh(basePath: basePath, schemaDirectory: schema) } catch { NSLog("InGoodPaste: カードを書き出せません: \(error)") }
+        }
+    }
+
+    /// 画像を PNG にそろえる（残す画像・送る画像）。
+    private nonisolated static func png(_ data: Data) -> Data? {
         if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return data }
         guard let image = NSImage(data: data), let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
         return bitmap.representation(using: .png, properties: [:])
@@ -344,7 +358,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settings = new
         settings.save(to: settingsURL)
         if old.openPanelHotKey != new.openPanelHotKey || old.stackHotKey != new.stackHotKey { registerHotKeys(alertOnFailure: true) }
-        if old.basePath != new.basePath { syncTags(); recordDataset() }
+        if old.basePath != new.basePath || old.workspaceKeep != new.workspaceKeep { syncTags(); recordDataset(); refreshCards() }
         // パネルの見た目を変えたら、設定の画面の横に実物を出して、すぐに反映する。
         let looks = { (value: Settings) in [value.panelWidth, value.panelEdge == .right ? 1 : 0, value.panelScreen == .mouse ? 1 : 0, value.showPreview ? 1 : 0, value.showKobito ? 1 : 0, Double(RowColorMode.allCases.firstIndex(of: value.rowColorMode) ?? 0)] }
         if looks(old) != looks(new), settingsWindow?.isVisible == true { panel.showForSettings() }

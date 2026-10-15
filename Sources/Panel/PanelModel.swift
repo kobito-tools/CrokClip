@@ -13,7 +13,8 @@ enum PanelCommand {
     case copyOnly(Int)
     case pasteText(String, copyOnly: Bool)
     case pasteLatex(LatexImage, copyOnly: Bool)
-    case exportToTomelet([Int])
+    /// workspace に残す（F-17）。
+    case keep([Int])
     /// 送る（F-16）。送り先は Share.targets から選んだもの。
     case share([Int], Share.Target)
     case pushToStack([Int])
@@ -573,7 +574,7 @@ final class PanelModel: ObservableObject {
         if single { add("transform", "r", "変換を選ぶ（つなげる・保存する）", "wand.and.stars", nil) { [unowned self] in beginTransform() } }
         if single { add("latex", "l", clip?.kind == .formula ? "数式を開き直す" : "数式画像を作る", "function", "⌘L") { [unowned self] in beginLatex() } }
         add("stack", "k", "ペーストスタックに積む", "square.stack", nil) { [unowned self] in onCommand(.pushToStack(ids)) }
-        add("tomelet", "s", "Tomelet に残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.exportToTomelet(ids)) }
+        if settings().workspaceKeep { add("keep", "s", "workspace に残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.keep(ids)) } }
         add("share", "n", "送る…", "paperplane", "⇧⌘N") { [unowned self] in beginShare() }
         if single { add("quicklook", "q", "Quick Look", "eye", "⌘Y") { [unowned self] in endMode(); onQuickLook() } }
         add("snippet", "f", "新しい定型文", "text.badge.star", "⌘N") { [unowned self] in beginSnippet() }

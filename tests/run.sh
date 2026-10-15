@@ -29,22 +29,24 @@ assert db.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
 print(f"ok - DBの更新 {len(applied)}件・整合性OK・WAL")
 PY
 
-# Tomelet への書き出し用のDB：Tomelet と同じ形・メモ・タグ・画像
+# workspace に残したクリップのDBと、カード（約束③）の形
 python3 - "$work/harness.log" <<'PY'
-import sqlite3, sys, os
-values = dict(line.strip().split("=", 1) for line in open(sys.argv[1]) if line.startswith("EXPORT_"))
-db = sqlite3.connect(values["EXPORT_DB"])
+import json, re, sqlite3, sys, os
+values = dict(line.strip().split("=", 1) for line in open(sys.argv[1]) if line.startswith(("KEPT_DB=", "CARDS=")))
+db = sqlite3.connect(values["KEPT_DB"])
 applied = [row[0] for row in db.execute("SELECT version FROM schema_migrations ORDER BY version")]
-bundled = sorted(name for name in os.listdir("schema/tomelet") if name.endswith(".sql"))
+bundled = sorted(name for name in os.listdir("schema/kept") if name.endswith(".sql"))
 assert applied == bundled, (applied, bundled)
 assert db.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
-title, html, text = db.execute("SELECT title, body_html, body_text FROM memos WHERE id = ?", (values["EXPORT_MEMO"],)).fetchone()
-assert title == values["EXPORT_TITLE"], title
-assert "arxiv.org" in html and "&lt;b&gt;" in html and "2件目" in html and "<img src=\"/api/v1/uploads/upload-" in html, html
-assert db.execute("SELECT count(*) FROM memos").fetchone()[0] == 1
-tags = [row[0] for row in db.execute("SELECT t.name FROM memo_tags r JOIN tags t ON t.id = r.tag_id")]
-assert tags == ["書き出し"], tags
-stored = db.execute("SELECT u.stored_name FROM memo_uploads r JOIN managed_uploads u ON u.id = r.upload_id").fetchone()[0]
-assert os.path.exists(os.path.join(os.path.dirname(os.path.dirname(values["EXPORT_DB"])), "uploads", stored))
-print("ok - Tomelet への書き出し：Tomelet と同じ形・1日1メモ・タグ・画像")
+assert db.execute("SELECT count(*) FROM kept_meta WHERE key = 'legacy_imported'").fetchone()[0] == 1
+datetime = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$")
+ids = set()
+for line in open(values["CARDS"], encoding="utf-8"):
+    card = json.loads(line)
+    assert card["v"] == 1 and card["app"] == "ingoodpaste" and card["kind"] and card["title"], card
+    assert card["url"].startswith("kobito://ingoodpaste/day/") and datetime.match(card["updated"]), card
+    assert re.match(r"^\d{4}-\d{2}-\d{2}$", card["date"]) and len(card.get("text", "")) <= 2000, card
+    assert card["id"] not in ids
+    ids.add(card["id"])
+print(f"ok - workspace に残す：DBの更新・移し替えの記録・カード {len(ids)}枚が約束③の形")
 PY
