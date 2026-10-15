@@ -83,6 +83,8 @@ struct Settings: Codable, Equatable {
     var basePath: String?
     /// このタグが付いたら、Tomelet へ自動で書き出す（F-17）。
     var autoExportTags: [String] = []
+    /// 最後に使った送り先（「アプリID/口のID」。F-16）。⌥⇧⌘N で一覧を出さずにここへ送る。
+    var lastShareTarget: String?
 
     static let defaultExcludedBundleIDs = [
         "com.apple.keychainaccess", "com.apple.Passwords",
@@ -105,6 +107,7 @@ struct Settings: Codable, Equatable {
         read(.latexPresets, &s.latexPresets); read(.latexOptions, &s.latexOptions); read(.latexMacros, &s.latexMacros)
         read(.reverseStack, &s.reverseStack); read(.autoExportTags, &s.autoExportTags)
         s.basePath = try? c.decode(String.self, forKey: .basePath)
+        s.lastShareTarget = try? c.decode(String.self, forKey: .lastShareTarget)
         self = s
     }
 

@@ -395,5 +395,44 @@ check(history?["v"] as? Int == 1 && historyItems.filter { $0["path"] as? String 
 check(historyItems.first?["app"] as? String == "ingoodpaste" && historyItems.first?["id"] as? String == "テスト" && historyItems.contains { $0["app"] as? String == "another" }, "自分の1件を先頭に足し、ほかのアプリの分は残す")
 check(Series.datasetCandidates().map(\.path) == [base, otherBase], "最後に開いた順に並べる")
 
+// 20. ⑦ 送る：送り先は起動情報の receive から作る
+try Series.writeJSON(["app": "another", "name": "別のアプリ", "command": ["/usr/bin/true"], "receive": [
+    ["id": "new", "label": "新しく作る", "accepts": ["text", "image", "file"], "url": "kobito://another/import?mode=new&file={file}"],
+    ["id": "pictures", "label": "画像だけ", "accepts": ["image"], "url": "kobito://another/import?mode=image&file={file}"],
+    ["id": "broken", "label": "形が違う", "accepts": ["text"], "url": "https://example.com/{file}"]]], to: Series.appsDirectory.appendingPathComponent("another.json"))
+try Series.writeJSON(["app": "mismatch", "name": "名前違い", "command": ["/usr/bin/true"], "receive": [["id": "x", "label": "x", "accepts": ["text"], "url": "kobito://mismatch/x?file={file}"]]],
+                     to: Series.appsDirectory.appendingPathComponent("wrong-name.json"))
+check(Share.targets(for: ["text"]).map(\.title) == ["別のアプリ：新しく作る"], "文字を受け取れる口だけを並べる（形の違う口・ファイル名とIDの違う起動情報は捨てる）")
+check(Share.targets(for: ["image"]).map(\.key) == ["another/pictures", "another/new"] || Share.targets(for: ["image"]).map(\.key) == ["another/new", "another/pictures"], "画像なら画像を受け取れる口を全部並べる")
+check(Share.targets(for: ["text"], launchInfos: [Series.LaunchInfo(app: "ingoodpaste", name: "InGoodPaste!", command: ["/x"], receive: [Series.Receive(id: "a", label: "a", accepts: ["text"], url: "kobito://ingoodpaste/a?file={file}")])]).isEmpty, "自分の口は並べない")
+var launched: [String] = []
+let sharePayload = Share.Payload(text: "送る文字", images: [Share.Image(name: "クリップ1.png", mimeType: "image/png", data: makePNG(width: 4, height: 4))], files: [Share.File(path: "/tmp/ある ファイル.pdf", name: "ある ファイル.pdf")])
+let target = Share.targets(for: sharePayload.kinds).first { $0.receive.id == "new" }!
+try Share.send(sharePayload, to: target) { launched = $0 }
+check(launched.dropLast() == ["/usr/bin/true"] && launched.last?.hasPrefix("kobito://another/import?mode=new&file=") == true, "起動情報の command の最後に URL を足して起動する")
+let sentPath = URLComponents(string: launched.last ?? "")?.queryItems?.first { $0.name == "file" }?.value ?? ""
+check(URL(fileURLWithPath: sentPath).deletingLastPathComponent().path == Share.directory.path && !(launched.last ?? "").contains("/kobito-share/"), "受け渡しファイルのパスは URL エンコードして kobito-share/ に置く")
+let shareAttributes = try? FileManager.default.attributesOfItem(atPath: sentPath)
+let directoryAttributes = try? FileManager.default.attributesOfItem(atPath: Share.directory.path)
+check((shareAttributes?[.posixPermissions] as? Int) == 0o600 && (directoryAttributes?[.posixPermissions] as? Int) == 0o700, "受け渡しファイルは 600、フォルダは 700")
+let shared = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: sentPath)))) as? [String: Any]
+check(shared?["kobito"] as? Int == 1 && shared?["type"] as? String == "share" && shared?["from"] as? String == "ingoodpaste" && shared?["created"] is String, "約束⑦の形（kobito・type・from・created）")
+check(shared?["text"] as? String == "送る文字" && ((shared?["images"] as? [[String: Any]])?.first?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == sharePayload.images[0].data
+      && (shared?["files"] as? [[String: String]]) == [["path": "/tmp/ある ファイル.pdf", "name": "ある ファイル.pdf"]], "文字・画像・ファイルを入れる")
+let imageTarget = Share.targets(for: ["image"]).first { $0.receive.id == "pictures" }!
+try Share.send(sharePayload, to: imageTarget) { launched = $0 }
+let imageOnly = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: URLComponents(string: launched.last!)!.queryItems!.first { $0.name == "file" }!.value!)))) as? [String: Any]
+check(imageOnly?["images"] != nil && imageOnly?["text"] == nil && imageOnly?["files"] == nil, "口が受け取れる種類だけを送る")
+struct LaunchFailed: Error {}
+let before = (try? FileManager.default.contentsOfDirectory(atPath: Share.directory.path).count) ?? 0
+do { try Share.send(sharePayload, to: target) { _ in throw LaunchFailed() }; check(false, "起動できなければエラーにする") }
+catch { check((try? FileManager.default.contentsOfDirectory(atPath: Share.directory.path).count) == before, "起動できなければ書いたファイルを消す") }
+let old = Share.directory.appendingPathComponent("old.json")
+try Data("{}".utf8).write(to: old)
+try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(-25 * 3600)], ofItemAtPath: old.path)
+Share.cleanup()
+check(!FileManager.default.fileExists(atPath: old.path), "24時間より古い受け渡しファイルを消す")
+print("SHARE_FILE=\(sentPath)")
+
 print(failures == 0 ? "すべて成功" : "\(failures) 件失敗")
 exit(failures == 0 ? 0 : 1)

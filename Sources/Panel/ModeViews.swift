@@ -32,7 +32,7 @@ struct ModeView: View {
 
     private var actionsList: some View {
         VStack(alignment: .leading, spacing: 6) {
-            title(model.targets.count > 1 ? "\(model.targets.count)件にできること" : "この項目にできること", "bolt")
+            title(model.actionsTitle ?? (model.targets.count > 1 ? "\(model.targets.count)件にできること" : "この項目にできること"), model.actionsTitle == nil ? "bolt" : "paperplane")
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 1) {

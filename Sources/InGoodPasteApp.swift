@@ -82,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.model.onSortChange = { [unowned self] sort in updateSettings { $0.sortOrder = sort } }
         panel.model.onLatexOptionsChange = { [unowned self] options in if settings.latexOptions != options { updateSettings { $0.latexOptions = options } } }
         panel.model.onSaveCombo = { [unowned self] combo in updateSettings { $0.transformCombos.append(combo) } }
+        panel.model.shareTargets = { [unowned self] ids in shareTargets(ids) }
 
         let settingsModel = SettingsModel(settings: settings)
         settingsModel.onChange = { [unowned self] new in applySettings(new) }
@@ -177,8 +178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if copyOnly { paster.write([image.representations]) } else { paster.deliver([image.representations], into: target, cursorOffset: nil) }
         case .exportToTomelet(let ids):
             exportToTomelet(ids, automatic: false)
-        case .sendToPopNote(let ids, let append):
-            sendToPopNote(ids, append: append)
+        case .share(let ids, let target):
+            share(ids, to: target)
         case .pushToStack(let ids):
             stack.push(ids)
         case .tagsChanged(let ids):
@@ -297,23 +298,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsWindow.model.datasetID = try? Dataset.read(basePath)?.datasetId
     }
 
-    // MARK: - PopNote! に送る（F-16）
+    // MARK: - 送る（F-16）
 
-    private func sendToPopNote(_ ids: [Int], append: Bool) {
-        var texts: [String] = [], images: [(data: Data, mimeType: String)] = []
+    /// 選んだ項目の中身（⑦ 受け渡し）。画像は PNG にそろえ、ファイルはパスだけを渡す。
+    private func sharePayload(_ ids: [Int]) -> Share.Payload {
+        var texts: [String] = [], payload = Share.Payload()
         for id in ids {
             guard let detail = try? store.detail(id, maxTextLength: ClipStore.maxStoredTextLength) else { continue }
-            if let data = detail.imageData.flatMap(Self.png) { images.append((data, "image/png")) }
-            if let latex = detail.latex { texts.append(latex.source) }
+            if let data = detail.imageData.flatMap(Self.png) { payload.images.append(Share.Image(name: "クリップ\(payload.images.count + 1).png", mimeType: "image/png", data: data)) }
+            if !detail.filePaths.isEmpty { payload.files += detail.filePaths.map { Share.File(path: $0, name: ($0 as NSString).lastPathComponent) } }
+            else if let latex = detail.latex { texts.append(latex.source) }
             else if let text = detail.text, !text.isEmpty { texts.append(text) }
-            else if !detail.filePaths.isEmpty { texts.append(detail.filePaths.joined(separator: "\n")) }
         }
+        payload.text = texts.joined(separator: "\n\n")
+        return payload
+    }
+
+    private func shareTargets(_ ids: [Int]) -> [Share.Target] {
+        Share.targets(for: sharePayload(ids).kinds)
+    }
+
+    private func share(_ ids: [Int], to target: Share.Target) {
+        let payload = sharePayload(ids)
+        guard !payload.kinds.isDisjoint(with: target.receive.accepts) else { NSSound.beep(); return }
         do {
-            guard try PopNoteLink.send(text: texts.joined(separator: "\n\n"), images: images, append: append) else {
-                alert("PopNote! が見つかりません", "PopNote! をインストールして一度起動してから、もう一度お試しください。")
-                return
-            }
-        } catch { alert("PopNote! に送れませんでした", "\(error)") }
+            try Share.send(payload, to: target)
+            if settings.lastShareTarget != target.key { updateSettings { $0.lastShareTarget = target.key } }
+        } catch {
+            alert("\(target.appName) に送れませんでした", (error as? StoreError)?.message ?? error.localizedDescription)
+        }
     }
 
     // MARK: - 設定

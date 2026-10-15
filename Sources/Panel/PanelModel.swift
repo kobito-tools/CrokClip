@@ -14,7 +14,8 @@ enum PanelCommand {
     case pasteText(String, copyOnly: Bool)
     case pasteLatex(LatexImage, copyOnly: Bool)
     case exportToTomelet([Int])
-    case sendToPopNote([Int], append: Bool)
+    /// 送る（F-16）。送り先は Share.targets から選んだもの。
+    case share([Int], Share.Target)
     case pushToStack([Int])
     case tagsChanged([Int])
     case openSettings
@@ -84,6 +85,10 @@ final class PanelModel: ObservableObject {
 
     // 操作の一覧（→・⌘K・右クリック）
     @Published private(set) var actions: [PanelAction] = []
+    /// 操作の一覧の見出し（nil ならふつうの「この項目にできること」）。
+    @Published private(set) var actionsTitle: String?
+    /// 選んだ項目を受け取れる送り先（本体が起動情報から作る）。
+    var shareTargets: ([Int]) -> [Share.Target] = { _ in [] }
     @Published var actionIndex = 0
 
     // タグ（F-04）
@@ -524,6 +529,7 @@ final class PanelModel: ObservableObject {
     func beginActions() {
         guard !targets.isEmpty else { NSSound.beep(); return }
         actions = actionItems(for: targets)
+        actionsTitle = nil
         actionIndex = 0
         mode = .actions
         requestFocus(nil)
@@ -568,13 +574,40 @@ final class PanelModel: ObservableObject {
         if single { add("latex", "l", clip?.kind == .formula ? "数式を開き直す" : "数式画像を作る", "function", "⌘L") { [unowned self] in beginLatex() } }
         add("stack", "k", "ペーストスタックに積む", "square.stack", nil) { [unowned self] in onCommand(.pushToStack(ids)) }
         add("tomelet", "s", "Tomelet に残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.exportToTomelet(ids)) }
-        add("popnote", "n", "PopNote! の新しいメモにする", "note.text", "⇧⌘N") { [unowned self] in onCommand(.sendToPopNote(ids, append: false)) }
-        add("popnoteAppend", "a", "PopNote! の開いているメモに足す", "note.text.badge.plus", "⌥⇧⌘N") { [unowned self] in onCommand(.sendToPopNote(ids, append: true)) }
+        add("share", "n", "送る…", "paperplane", "⇧⌘N") { [unowned self] in beginShare() }
         if single { add("quicklook", "q", "Quick Look", "eye", "⌘Y") { [unowned self] in endMode(); onQuickLook() } }
         add("snippet", "f", "新しい定型文", "text.badge.star", "⌘N") { [unowned self] in beginSnippet() }
         add("delete", "d", ids.count > 1 ? "\(ids.count)件を履歴から削除" : "履歴から削除", "trash", "⌘⌫") { [unowned self] in endMode(); delete(ids) }
         add("help", "?", "キーの一覧", "keyboard", "⌘/") { [unowned self] in mode = .help; requestFocus(nil) }
         return items
+    }
+
+    // MARK: - 送る（F-16）
+
+    static let noShareTargets = "送り先のアプリがありません。kobito シリーズについては kobito-workspace を参照してください"
+
+    /// ⇧⌘N：送り先の一覧を出す（1〜9 で選ぶ）。
+    func beginShare() {
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        let found = shareTargets(ids)
+        guard !found.isEmpty else { endMode(); show(Self.noShareTargets); return }
+        actions = found.enumerated().map { index, target in
+            PanelAction(id: "share-\(target.key)", key: index < 9 ? Character("\(index + 1)") : "·", label: target.title, symbol: "paperplane",
+                        shortcut: target.key == settings().lastShareTarget ? "⌥⇧⌘N" : nil) { [weak self] in self?.onCommand(.share(ids, target)) }
+        }
+        actionsTitle = ids.count > 1 ? "\(ids.count)件をどこへ送るか" : "どこへ送るか"
+        actionIndex = max(found.firstIndex { $0.key == settings().lastShareTarget } ?? 0, 0)
+        mode = .actions
+        requestFocus(nil)
+    }
+
+    /// ⌥⇧⌘N：最後に使った送り先へ、一覧を出さずに送る。まだ無い・今は使えないなら一覧を出す。
+    func shareToLast() {
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        if let last = settings().lastShareTarget, let target = shareTargets(ids).first(where: { $0.key == last }) { onCommand(.share(ids, target)) }
+        else { beginShare() }
     }
 
     // MARK: - タグ（F-04）

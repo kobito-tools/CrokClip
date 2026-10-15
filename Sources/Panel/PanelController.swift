@@ -200,7 +200,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     private func perform(_ command: PanelCommand) {
         let target = targetApplication
         switch command {
-        case .paste, .copyOnly, .pasteText, .pasteLatex, .sendToPopNote, .openSettings, .pushToStack:
+        case .paste, .copyOnly, .pasteText, .pasteLatex, .share, .openSettings, .pushToStack:
             hide(animated: false)
         case .exportToTomelet, .tagsChanged:
             break
@@ -311,8 +311,8 @@ final class PanelController: NSObject, NSWindowDelegate {
                 }
                 return true
             }
-            if flags == [.command, .shift], character == "n" { perform(.sendToPopNote(model.targets, append: false)); return true }
-            if flags == [.command, .shift, .option], character == "n" { perform(.sendToPopNote(model.targets, append: true)); return true }
+            if flags == [.command, .shift], character == "n" { model.beginShare(); return true }
+            if flags == [.command, .shift, .option], character == "n" { model.shareToLast(); return true }
             if flags == [.control], let number = Int(character), (1...9).contains(number) { model.applyCombo(number); return true }
             return false
         }
