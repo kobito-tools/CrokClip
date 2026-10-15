@@ -129,8 +129,11 @@ struct PanelView: View {
                  tint: model.rowColorMode.color(for: clip))
             .id(clip.id)
             .contentShape(Rectangle())
-            .onTapGesture(count: 2) { model.selection = clip.id; model.pasteSelected() }
-            .onTapGesture { model.click(clip.id, modifiers: NSEvent.modifierFlags) }
+            // ダブルクリックの判定を待たずに、1回目で選ぶ（2回目で貼る）。onTapGesture(count: 2) を付けると、1回目の反応が遅れる。
+            .onTapGesture {
+                if clickCount >= 2 { model.selection = clip.id; model.pasteSelected() }
+                else { model.click(clip.id, modifiers: NSEvent.modifierFlags) }
+            }
             .onHover { inside in model.hover(clip.id, inside: inside) }
             .onDrag { model.itemProvider(for: clip.id) }
             .contextMenu {
@@ -291,8 +294,10 @@ private struct StyleStrip: View {
                             .foregroundStyle(selected ? Color.white : Theme.ink)
                             .contentShape(Capsule())
                             .id(style.id)
-                            .onTapGesture(count: 2) { model.selectStyle(index); model.pasteSelected() }
-                            .onTapGesture { model.selectStyle(index) }
+                            .onTapGesture {
+                                model.selectStyle(index)
+                                if clickCount >= 2 { model.pasteSelected() }
+                            }
                     }
                 }
                 .padding(.horizontal, 10)
@@ -356,3 +361,6 @@ struct PanelBackground: NSViewRepresentable {
 
     func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
+/// いまのクリックが何回目か（ダブルクリックなら 2）。
+var clickCount: Int { NSApp.currentEvent?.clickCount ?? 1 }
+

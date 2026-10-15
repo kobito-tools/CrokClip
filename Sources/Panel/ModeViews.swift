@@ -129,8 +129,10 @@ struct ModeView: View {
                                     .background(RoundedRectangle(cornerRadius: 5).fill(index == model.transformIndex ? Theme.accent.opacity(0.25) : Color.clear))
                                     .contentShape(Rectangle())
                                     .id(entry.id)
-                                    .onTapGesture { model.transformIndex = index }
-                                    .onTapGesture(count: 2) { model.transformIndex = index; model.commitTransform(copyOnly: false) }
+                                    .onTapGesture {
+                                        model.transformIndex = index
+                                        if clickCount >= 2 { model.commitTransform(copyOnly: false) }
+                                    }
                             }
                         }
                     }
