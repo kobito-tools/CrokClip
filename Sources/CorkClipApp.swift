@@ -462,8 +462,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateStatusIcon() {
-        let name = stack?.isActive == true ? "square.stack.3d.up.fill" : watcher.effectivelyPaused ? "pause.rectangle" : "list.clipboard"
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "CorkClip")
+        // ふだんはコルクボードの絵。スタック中と一時停止中は、それと分かる記号にする。
+        let name = stack?.isActive == true ? "square.stack.3d.up.fill" : watcher.effectivelyPaused ? "pause.rectangle" : nil
+        let image = name.map { NSImage(systemSymbolName: $0, accessibilityDescription: "CorkClip") } ?? CorkboardIcon.menuBar
         image?.isTemplate = true
         statusItem?.button?.image = image
     }

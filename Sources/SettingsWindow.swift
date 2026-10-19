@@ -69,6 +69,16 @@ struct SettingsView: View {
         }
         .padding(16)
         .frame(minWidth: 640, minHeight: 540)
+        // パネルに合わせて、紙の色の地にコルクの帯を敷き、アクセントもパネルと同じ色にする。
+        .tint(Theme.accent)
+        .background(alignment: .top) {
+            ZStack(alignment: .bottom) {
+                CorkBackground()
+                Rectangle().fill(Theme.frame).frame(height: 3)
+            }
+            .frame(height: 36)
+        }
+        .background(Theme.paper)
     }
 
     // MARK: - 一般
@@ -130,6 +140,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 取得とタグ
@@ -191,6 +202,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 保存
@@ -230,6 +242,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 変換
@@ -255,6 +268,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 数式
@@ -300,6 +314,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 連携
@@ -372,6 +387,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 }
 

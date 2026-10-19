@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// パネルの色（kobito-tools シリーズの小人と同じ墨色・紙の色、アイコンの青みがかった灰色）。明るい画面と暗い画面の両方を持つ。
+/// パネルの色。コルクボードに見立てる（コルクの地、木の枠、画びょうで留めたメモ用紙）。文字は kobito-tools シリーズの小人と同じ墨色。明るい画面と暗い画面の両方を持つ。
 enum Theme {
     private static func dynamic(_ light: String, _ dark: String, alpha: CGFloat = 1) -> Color {
         Color(nsColor: NSColor(name: nil) { appearance in
@@ -10,21 +10,32 @@ enum Theme {
         })
     }
 
-    /// アクセント（アイコンの背景の色）。
-    static let accent = dynamic("#5F7A90", "#9DB4C6")
-    /// パネルの地（紙の色）。すりガラスの上に重ねる。
-    static let paper = dynamic("#F3F0E8", "#262B2A", alpha: 0.94)
-    /// カード。
-    static let card = dynamic("#FFFFFF", "#333A39")
-    static let cardBorder = dynamic("#E0DBCF", "#454D4B")
-    /// プレビューの枠の中。
-    static let well = dynamic("#FBFAF6", "#2D3332")
-    static let wellBorder = dynamic("#D3CCBC", "#56605D")
+    /// アクセント（シリーズの青みがかった灰色）。コルクの茶色の上でも、選んでいる物がはっきり分かる。
+    static let accent = dynamic("#4F6C84", "#9DB4C6")
+    /// コルクの地（粒の模様は CorkBackground が描く）。
+    static let cork = dynamic("#C9A06F", "#5A4533")
+    /// ボードの木の枠。
+    static let frame = dynamic("#8B5E3A", "#33251A")
+    static let frameHighlight = dynamic("#B07E52", "#4E3A2A")
+    /// 帯の紙（検索欄・見出し・キーの案内を書く細長い紙）。
+    static let paper = dynamic("#F7F1E3", "#2E2A25")
+    /// メモ用紙（履歴のカード）。
+    static let card = dynamic("#FFFDF7", "#37332D")
+    static let cardBorder = dynamic("#E3D7BF", "#4C463D")
+    /// 紙の下に落ちる影（影の効果は重いので、ずらした形で描く）。
+    static let cardShade = dynamic("#5B3E22", "#000000", alpha: 0.28)
+    /// プレビューの紙。
+    static let well = dynamic("#FCF9F1", "#312D28")
+    static let wellBorder = dynamic("#DCCFB5", "#554E44")
     /// 文字（小人の墨色）。
     static let ink = dynamic("#3B4441", "#E6E3D9")
-    static let subtle = dynamic("#7A817D", "#A3A9A5")
+    static let subtle = dynamic("#76716A", "#A9A49B")
     /// キーの印の地。
-    static let keycap = dynamic("#E8E3D7", "#3E4644")
+    static let keycap = dynamic("#EDE5D3", "#45403A")
+    /// 画びょう。ピン留めは赤、定型文は緑、ほかは真鍮。
+    static let pinRed = Color(nsColor: NSColor(hex: "#D2443A"))
+    static let pinGreen = Color(nsColor: NSColor(hex: "#3F8A6E"))
+    static let pinBrass = Color(nsColor: NSColor(hex: "#C9A24D"))
 
     /// 色分けに使う色（シリーズ共通のタグの色と同じ並び）。
     static let palette = ["#477B70", "#C75543", "#9B7432", "#5C668F", "#7B587D", "#416B7C", "#8A6A4F", "#6D7A45"]

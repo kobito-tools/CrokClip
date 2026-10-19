@@ -1,7 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// 画面の端から出てくるパネル（3.1）。上から、検索、プレビューの枠（作業中はその画面）と貼り方、履歴のカード、操作の案内。
+/// 画面の端から出てくるパネル（3.1）。コルクボードに見立てて、上から、検索の帯、プレビューの紙（作業中はその画面）と貼り方、
+/// 画びょうで留めた履歴のカード、操作の案内の帯を並べる。
 /// キー操作は PanelController が受け取る。
 struct PanelView: View {
     @ObservedObject var model: PanelModel
@@ -29,13 +30,13 @@ struct PanelView: View {
                 }
                 FooterHints(model: model, state: model.previewState)
             }
-            .padding(10)
+            .padding(.horizontal, 13).padding(.vertical, 12)
             .animation(.easeOut(duration: 0.15), value: model.message)
         }
         .foregroundStyle(Theme.ink)
-        .background(ZStack { PanelBackground(); Theme.paper })
+        .background(CorkBackground())
+        .overlay(BoardFrame())
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.wellBorder.opacity(0.8), lineWidth: 1))
         .onChange(of: model.focusRequest) { _ in focused = model.focus }
         .onAppear { focused = model.focus }
     }
@@ -54,8 +55,8 @@ struct PanelView: View {
                 }
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(focused == .search ? Theme.accent : Theme.cardBorder, lineWidth: focused == .search ? 1.5 : 1))
+            .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.card))
+            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(focused == .search ? Theme.accent : Theme.cardBorder, lineWidth: focused == .search ? 1.5 : 1))
             Menu {
                 Picker("並べ替え", selection: $model.sort) {
                     ForEach(SortOrder.allCases, id: \.self) { Text($0.label).tag($0) }
@@ -73,25 +74,33 @@ struct PanelView: View {
                 .help("設定（⌘,）")
         }
         .foregroundStyle(Theme.subtle)
+        .padding(.leading, 5).padding(.trailing, 10).padding(.vertical, 5)
+        .background(PaperStrip())
     }
 
     private var list: some View {
         let indexByID = Dictionary(uniqueKeysWithValues: model.rows.enumerated().map { ($1.id, $0) })
         return Group {
             if model.rows.isEmpty {
-                VStack(spacing: 8) {
+                VStack {
                     Spacer()
-                    Image(systemName: model.query.isEmpty ? "tray" : "magnifyingglass").font(.system(size: 28)).foregroundStyle(Theme.subtle)
-                    Text(model.query.isEmpty ? "まだ履歴がありません。\nコピーするとここに並びます。" : "見つかりませんでした")
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Theme.subtle)
+                    VStack(spacing: 8) {
+                        Image(systemName: model.query.isEmpty ? "tray" : "magnifyingglass").font(.system(size: 28)).foregroundStyle(Theme.subtle)
+                        Text(model.query.isEmpty ? "まだ履歴がありません。\nコピーするとここに並びます。" : "見つかりませんでした")
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Theme.subtle)
+                    }
+                    .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 16)
+                    .background(NotePaper(cornerRadius: 6))
+                    .overlay(alignment: .top) { Pushpin(color: Theme.pinBrass, size: 12).offset(y: -4) }
+                    .rotationEffect(.degrees(-1.5))
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 6) {
+                        LazyVStack(alignment: .leading, spacing: 9) {
                             if model.showsPins {
                                 SectionLabel(text: "ピン・定型文", symbol: "pin.fill", count: model.pins.count)
                                 ForEach(model.pins) { clip in row(clip, index: indexByID[clip.id] ?? 0) }
@@ -101,8 +110,9 @@ struct PanelView: View {
                             }
                             ForEach(model.clips) { clip in row(clip, index: indexByID[clip.id] ?? 0) }
                         }
-                        .padding(.horizontal, 2)
-                        .padding(.bottom, 4)
+                        .padding(.horizontal, 3)
+                        .padding(.top, 2)
+                        .padding(.bottom, 8)
                     }
                     .onChange(of: model.selection) { id in
                         guard let id else { return }
@@ -167,7 +177,7 @@ private struct RowMenu: View {
     }
 }
 
-/// 見出しの付いた枠。プレビューと作業の画面に使い、一覧との境目をはっきりさせる。
+/// 見出しの付いた紙。プレビューと作業の画面に使い、上の両端を画びょうで留める。
 private struct Card<Content: View>: View {
     let title: String?
     @ViewBuilder let content: () -> Content
@@ -183,10 +193,12 @@ private struct Card<Content: View>: View {
             content()
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.well))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.wellBorder, lineWidth: 1))
-        .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.well))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.wellBorder, lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.cardShade).offset(x: 1, y: 2.5))
+        .overlay(alignment: .topLeading) { Pushpin(color: Theme.pinBrass).offset(x: 9, y: -4) }
+        .overlay(alignment: .topTrailing) { Pushpin(color: Theme.pinBrass).offset(x: -9, y: -4) }
     }
 }
 
@@ -202,15 +214,18 @@ private struct SectionLabel: View {
             Text("\(count)").font(.system(size: 10, weight: .medium)).monospacedDigit()
                 .padding(.horizontal, 5).padding(.vertical, 1)
                 .background(Capsule().fill(Theme.keycap))
-            Spacer()
         }
         .foregroundStyle(Theme.subtle)
-        .padding(.horizontal, 4)
+        // コルクに留めた小さな名札。
+        .padding(.leading, 8).padding(.trailing, 5).padding(.vertical, 3)
+        .background(PaperStrip(cornerRadius: 4))
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 2)
     }
 }
 
-/// 一覧の1件。左の色の帯（色分け）、サムネかアイコン、見出し、コピー元と時刻、タグ。
+/// 一覧の1件。画びょうで留めたメモ用紙に、左の色の帯（色分け）、サムネかアイコン、見出し、コピー元と時刻、タグを書く。
+/// 選んでいる紙は少し持ち上がる。画びょうは、ピン留めは赤、定型文は緑、ほかは真鍮。
 private struct ClipCard: View, Equatable {
     let model: PanelModel
     let clip: ClipSummary
@@ -228,6 +243,8 @@ private struct ClipCard: View, Equatable {
 
     private var color: Color { tint ?? Theme.subtle }
 
+    private var pinColor: Color { clip.isSnippet ? Theme.pinGreen : clip.pinned ? Theme.pinRed : Theme.pinBrass }
+
     /// model は見た目に関わらないので比べない。
     static func == (lhs: ClipCard, rhs: ClipCard) -> Bool {
         lhs.clip == rhs.clip && lhs.index == rhs.index && lhs.selected == rhs.selected && lhs.primary == rhs.primary && lhs.tint == rhs.tint
@@ -241,7 +258,6 @@ private struct ClipCard: View, Equatable {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    if clip.pinned && !clip.isSnippet { Image(systemName: "pin.fill").font(.system(size: 9)).foregroundStyle(color) }
                     Text(clip.displayText)
                         .font(.system(size: 13, weight: clip.title == nil ? .regular : .semibold))
                         .lineLimit(2)
@@ -274,16 +290,20 @@ private struct ClipCard: View, Equatable {
         }
         .padding(.leading, 12)
         .padding(.trailing, 9)
-        .padding(.vertical, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
         .background(alignment: .leading) {
             // 色分けの帯。
             Rectangle().fill(tint ?? Color.clear).frame(width: 4)
         }
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(selected ? Theme.accent.opacity(primary ? 0.16 : 0.09) : Color.clear))
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        // 影はメインスレッドで描かれて重いので、カードには付けず、枠線だけにする。
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(selected ? Theme.accent : Theme.cardBorder, lineWidth: selected && primary ? 2 : 1))
+        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(selected ? Theme.accent.opacity(primary ? 0.16 : 0.09) : Color.clear))
+        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.card))
+        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(selected ? Theme.accent : Theme.cardBorder, lineWidth: selected && primary ? 2 : 1))
+        // 影の効果はメインスレッドで描かれて重いので、ふだんの紙はずらした形で影を描き、本物の影は選んでいる紙だけに付ける。
+        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.cardShade).offset(x: 1, y: selected ? 3 : 1.5))
+        .overlay(alignment: .top) { Pushpin(color: pinColor, size: clip.pinned || clip.isSnippet ? 13 : 10).offset(y: clip.pinned || clip.isSnippet ? -5.5 : -4) }
+        .lifted(selected)
     }
 
     @ViewBuilder private var leading: some View {
@@ -376,21 +396,39 @@ private struct FooterHints: View {
             Spacer(minLength: 0)
         }
         .foregroundStyle(Theme.subtle)
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 8).padding(.vertical, 5)
+        .background(PaperStrip())
     }
 }
 
 /// いまのクリックが何回目か（ダブルクリックなら 2）。
 var clickCount: Int { NSApp.currentEvent?.clickCount ?? 1 }
 
-struct PanelBackground: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = .popover
-        view.blendingMode = .behindWindow
-        view.state = .active
-        return view
+private extension View {
+    /// 選んでいる紙を少し持ち上げる。影の効果は、持ち上げた紙にだけ付ける。
+    @ViewBuilder func lifted(_ on: Bool) -> some View {
+        if on { shadow(color: .black.opacity(0.22), radius: 5, y: 3).offset(y: -1.5) } else { self }
     }
+}
 
-    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+/// コルクに留めた細長い紙（検索・見出し・キーの案内）。
+private struct PaperStrip: View {
+    var cornerRadius: CGFloat = 6
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(Theme.paper)
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(Theme.cardBorder, lineWidth: 0.5))
+            .background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(Theme.cardShade).offset(x: 0.5, y: 1.5))
+    }
+}
+
+/// メモ用紙（履歴が空のときの案内）。
+private struct NotePaper: View {
+    var cornerRadius: CGFloat = 5
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(Theme.card)
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(Theme.cardBorder, lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(Theme.cardShade).offset(x: 1, y: 2.5))
+    }
 }

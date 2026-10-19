@@ -13,7 +13,7 @@ cat > "$work/og.html" <<HTML
 <html><head><style>
 @font-face{font-family:Noto;src:url(file://$font)}
 html,body{margin:0;width:1280px;height:640px;overflow:hidden}
-body{background:linear-gradient(180deg,#8FA2B3,#728698);font-family:Noto,sans-serif;color:#F7F4EC;position:relative}
+body{background:linear-gradient(180deg,#9C6E45,#7A512E);font-family:Noto,sans-serif;color:#F7F4EC;position:relative}
 img{position:absolute;left:80px;top:100px;width:440px;height:440px}
 .text{position:absolute;left:560px;right:64px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center}
 h1{margin:0;font-weight:700;font-size:84px;letter-spacing:-.01em;line-height:1}

@@ -10,6 +10,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 ./build.sh                                 # フォルダ直下に CorkClip.app（ユニバーサルバイナリ）を作成
 ./scripts/package-release.sh               # Releases 用の dist/CorkClip_<版>.dmg と dist/CorkClip_<版>_universal.zip を作成
 ./tests/run.sh                             # 取得から書き戻し・検索・タグ・変換・文字認識・数式・シリーズの約束（起動情報・送る・カード）までのテスト
+./tests/preview.sh [書き出す先]            # パネル・設定の画面・メニューバーのアイコンを、アプリを起動せずに PNG に書き出す（既定 .build/preview）
 ./scripts/make-icon.sh                     # アイコンを描き直す（make-icon.py → icon.svg → icon-1024.png・AppIcon.icns）
 ./scripts/social-preview.sh [フォント]     # シリーズの紹介画像（assets/icon/CorkClip-1280x640.png）を作り直す（Google Chrome と Noto Sans JP を使う）
 ```
@@ -18,7 +19,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 
 `package-release.sh` の dmg は、アプリ・Applications へのリンク・背景（`assets/dmg/`。`scripts/make-icon.sh` で描き直せる）を置き、窓の並べ方を Finder に頼んでから圧縮します。初回は「Finder を操作する許可」を求められることがあります。許可しないと、背景なし（並べ方なし）の dmg になります。
 
-`tests/run.sh` は名前付きの NSPasteboard と一時フォルダを使い、`KOBITO_CONFIG_DIR`・`KOBITO_SHARE_DIR` も一時フォルダに向けるので、実際のクリップボード・履歴・基準パス・シリーズの設定には触れません。数式のテストは同梱の KaTeX を画面外の WKWebView で動かします。
+`tests/run.sh` は名前付きの NSPasteboard と一時フォルダを使い、`KOBITO_CONFIG_DIR`・`KOBITO_SHARE_DIR` も一時フォルダに向けるので、実際のクリップボード・履歴・基準パス・シリーズの設定には触れません。数式のテストは同梱の KaTeX を画面外の WKWebView で動かします。`tests/preview.sh` も同じく一時フォルダに見本の履歴を作り、画面外のウィンドウで描いて書き出すので、`CorkClip.app` を起動せずに見た目を確かめられます。
 
 ### 許可について
 
@@ -40,14 +41,14 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 | `Sources/Settings.swift` | このMacの設定（`settings.json`）と自動タグの規則 |
 | `Sources/SettingsWindow.swift` | 設定の画面（F-19） |
 | `Sources/SQLiteDatabase.swift` | macOS 標準の SQLite の薄いラッパーと、`schema/` の適用 |
-| `Sources/Panel/` | パネル（フォーカスを奪わない NSPanel）、一覧、プレビュー、作業の画面（タグ・編集・変換・まとめる・数式・定型文）、キー操作、Quick Look、ドラッグ |
+| `Sources/Panel/` | パネル（フォーカスを奪わない NSPanel。コルクボードの見た目は `Corkboard.swift`・`Theme.swift`）、一覧、プレビュー、作業の画面（タグ・編集・変換・まとめる・数式・定型文）、キー操作、Quick Look、ドラッグ |
 | `Sources/Transforms/` | 改行を消す処理、貼る前の変換・パス・まとめる区切り・定型文の差し込み（F-07, F-09, F-11, F-12） |
 | `Sources/Latex/` | 数式の元の式と描き方、KaTeX での描画と PDF・PNG・TIFF の作成（F-06） |
 | `Sources/Companions/` | 基準パス（`.kobito-tools/`）の扱いと使用中の印・共有タグ（`Dataset.swift`・`TagStore.swift`）、シリーズの約束（`Series.swift`：起動情報・基準パスの履歴・受け付ける URL）、送る（`Share.swift`）、workspace に残す（`WorkspaceCards.swift`）（F-04, F-16〜F-18） |
 | `Resources/katex/` | 同梱の KaTeX（MIT）と描画ページ `render.html` |
 | `schema/` | 履歴のDBの作成と更新（ファイル名順に、まだの物だけ適用） |
 | `schema/kept/` | 基準パスの、workspace に残したクリップのDBの作成と更新 |
-| `tests/` | `run.sh` とハーネス（`harness/main.swift`） |
+| `tests/` | `run.sh` とハーネス（`harness/main.swift`）、見た目を書き出す `preview.sh`（`preview/main.swift`） |
 
 ## 保存の仕組み
 
