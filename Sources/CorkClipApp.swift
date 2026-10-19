@@ -447,6 +447,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         switch Series.route(url) {
         case .day(let day): panel.show(query: "kept:\(day)")
         case .open(let id): panel.show(query: "id:\(id)")
+        case .snippet: panel.show(mode: .snippet)
+        case .latex: panel.show(mode: .latex)
+        case .settings: settingsWindow.show()
         case .panel, nil: panel.show()
         }
     }

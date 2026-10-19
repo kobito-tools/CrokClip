@@ -19,6 +19,9 @@ cp -R schema "$CONTENTS/Resources/schema"
 # 数式画像を描く KaTeX（MIT）と、その描画ページ。
 cp -R Resources/. "$CONTENTS/Resources/"
 [[ -f assets/icon/AppIcon.icns ]] && cp assets/icon/AppIcon.icns "$CONTENTS/Resources/AppIcon.icns"
+# 起動情報（④）の icon.file に書く、256px のアイコン画像（約束で 256 KB まで）。
+sips -z 256 256 assets/icon/icon-1024.png --out "$CONTENTS/Resources/icon-256.png" > /dev/null
+(( $(stat -f %z "$CONTENTS/Resources/icon-256.png") <= 262144 )) || { echo "icon-256.png が 256 KB を超えています" >&2; exit 1; }
 
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
