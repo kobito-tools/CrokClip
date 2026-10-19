@@ -14,7 +14,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 ./scripts/social-preview.sh [フォント]     # シリーズの紹介画像（assets/icon/InGoodPaste-1280x640.png）を作り直す（Google Chrome と Noto Sans JP を使う）
 ```
 
-版番号は `build.sh` の `VERSION` で指定します。`InGoodPaste-Setup.command` は `build.sh` を呼び出すだけの、ソースから使う人向けの入口です。
+版番号は `build.sh` の `VERSION` で指定します。ソースから使う人向けの入口は `setup.sh` です（ビルド・アプリケーションフォルダへ移すかの確認・起動情報の書き出し・起動の案内。`--yes`・`--dry-run`・`--help` を受け付けます）。`InGoodPaste-Setup.command` は `setup.sh` を Finder から動かすための入口です。
 
 `package-release.sh` の dmg は、アプリ・Applications へのリンク・背景（`assets/dmg/`。`scripts/make-icon.sh` で描き直せる）を置き、窓の並べ方を Finder に頼んでから圧縮します。初回は「Finder を操作する許可」を求められることがあります。許可しないと、背景なし（並べ方なし）の dmg になります。
 

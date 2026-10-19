@@ -47,7 +47,7 @@ InGoodPaste! は以前 Pastephant という名前でした。初めて起動す�
 - ログイン時に開く設定も、InGoodPaste! の設定でオンにし直してください。
 - URL は `pastephant://` から `ingoodpaste://` に変わりました。ランチャーなどに登録している場合は登録し直してください。
 
-ソースから作る場合は、このリポジトリをクローンして `InGoodPaste-Setup.command` を実行します（Xcode Command Line Tools が必要です。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)）。
+ソースから作る場合は、このリポジトリをクローンして `./setup.sh` を実行します（Finder からは `InGoodPaste-Setup.command` をダブルクリック）。ビルドして、アプリケーションフォルダへ移すかを尋ね（既定は移さない。同じ名前のアプリがすでにあるときは、置き換えてよいかも尋ねる）、起動のしかたを表示します。何度動かしても大丈夫で、履歴と設定には触れません。`./setup.sh --dry-run` で何をするかだけを確かめられ、`--yes` を付けると尋ねずに既定の答えを選びます。Xcode Command Line Tools が必要で、無いときは入れ方（`xcode-select --install`）を表示して止まります。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
 #### アクセシビリティの許可
 
