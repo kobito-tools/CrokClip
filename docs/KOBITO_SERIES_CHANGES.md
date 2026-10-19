@@ -31,9 +31,9 @@ kobito シリーズは「各アプリが単体で完結し、kobito-workspace �
 | `docs/DEVELOPMENT.md` | ほかのアプリの名前を消す。シリーズの規則は kobito-workspace を参照させる |
 | `Sources/SettingsWindow.swift`（`SeriesApp` の一覧、連携の説明、「〜が使っているフォルダが見つかりました」） | `SeriesApp` の一覧を消し、「kobito シリーズについて（kobito-workspace の README を開く）」のリンク1つにする。基準パスの候補は §5 |
 | `Sources/Panel/PanelModel.swift`（「〜に残す」「〜の新しいメモにする」「〜の開いているメモに足す」） | §3・§4 の一般化した操作に置き換える |
-| `Sources/Panel/PanelController.swift`（`.exportToTomelet`・`.sendToPopNote`） | 同上 |
+| `Sources/Panel/PanelController.swift`（特定のアプリ向けの書き出し・送りの操作） | 同上 |
 | `Sources/InGoodPasteApp.swift`（書き出し・送る処理と、その文言） | 同上 |
-| `Sources/Companions/PopNoteLink.swift` | `Companions/Share.swift`（⑦）に置き換える（§3） |
+| 特定のアプリへ送る `Sources/Companions/` のファイル | `Companions/Share.swift`（⑦）に置き換える（§3） |
 | `Sources/Companions/TomeletExport.swift`・`schema/tomelet/`・`scripts/sync-schema.sh` | `Companions/WorkspaceCards.swift`（③）に置き換え、`schema/tomelet/` と写しのスクリプトは消す（§4） |
 | `Sources/ClipStore+Organize.swift`・`Settings.swift`・`SQLiteDatabase.swift`・`ClipStore.swift`・`ClipContent.swift`・`PasteStack.swift`・`Panel/Theme.swift`・`Panel/ModeViews.swift`・`Companions/Dataset.swift`・`Companions/TagStore.swift` のコメント・文言 | ほかのアプリの名前を「kobito シリーズ」「共有タグ（tags.json）」などに書き換える |
 | `schema/001_initial.sql` のコメント | 同上 |
