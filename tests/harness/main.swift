@@ -429,6 +429,29 @@ let launchJSON = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Serie
 check(launchJSON?["app"] as? String == "corkclip" && launchJSON?["name"] as? String == "CorkClip" && launchJSON?["command"] as? [String] == ["/usr/bin/open", "-b", "io.github.kobito-tools.corkclip"], "起動情報を書き出す（open -b <バンドルID>）")
 check(launchJSON?["embed"] == nil && launchJSON?["receive"] == nil, "起動情報に embed・receive は持たない")
 check(Series.launchInfos().map(\.app) == ["corkclip"], "書いた起動情報を約束どおりに読める")
+// 見せ方と操作（④）。
+let launchIcon = launchJSON?["icon"] as? [String: Any]
+check(launchJSON?["name_en"] as? String == "CorkClip" && launchJSON?["color"] as? String == "teal", "起動情報に英語名と色（シリーズの配色の名前）を書く")
+check(launchIcon?["glyph"] as? String == "📌" && launchIcon?["file"] == nil, "アイコン画像が無ければ、代わりの1文字だけを書く")
+let launchKinds = launchJSON?["kinds"] as? [[String: Any]] ?? []
+check(launchKinds.count == 1 && launchKinds[0]["kind"] as? String == WorkspaceCards.kind && launchKinds[0]["dates"] as? String == "record", "カードの種類は1つで、日付は記録として扱う")
+let launchActions = launchJSON?["actions"] as? [[String: Any]] ?? []
+let actionIDs = launchActions.compactMap { $0["id"] as? String }
+check(actionIDs == ["panel", "today", "snippet", "latex", "settings"] && Set(actionIDs).count == actionIDs.count, "操作の id は決まった名前で重ならない")
+check(launchActions.allSatisfy { ($0["label"] as? String)?.isEmpty == false && ($0["url"] as? String)?.hasPrefix("kobito://corkclip/") == true }, "操作は名前を持ち、宛先は自分だけ")
+check(launchActions.allSatisfy { action in
+    let url = action["url"] as! String
+    return url.replacingOccurrences(of: "{today}", with: "").range(of: "[{}]", options: .regularExpression) == nil
+        && Series.route(URL(string: url.replacingOccurrences(of: "{today}", with: "2026-10-20"))!) != nil
+}, "操作の URL の置き換えは {today} だけで、どれも自分で受け付ける")
+let launchRoutes = launchActions.map { Series.route(URL(string: ($0["url"] as! String).replacingOccurrences(of: "{today}", with: "2026-10-20"))!) }
+check(launchRoutes == [.panel, .day("2026-10-20"), .snippet, .latex, .settings], "操作の URL が、それぞれの画面に届く")
+check(launchActions.first { $0["role"] as? String == "settings" }?["id"] as? String == "settings" && launchActions.first { $0["role"] as? String == "new" }?["id"] as? String == "snippet", "設定と新しく作る操作に role を付ける")
+let iconPNG = work.appendingPathComponent("icon-256.png")
+try Data([0x89, 0x50, 0x4e, 0x47]).write(to: iconPNG)
+try Series.writeLaunchInfo(bundleID: "io.github.kobito-tools.corkclip", iconFile: iconPNG)
+let launchWithIcon = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Series.appsDirectory.appendingPathComponent("corkclip.json")))) as? [String: Any]
+check(((launchWithIcon?["icon"] as? [String: Any])?["file"] as? String) == iconPNG.standardizedFileURL.path && (iconPNG.path as NSString).isAbsolutePath, "アイコン画像があれば、その絶対パスを書く")
 check(Series.route(URL(string: "kobito://corkclip/day/2026-10-15")!) == .day("2026-10-15"), "kobito://corkclip/day/<日付> を受け付ける")
 check(Series.route(URL(string: "kobito://corkclip/open/42?dataset=abc")!) == .open(42), "kobito://corkclip/open/<ID> を受け付ける")
 check(Series.route(URL(string: "kobito://corkclip/day/昨日")!) == .panel && Series.route(URL(string: "kobito://corkclip")!) == .panel, "知らない形はパネルを開くだけ")

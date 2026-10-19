@@ -103,7 +103,9 @@ kobito シリーズは「各アプリが単体で完結し、kobito-workspace �
 |---|---|
 | `kobito://corkclip/day/<YYYY-MM-DD>` | パネルを開き、その日に残したクリップで絞り込む |
 | `kobito://corkclip/open/<クリップID>` | パネルを開き、そのクリップを選ぶ |
+| `kobito://corkclip/panel`・`snippet`・`latex`・`settings` | パネル・新しい定型文・数式画像の画面・設定を開く |
 
+- 2026-10-20 から、起動情報に見せ方と操作（`name_en`・`icon`・`color`・`kinds`・`actions`）も書きます。値は REQUIREMENTS.md の F-18 にあります。`embed` は今までどおり書きません。
 - URL は「URL を開く」Apple Event（`kAEGetURL`）として届きます。`NSAppleEventManager` でハンドラーを登録して受け取ります。
 - `open -b <バンドルID> kobito://…` で、`kobito` スキームを Info.plist に登録していなくても、起動中・未起動のどちらでも URL が届くことを確認済みです（kobito-workspace の `spikes/apple-event/`）。ハンドラは `applicationWillFinishLaunching` で登録します（未起動から開かれたとき、`didFinishLaunching` より前に届くため）。`kobito` スキームは Info.plist に登録しません。
 

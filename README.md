@@ -201,8 +201,12 @@ LaTeX の式を書くと、その場でプレビューが出ます。`⏎` で�
 | `corkclip://settings` | 設定を開く |
 | `kobito://corkclip/day/2026-09-28` | その日に残した項目で履歴を開く（workspace のカードから） |
 | `kobito://corkclip/open/123` | その項目を選んで履歴を開く |
+| `kobito://corkclip/panel` | 履歴を開く |
+| `kobito://corkclip/snippet`・`latex`・`settings` | 新しい定型文・数式画像の画面・設定を開く |
 
 `kobito://` の URL は、`open -b io.github.kobito-tools.corkclip "kobito://corkclip/…"` のようにアプリを指定して渡します。
+
+kobito シリーズの workspace には、CorkClip は中に表示されず、起動するボタンとして並びます。ボタンには 📌 のアイコンとティール（teal）の色が付き、「履歴を開く」「今日残したクリップを見る」「定型文を作る」「数式画像を作る」「設定を開く」の操作を呼べます。
 
 ### 保存しない物と消える期限
 

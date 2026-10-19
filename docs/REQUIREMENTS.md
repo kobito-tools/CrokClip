@@ -265,6 +265,28 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 |---|---|
 | `kobito://corkclip/day/<YYYY-MM-DD>` | パネルを開き、その日に残したクリップで絞り込む |
 | `kobito://corkclip/open/<クリップID>` | パネルを開き、そのクリップを選ぶ |
+| `kobito://corkclip/panel` | パネルを開く（知らない形も同じ） |
+| `kobito://corkclip/snippet` | 新しい定型文の画面を開く |
+| `kobito://corkclip/latex` | 数式画像の画面を開く |
+| `kobito://corkclip/settings` | 設定を開く |
+
+- 起動情報には、見せ方と操作（④「見せ方と操作」）も書きます。
+
+| 項目 | 値 |
+|---|---|
+| `name_en` | `CorkClip` |
+| `color` | `teal`（シリーズの配色のうち、まだ使われていない色。コルクに近い `orange` は別のアプリが使っているため） |
+| `icon` | `glyph` は `📌`。`file` は `.app` の中の `Contents/Resources/icon-256.png` の絶対パス（`build.sh` が `assets/icon/icon-1024.png` から 256px で作る。256 KB を超えたらビルドを止める）。画像が無いときは `glyph` だけ |
+| `kinds` | `[{"kind": "クリップ", "label_en": "Clip", "glyph": "📌", "dates": "record"}]`（カードの日付は「残した日」なので記録） |
+| `actions` | 下の表。`id` は変えません |
+
+| `id` | 表示名 | URL | `role` |
+|---|---|---|---|
+| `panel` | 履歴を開く | `kobito://corkclip/panel` | |
+| `today` | 今日残したクリップを見る | `kobito://corkclip/day/{today}` | |
+| `snippet` | 定型文を作る | `kobito://corkclip/snippet` | `new` |
+| `latex` | 数式画像を作る | `kobito://corkclip/latex` | |
+| `settings` | 設定を開く | `kobito://corkclip/settings` | `settings` |
 
 - URL は「URL を開く」Apple Event（`kAEGetURL`）として届きます。`applicationWillFinishLaunching` で `NSAppleEventManager` に受け口を登録します（未起動から開かれたときは `didFinishLaunching` より前に届くため）。`kobito` スキームは Info.plist に登録しません（ほかのアプリ宛ての URL まで受け取ってしまうため）。自分宛て（`kobito://corkclip/…`）以外は無視します。
 

@@ -88,10 +88,37 @@ enum Series {
 
     static let shareKinds: Set<String> = ["text", "image", "file"]
 
+    /// 見せ方（④「見せ方と操作」）。色はシリーズの配色の名前から選ぶ。
+    static let appNameEnglish = "CorkClip"
+    static let color = "teal"
+    static let glyph = "📌"
+    /// .app の Resources に build.sh が入れる、256px のアイコン画像（256 KB まで）。
+    static let iconResource = "icon-256.png"
+
+    /// workspace に残したクリップのカードの見せ方。日付は「残した日」なので記録として扱う。
+    static let kinds: [[String: Any]] = [
+        ["kind": WorkspaceCards.kind, "label_en": "Clip", "glyph": glyph, "dates": "record"],
+    ]
+
+    /// 外から呼んでよい操作。宛先は自分（kobito://corkclip/…）だけで、id は変えない。
+    static let actions: [[String: Any]] = [
+        ["id": "panel", "label": "履歴を開く", "label_en": "Open history", "url": "kobito://\(appID)/panel"],
+        ["id": "today", "label": "今日残したクリップを見る", "label_en": "Today's kept clips", "url": "kobito://\(appID)/day/{today}"],
+        ["id": "snippet", "label": "定型文を作る", "label_en": "New snippet", "url": "kobito://\(appID)/snippet", "role": "new"],
+        ["id": "latex", "label": "数式画像を作る", "label_en": "New LaTeX image", "url": "kobito://\(appID)/latex"],
+        ["id": "settings", "label": "設定を開く", "label_en": "Settings", "url": "kobito://\(appID)/settings", "role": "settings"],
+    ]
+
     /// 自分の起動情報を書く。起動のたびに呼ぶ（入れ替えてバンドルIDや場所が変わっても追いつくように）。
     /// embed・receive は持たない（workspace の中には表示せず、受け渡しも受け付けない）。
-    static func writeLaunchInfo(bundleID: String) throws {
-        let record: [String: Any] = ["app": appID, "name": appName, "command": ["/usr/bin/open", "-b", bundleID]]
+    /// アイコン画像が無ければ（ハーネスなど）、代わりの1文字だけを書く。
+    static func writeLaunchInfo(bundleID: String, iconFile: URL? = Bundle.main.resourceURL?.appendingPathComponent(iconResource)) throws {
+        var icon: [String: Any] = ["glyph": glyph]
+        if let iconFile, FileManager.default.fileExists(atPath: iconFile.path) { icon["file"] = iconFile.standardizedFileURL.path }
+        let record: [String: Any] = [
+            "app": appID, "name": appName, "command": ["/usr/bin/open", "-b", bundleID],
+            "name_en": appNameEnglish, "icon": icon, "color": color, "kinds": kinds, "actions": actions,
+        ]
         try writeJSON(record, to: appsDirectory.appendingPathComponent("\(appID).json"))
     }
 
@@ -127,7 +154,13 @@ enum Series {
         case day(String)
         /// kobito://corkclip/open/<クリップID>：そのクリップを選ぶ。
         case open(Int)
-        /// そのほか：パネルを開くだけ。
+        /// kobito://corkclip/snippet：新しい定型文を作る。
+        case snippet
+        /// kobito://corkclip/latex：数式画像を作る。
+        case latex
+        /// kobito://corkclip/settings：設定を開く。
+        case settings
+        /// kobito://corkclip/panel と、そのほか：パネルを開くだけ。
         case panel
     }
 
@@ -139,6 +172,9 @@ enum Series {
         switch (path.first?.lowercased(), path.dropFirst().first) {
         case ("day", let day?) where day.range(of: "^\\d{4}-\\d{2}-\\d{2}$", options: .regularExpression) != nil: return .day(day)
         case ("open", let id?) where Int(id) != nil: return .open(Int(id)!)
+        case ("snippet", _): return .snippet
+        case ("latex", _): return .latex
+        case ("settings", _): return .settings
         default: return .panel
         }
     }

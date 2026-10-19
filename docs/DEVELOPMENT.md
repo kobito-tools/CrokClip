@@ -73,7 +73,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 
 ```text
 ~/Library/Application Support/kobito-tools/   （KOBITO_CONFIG_DIR で変えられる）
-├── apps/corkclip.json           ④ 起動情報。起動のたびに書く（open -b <バンドルID>。embed・receive は持たない）
+├── apps/corkclip.json           ④ 起動情報。起動のたびに書く（open -b <バンドルID>、見せ方と操作。embed・receive は持たない）
 ├── apps/*.json                     ほかのアプリの起動情報。receive を集めて「送る」の送り先にする
 └── datasets.json                   ⑥ 基準パスの履歴。基準パスの候補にし、開いたら自分の1件を書く
 
@@ -90,7 +90,8 @@ $TMPDIR/kobito-share/<UUID>.json    ⑦ 送る中身（KOBITO_SHARE_DIR で変�
 ```
 
 - **共有タグ**：起動時、基準パスを変えたとき、タグを付け外ししたときに、シリーズ共通の規則（`TagStore.swift`）で `tags.json` と統合します。
-- **URL**：`kobito://corkclip/day/<日付>`・`kobito://corkclip/open/<ID>` は「URL を開く」Apple Event（`kAEGetURL`）で届きます。`applicationWillFinishLaunching` で受け口を作るので、未起動から開かれても届きます。`kobito` スキームは Info.plist に登録しません。
+- **見せ方と操作**：`Series.swift` の `color`・`glyph`・`kinds`・`actions` に書きます。アイコン画像は `build.sh` が `.app` の `Resources/icon-256.png` に作り、起動情報にはその絶対パスを書きます（無ければ `glyph` だけ）。操作を足すときは、その URL を `Series.route` でも受け付け、テストの id の一覧も直します。
+- **URL**：`kobito://corkclip/day/<日付>`・`kobito://corkclip/open/<ID>`（ほかに `panel`・`snippet`・`latex`・`settings`）は「URL を開く」Apple Event（`kAEGetURL`）で届きます。`applicationWillFinishLaunching` で受け口を作るので、未起動から開かれても届きます。`kobito` スキームは Info.plist に登録しません。
 - **送る**：送り先は起動情報の `receive` から実行時に作ります。口が受け取れる種類（`accepts`）だけを入れて受け渡しファイルを書き、口の `url` の `{file}` を置き換えて、送り先の起動情報の `command` で開きます。
 - **workspace に残す**：残した物は基準パスの `kept.sqlite3` に写し（複数のMacで同じ基準パスを使えるように、このMacの履歴ではなく基準パスに置く）、そのたびに `cards.jsonl` を全件書き直します。以前の書き出し先（`database/corkclip.sqlite3` の日ごとのメモ）は、初めて開いたときに一度だけ写します（元のファイルは消しません）。
 - **約束の確かめ**：`CorkClip.app/Contents/MacOS/CorkClip --write-launch-info` は起動情報だけを書いて終わります。`KOBITO_CONFIG_DIR` を一時フォルダに向けて実行し、kobito-workspace の `uv run scripts/check_contracts.py --apps`（カードは `--base <基準パス>`）で確かめられます。
