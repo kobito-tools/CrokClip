@@ -43,7 +43,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         model.datasetCandidates = Series.datasetCandidates()
         if window == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 640), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-            window.title = "InGoodPaste! の設定"
+            window.title = "CorkClip の設定"
             window.contentView = NSHostingView(rootView: SettingsView(model: model))
             window.isReleasedWhenClosed = false
             window.center()
@@ -89,7 +89,7 @@ struct SettingsView: View {
             } header: {
                 Text("許可")
             } footer: {
-                Text("ビルドし直したあとは許可が外れることがあります。その場合は、システム設定の一覧で InGoodPaste! を一度削除（−）してから、もう一度オンにしてください。")
+                Text("ビルドし直したあとは許可が外れることがあります。その場合は、システム設定の一覧で CorkClip を一度削除（−）してから、もう一度オンにしてください。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("ショートカット") {
@@ -137,7 +137,7 @@ struct SettingsView: View {
     private var capture: some View {
         Form {
             Section {
-                ExplainBox(title: "どのコピーを取っておくか", text: "InGoodPaste! は ⌘C でコピーした物を、自動で履歴に取っておきます。ここでは、取っておかないアプリと、コピーしたときに自動で付けるタグを決めます。")
+                ExplainBox(title: "どのコピーを取っておくか", text: "CorkClip は ⌘C でコピーした物を、自動で履歴に取っておきます。ここでは、取っておかないアプリと、コピーしたときに自動で付けるタグを決めます。")
             }
             Section {
                 ForEach(model.settings.excludedBundleIDs, id: \.self) { bundleID in
@@ -226,7 +226,7 @@ struct SettingsView: View {
                     Button("今すぐ整理") { model.onCleanup() }
                     Button("Finder で表示") { NSWorkspace.shared.activateFileViewerSelecting([ClipStore.defaultDirectory]) }
                 }
-                Text("履歴はこのMacの ~/Library/Application Support/InGoodPaste/ にだけ保存します。").font(.caption).foregroundStyle(.secondary)
+                Text("履歴はこのMacの ~/Library/Application Support/CorkClip/ にだけ保存します。").font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -307,7 +307,7 @@ struct SettingsView: View {
     private var companions: some View {
         Form {
             Section {
-                ExplainBox(title: "連携でできること", text: "InGoodPaste! は単独で使えます。kobito シリーズのほかのアプリも使っているなら、次のことができるようになります。\n・タグをシリーズのアプリと共有する\n・⌘S で残したクリップを、kobito-workspace に日ごとのカードとして並べる\n・⇧⌘N で選んだクリップを、受け取れるアプリへ送る（送り先は、入っているアプリから自動で並びます）")
+                ExplainBox(title: "連携でできること", text: "CorkClip は単独で使えます。kobito シリーズのほかのアプリも使っているなら、次のことができるようになります。\n・タグをシリーズのアプリと共有する\n・⌘S で残したクリップを、kobito-workspace に日ごとのカードとして並べる\n・⇧⌘N で選んだクリップを、受け取れるアプリへ送る（送り先は、入っているアプリから自動で並びます）")
                 VStack(alignment: .leading, spacing: 4) {
                     Text("はじめかた").font(.system(size: 12, weight: .semibold))
                     Text("1. 下の「基準パス」で、シリーズのアプリと共有するフォルダを選びます（シリーズのアプリで使っているフォルダがあれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。\n3. 送り先は設定いりません。受け取れるアプリを一度起動しておけば、⇧⌘N の一覧に並びます。")
@@ -341,7 +341,7 @@ struct SettingsView: View {
             } header: {
                 Text("基準パス（シリーズで共有するフォルダ）")
             } footer: {
-                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や「workspace に残す」に使います。InGoodPaste! の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
+                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や「workspace に残す」に使います。CorkClip の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {

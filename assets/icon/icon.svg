@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="bg-ingoodpaste" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FA2B3"/><stop offset="1" stop-color="#728698"/></linearGradient>
-    <clipPath id="clip-ingoodpaste"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
-    <filter id="drop-ingoodpaste" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity=".22"/></filter>
+    <linearGradient id="bg-corkclip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FA2B3"/><stop offset="1" stop-color="#728698"/></linearGradient>
+    <clipPath id="clip-corkclip"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+    <filter id="drop-corkclip" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity=".22"/></filter>
   </defs>
-  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg-ingoodpaste)" filter="url(#drop-ingoodpaste)"/>
-  <g clip-path="url(#clip-ingoodpaste)">
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg-corkclip)" filter="url(#drop-corkclip)"/>
+  <g clip-path="url(#clip-corkclip)">
 <ellipse cx="512" cy="872" rx="230" ry="22" fill="#000" opacity=".10"/><g stroke="#EEF2F5" stroke-width="14" stroke-linecap="round" opacity=".9"><path d="M712 398 L748 364"/><path d="M736 456 L784 452"/><path d="M682 352 L690 306"/></g><g transform="translate(236.0 300) scale(11.5)" stroke-linecap="round" stroke-linejoin="round">
     
     <g fill="none" stroke="#3B4441" stroke-width="1.8"><path d="M20 35.5 L19 45"/><path d="M28 35.5 L29 45"/></g>

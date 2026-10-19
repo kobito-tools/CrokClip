@@ -2,7 +2,7 @@
   <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6F3EC"/><stop offset="1" stop-color="#E7E2D6"/></linearGradient></defs>
   <rect width="600" height="400" fill="url(#bg)"/>
   <path d="M0 0 H600 V56 H0 Z" fill="#8FA2B3" opacity=".22"/>
-  <text x="300" y="36" text-anchor="middle" font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, sans-serif" font-size="17" font-weight="600" fill="#3B4441">InGoodPaste! を Applications フォルダへドラッグしてください</text>
+  <text x="300" y="36" text-anchor="middle" font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, sans-serif" font-size="17" font-weight="600" fill="#3B4441">CorkClip を Applications フォルダへドラッグしてください</text>
   <path d="M225 190 C265 160 335 160 375 190" fill="none" stroke="#728698" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 12"/>
   <path d="M366 176 L380 193 L360 199" fill="none" stroke="#728698" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
   <g transform="translate(254.4 280) scale(1.9)" stroke-linecap="round" stroke-linejoin="round">

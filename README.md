@@ -1,8 +1,8 @@
-# InGoodPaste!
+# CorkClip
 
 <img src="assets/icon/icon-1024.png" width="96" align="right" alt="">
 
-InGoodPaste! は、コック帽の小人が味見してから貼ってくれる、macOS 用クリップボード履歴アプリです。名前は「in good taste（趣味よく・おいしく）」と paste を掛けています。
+CorkClip は、コピーした物をコルクボードにピンで留めるように取っておける、macOS 用クリップボード履歴アプリです。
 
 `⌘C` でコピーした文字・画像・表・ファイル・パワポの図形などを元の形のまま覚えておき、`⌥⌘V` で画面の端から呼び出して貼れます。貼る前に「改行を消す」「表 → LaTeX」などの貼り方を選んで、貼られる内容を先に確かめられます。タグ、定型文、数式画像、画像の文字認識、順番に貼るペーストスタックもそろっています。
 
@@ -20,15 +20,15 @@ kobito シリーズの1つです。ほかのアプリとの連携は [kobito-wor
 
 | 形式 | ファイル |
 |---|---|
-| dmg（おすすめ） | `InGoodPaste_x.y.z.dmg` |
-| zip | `InGoodPaste_x.y.z_universal.zip` |
+| dmg（おすすめ） | `CorkClip_x.y.z.dmg` |
+| zip | `CorkClip_x.y.z_universal.zip` |
 
 `x.y.z` にはバージョン番号が入ります。
 
 ## インストール
 
-1. ダウンロードした `.dmg` ファイルを開き、表示された `InGoodPaste!` を右の `Applications` フォルダにドラッグします（zip の場合は、展開された `InGoodPaste!.app` を Applications フォルダに移動します）。
-2. アプリケーションフォルダから InGoodPaste! を起動します。Dock には出ず、メニューバーにクリップボードのアイコンが出ます。
+1. ダウンロードした `.dmg` ファイルを開き、表示された `CorkClip` を右の `Applications` フォルダにドラッグします（zip の場合は、展開された `CorkClip.app` を Applications フォルダに移動します）。
+2. アプリケーションフォルダから CorkClip を起動します。Dock には出ず、メニューバーにクリップボードのアイコンが出ます。
 3. dmg は Finder のサイドバーの「⏏」で取り出して、ゴミ箱に入れて構いません。
 
 本アプリは Apple の公証を受けていないため、初回起動時に「開発元を確認できません」などの警告が表示されます。その場合は警告を閉じ、「システム設定」→「プライバシーとセキュリティ」を開いて、画面下部の「このまま開く」をクリックしてください。2 回目以降は通常どおり起動できます。
@@ -36,22 +36,22 @@ kobito シリーズの1つです。ほかのアプリとの連携は [kobito-wor
 「壊れているため開けません」と表示される場合は、ターミナルで次のコマンドを実行してから、再度起動してください。
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/InGoodPaste!.app"
+xattr -dr com.apple.quarantine "/Applications/CorkClip.app"
 ```
 
 #### Pastephant から乗り換える場合
 
-InGoodPaste! は以前 Pastephant という名前でした。初めて起動すると、Pastephant の履歴と設定（`~/Library/Application Support/Pastephant/`）を `InGoodPaste/` へ移して、そのまま使えます。基準パスに残したクリップ（`.kobito-tools/Pastephant/`）も、次に開くときに `.kobito-tools/InGoodPaste/` へ移します。
+CorkClip は以前 Pastephant という名前でした。初めて起動すると、Pastephant の履歴と設定（`~/Library/Application Support/Pastephant/`）を `CorkClip/` へ移して、そのまま使えます。基準パスに残したクリップ（`.kobito-tools/Pastephant/`）も、次に開くときに `.kobito-tools/CorkClip/` へ移します。
 
-- Pastephant を終了してから `Pastephant.app` をゴミ箱に入れ、アクセシビリティ・入力監視の一覧からも「－」で削除してください。InGoodPaste! には改めて許可が必要です。
-- ログイン時に開く設定も、InGoodPaste! の設定でオンにし直してください。
-- URL は `pastephant://` から `ingoodpaste://` に変わりました。ランチャーなどに登録している場合は登録し直してください。
+- Pastephant を終了してから `Pastephant.app` をゴミ箱に入れ、アクセシビリティ・入力監視の一覧からも「－」で削除してください。CorkClip には改めて許可が必要です。
+- ログイン時に開く設定も、CorkClip の設定でオンにし直してください。
+- URL は `pastephant://` から `corkclip://` に変わりました。ランチャーなどに登録している場合は登録し直してください。
 
-ソースから作る場合は、このリポジトリをクローンして `./setup.sh` を実行します（Finder からは `InGoodPaste-Setup.command` をダブルクリック）。ビルドして、アプリケーションフォルダへ移すかを尋ね（既定は移さない。同じ名前のアプリがすでにあるときは、置き換えてよいかも尋ねる）、起動のしかたを表示します。何度動かしても大丈夫で、履歴と設定には触れません。`./setup.sh --dry-run` で何をするかだけを確かめられ、`--yes` を付けると尋ねずに既定の答えを選びます。Xcode Command Line Tools が必要で、無いときは入れ方（`xcode-select --install`）を表示して止まります。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+ソースから作る場合は、このリポジトリをクローンして `./setup.sh` を実行します（Finder からは `CorkClip-Setup.command` をダブルクリック）。ビルドして、アプリケーションフォルダへ移すかを尋ね（既定は移さない。同じ名前のアプリがすでにあるときは、置き換えてよいかも尋ねる）、起動のしかたを表示します。何度動かしても大丈夫で、履歴と設定には触れません。`./setup.sh --dry-run` で何をするかだけを確かめられ、`--yes` を付けると尋ねずに既定の答えを選びます。Xcode Command Line Tools が必要で、無いときは入れ方（`xcode-select --install`）を表示して止まります。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
 #### アクセシビリティの許可
 
-選んだ項目を前のアプリに貼り込むために、アクセシビリティの許可を使います。初めて貼るときに求められるので、「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で InGoodPaste! をオンにしてください。許可が無い間は、選んだ項目をクリップボードに戻すだけになります（自分で `⌘V` を押せば貼れます）。
+選んだ項目を前のアプリに貼り込むために、アクセシビリティの許可を使います。初めて貼るときに求められるので、「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で CorkClip をオンにしてください。許可が無い間は、選んだ項目をクリップボードに戻すだけになります（自分で `⌘V` を押せば貼れます）。
 
 #### 入力監視の許可
 
@@ -189,20 +189,20 @@ LaTeX の式を書くと、その場でプレビューが出ます。`⏎` で�
 
 ### ランチャーから開く
 
-ランチャーには `InGoodPaste!.app` を登録します。URL にも対応しています。
+ランチャーには `CorkClip.app` を登録します。URL にも対応しています。
 
 | URL | 動作 |
 |---|---|
-| `ingoodpaste://open` | 履歴を開く（`?tag=論文`・`?query=…` で絞り込んで開く） |
-| `ingoodpaste://latex` | 数式画像の画面を開く |
-| `ingoodpaste://snippet` | 新しい定型文 |
-| `ingoodpaste://stack/toggle`（`start`・`stop`） | ペーストスタックを始める・終える |
-| `ingoodpaste://pause`（`?minutes=15`）・`ingoodpaste://resume` | 取得を一時停止・再開 |
-| `ingoodpaste://settings` | 設定を開く |
-| `kobito://ingoodpaste/day/2026-09-28` | その日に残した項目で履歴を開く（workspace のカードから） |
-| `kobito://ingoodpaste/open/123` | その項目を選んで履歴を開く |
+| `corkclip://open` | 履歴を開く（`?tag=論文`・`?query=…` で絞り込んで開く） |
+| `corkclip://latex` | 数式画像の画面を開く |
+| `corkclip://snippet` | 新しい定型文 |
+| `corkclip://stack/toggle`（`start`・`stop`） | ペーストスタックを始める・終える |
+| `corkclip://pause`（`?minutes=15`）・`corkclip://resume` | 取得を一時停止・再開 |
+| `corkclip://settings` | 設定を開く |
+| `kobito://corkclip/day/2026-09-28` | その日に残した項目で履歴を開く（workspace のカードから） |
+| `kobito://corkclip/open/123` | その項目を選んで履歴を開く |
 
-`kobito://` の URL は、`open -b io.github.kobito-tools.ingoodpaste "kobito://ingoodpaste/…"` のようにアプリを指定して渡します。
+`kobito://` の URL は、`open -b io.github.kobito-tools.corkclip "kobito://corkclip/…"` のようにアプリを指定して渡します。
 
 ### 保存しない物と消える期限
 
@@ -212,17 +212,17 @@ LaTeX の式を書くと、その場でプレビューが出ます。`⏎` で�
 
 ### 終了する
 
-メニューバーのクリップボードのアイコンをクリックし、「InGoodPaste! を終了」を選択します。
+メニューバーのクリップボードのアイコンをクリックし、「CorkClip を終了」を選択します。
 
 ## トラブルシューティング
 
 ### `⏎` を押しても貼られない
 
-アクセシビリティの許可が無いと、選んだ項目をクリップボードに戻すだけになります。「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で InGoodPaste! がオンになっているか確認してください。アプリを更新した後に動作しなくなった場合は、一覧から InGoodPaste! を「－」で削除し、再度追加してください。
+アクセシビリティの許可が無いと、選んだ項目をクリップボードに戻すだけになります。「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で CorkClip がオンになっているか確認してください。アプリを更新した後に動作しなくなった場合は、一覧から CorkClip を「－」で削除し、再度追加してください。
 
 ### ペーストスタックで `⌘V` を押しても次の項目にならない
 
-「システム設定」→「プライバシーとセキュリティ」→「入力監視」で InGoodPaste! がオンになっているか確認してください。
+「システム設定」→「プライバシーとセキュリティ」→「入力監視」で CorkClip がオンになっているか確認してください。
 
 ### コピーした物が履歴に入らない
 
@@ -231,20 +231,20 @@ LaTeX の式を書くと、その場でプレビューが出ます。`⏎` で�
 
 ### `⌥⌘V` を押してもパネルが出ない
 
-ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、ランチャーなどから `ingoodpaste://open` で開いてください。
+ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、ランチャーなどから `corkclip://open` で開いてください。
 
 ## アンインストール
 
-1. メニューバーのアイコンから InGoodPaste! を終了し、アプリケーションフォルダの `InGoodPaste!.app` をゴミ箱へ移動します。
-2. 「システム設定」→「プライバシーとセキュリティ」の「アクセシビリティ」「入力監視」の一覧から InGoodPaste! を選択し、「－」で削除します。
+1. メニューバーのアイコンから CorkClip を終了し、アプリケーションフォルダの `CorkClip.app` をゴミ箱へ移動します。
+2. 「システム設定」→「プライバシーとセキュリティ」の「アクセシビリティ」「入力監視」の一覧から CorkClip を選択し、「－」で削除します。
 
 ### 履歴の削除
 
-履歴も消す場合は、`~/Library/Application Support/InGoodPaste/` を削除してください。workspace に残した物は、基準パスの `.kobito-tools/InGoodPaste/` にあります。
+履歴も消す場合は、`~/Library/Application Support/CorkClip/` を削除してください。workspace に残した物は、基準パスの `.kobito-tools/CorkClip/` にあります。
 
 ## プライバシー
 
-InGoodPaste! は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/InGoodPaste/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などで workspace に残した物だけです。
+CorkClip は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/CorkClip/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などで workspace に残した物だけです。
 
 ## ライセンス
 

@@ -1,20 +1,20 @@
 # 開発について
 
-InGoodPaste! のビルド方法とソースコードの構成をまとめます。利用方法は [README](../README.md)、機能の要件は [REQUIREMENTS.md](REQUIREMENTS.md) を参照してください。
+CorkClip のビルド方法とソースコードの構成をまとめます。利用方法は [README](../README.md)、機能の要件は [REQUIREMENTS.md](REQUIREMENTS.md) を参照してください。
 
 ## ビルド
 
 Xcode Command Line Tools（`xcode-select --install`）が必要です。
 
 ```bash
-./build.sh                                 # フォルダ直下に InGoodPaste!.app（ユニバーサルバイナリ）を作成
-./scripts/package-release.sh               # Releases 用の dist/InGoodPaste_<版>.dmg と dist/InGoodPaste_<版>_universal.zip を作成
+./build.sh                                 # フォルダ直下に CorkClip.app（ユニバーサルバイナリ）を作成
+./scripts/package-release.sh               # Releases 用の dist/CorkClip_<版>.dmg と dist/CorkClip_<版>_universal.zip を作成
 ./tests/run.sh                             # 取得から書き戻し・検索・タグ・変換・文字認識・数式・シリーズの約束（起動情報・送る・カード）までのテスト
 ./scripts/make-icon.sh                     # アイコンを描き直す（make-icon.py → icon.svg → icon-1024.png・AppIcon.icns）
-./scripts/social-preview.sh [フォント]     # シリーズの紹介画像（assets/icon/InGoodPaste-1280x640.png）を作り直す（Google Chrome と Noto Sans JP を使う）
+./scripts/social-preview.sh [フォント]     # シリーズの紹介画像（assets/icon/CorkClip-1280x640.png）を作り直す（Google Chrome と Noto Sans JP を使う）
 ```
 
-版番号は `build.sh` の `VERSION` で指定します。ソースから使う人向けの入口は `setup.sh` です（ビルド・アプリケーションフォルダへ移すかの確認・起動情報の書き出し・起動の案内。`--yes`・`--dry-run`・`--help` を受け付けます）。`InGoodPaste-Setup.command` は `setup.sh` を Finder から動かすための入口です。
+版番号は `build.sh` の `VERSION` で指定します。ソースから使う人向けの入口は `setup.sh` です（ビルド・アプリケーションフォルダへ移すかの確認・起動情報の書き出し・起動の案内。`--yes`・`--dry-run`・`--help` を受け付けます）。`CorkClip-Setup.command` は `setup.sh` を Finder から動かすための入口です。
 
 `package-release.sh` の dmg は、アプリ・Applications へのリンク・背景（`assets/dmg/`。`scripts/make-icon.sh` で描き直せる）を置き、窓の並べ方を Finder に頼んでから圧縮します。初回は「Finder を操作する許可」を求められることがあります。許可しないと、背景なし（並べ方なし）の dmg になります。
 
@@ -22,13 +22,13 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 
 ### 許可について
 
-`build.sh` はアドホック署名なので、ビルドし直すたびに macOS からは別のアプリに見え、アクセシビリティと入力監視の許可が外れます。ビルドし直したら、「システム設定」→「プライバシーとセキュリティ」の各項目で InGoodPaste! を一度削除（`−`）してから、もう一度許可してください。
+`build.sh` はアドホック署名なので、ビルドし直すたびに macOS からは別のアプリに見え、アクセシビリティと入力監視の許可が外れます。ビルドし直したら、「システム設定」→「プライバシーとセキュリティ」の各項目で CorkClip を一度削除（`−`）してから、もう一度許可してください。
 
 ## ソースコードの構成
 
 | パス | 内容 |
 |---|---|
-| `Sources/InGoodPasteApp.swift` | 起動、取得した物の流れ（保存 → 自動タグ → スタック → 文字認識 → 自動書き出し）、パネルからの操作、メニューバー、URL、ショートカット |
+| `Sources/CorkClipApp.swift` | 起動、取得した物の流れ（保存 → 自動タグ → スタック → 文字認識 → 自動書き出し）、パネルからの操作、メニューバー、URL、ショートカット |
 | `Sources/PasteboardWatcher.swift` | クリップボードの監視（0.3秒ごと）と、保存しない物の判定（F-01, F-02） |
 | `Sources/ClipContent.swift` | 1回のコピーの中身（全ての項目・型・データ）、種類の判定、埋め込んだ数式の読み取り、プレビュー、サムネ |
 | `Sources/ClipStore.swift` | 履歴のDBと `blobs/` の読み書き、削除、整理（F-01, F-15） |
@@ -52,7 +52,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 ## 保存の仕組み
 
 ```text
-~/Library/Application Support/InGoodPaste/
+~/Library/Application Support/CorkClip/
 ├── database/history.sqlite3   項目・型の一覧・タグの写し・全文検索（WAL）
 ├── blobs/ab/<sha256>.bin      生データ（中身のハッシュ名。同じデータは1つだけ）
 ├── thumbs/<項目ID>.png        一覧用のサムネ
@@ -61,7 +61,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 
 - 1回のコピーは、`NSPasteboardItem` ごと・型ごとに `clip_representations` の1行になります。貼るときは同じ並びで `NSPasteboardItem` を作り直すので、アプリ独自の型（パワポの図形など）も元のまま戻ります。
 - 全ての項目・型・データから作るハッシュ（`clips.content_hash`）で重複を判定し、同じ物は回数を増やして先頭に移します。定型文は重複を判定しません。
-- 自分が書き戻した物には `io.github.kobito-tools.ingoodpaste.own` の型を付け、監視側で取らないようにしています。
+- 自分が書き戻した物には `io.github.kobito-tools.corkclip.own` の型を付け、監視側で取らないようにしています。
 - 取得（クリップボードを読む）はメインスレッド、保存・整理・タグの同期・書き出しは裏の1本のキュー、文字認識は別のキューです。`ClipStore` の公開メソッドは1つのロックの中で動きます。
 - 検索は FTS5 の trigram（3文字以上）と、それより短い語の部分一致を組み合わせます。タグの名前も対象です。
 - 数式画像には元の式と描き方（`LatexSource` の JSON）を、自分の型・PNG の説明・PDF のキーワードの3か所に入れます。どれか1つが残っていれば、ほかのアプリから戻ってきても数式として扱えます。
@@ -72,14 +72,14 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 
 ```text
 ~/Library/Application Support/kobito-tools/   （KOBITO_CONFIG_DIR で変えられる）
-├── apps/ingoodpaste.json           ④ 起動情報。起動のたびに書く（open -b <バンドルID>。embed・receive は持たない）
+├── apps/corkclip.json           ④ 起動情報。起動のたびに書く（open -b <バンドルID>。embed・receive は持たない）
 ├── apps/*.json                     ほかのアプリの起動情報。receive を集めて「送る」の送り先にする
 └── datasets.json                   ⑥ 基準パスの履歴。基準パスの候補にし、開いたら自分の1件を書く
 
 <基準パス>/.kobito-tools/
 ├── dataset.json                    ⓪-1 読むだけ（無ければ ID を尋ねて作る）
 ├── Tags/tags.json                  ⓪-2 共有タグ。このMacの履歴DBの tags・tag_categories はその写し
-└── InGoodPaste/                    workspace に残す（⌘S・自動で残すタグ）
+└── CorkClip/                    workspace に残す（⌘S・自動で残すタグ）
     ├── lock.json                   書く間だけ置く使用中の印
     ├── database/kept.sqlite3       残したクリップの写し（schema/kept/・DELETE モード）
     ├── uploads/                    残した画像（PNG）
@@ -89,7 +89,7 @@ $TMPDIR/kobito-share/<UUID>.json    ⑦ 送る中身（KOBITO_SHARE_DIR で変�
 ```
 
 - **共有タグ**：起動時、基準パスを変えたとき、タグを付け外ししたときに、シリーズ共通の規則（`TagStore.swift`）で `tags.json` と統合します。
-- **URL**：`kobito://ingoodpaste/day/<日付>`・`kobito://ingoodpaste/open/<ID>` は「URL を開く」Apple Event（`kAEGetURL`）で届きます。`applicationWillFinishLaunching` で受け口を作るので、未起動から開かれても届きます。`kobito` スキームは Info.plist に登録しません。
+- **URL**：`kobito://corkclip/day/<日付>`・`kobito://corkclip/open/<ID>` は「URL を開く」Apple Event（`kAEGetURL`）で届きます。`applicationWillFinishLaunching` で受け口を作るので、未起動から開かれても届きます。`kobito` スキームは Info.plist に登録しません。
 - **送る**：送り先は起動情報の `receive` から実行時に作ります。口が受け取れる種類（`accepts`）だけを入れて受け渡しファイルを書き、口の `url` の `{file}` を置き換えて、送り先の起動情報の `command` で開きます。
-- **workspace に残す**：残した物は基準パスの `kept.sqlite3` に写し（複数のMacで同じ基準パスを使えるように、このMacの履歴ではなく基準パスに置く）、そのたびに `cards.jsonl` を全件書き直します。以前の書き出し先（`database/ingoodpaste.sqlite3` の日ごとのメモ）は、初めて開いたときに一度だけ写します（元のファイルは消しません）。
-- **約束の確かめ**：`InGoodPaste!.app/Contents/MacOS/InGoodPaste --write-launch-info` は起動情報だけを書いて終わります。`KOBITO_CONFIG_DIR` を一時フォルダに向けて実行し、kobito-workspace の `uv run scripts/check_contracts.py --apps`（カードは `--base <基準パス>`）で確かめられます。
+- **workspace に残す**：残した物は基準パスの `kept.sqlite3` に写し（複数のMacで同じ基準パスを使えるように、このMacの履歴ではなく基準パスに置く）、そのたびに `cards.jsonl` を全件書き直します。以前の書き出し先（`database/corkclip.sqlite3` の日ごとのメモ）は、初めて開いたときに一度だけ写します（元のファイルは消しません）。
+- **約束の確かめ**：`CorkClip.app/Contents/MacOS/CorkClip --write-launch-info` は起動情報だけを書いて終わります。`KOBITO_CONFIG_DIR` を一時フォルダに向けて実行し、kobito-workspace の `uv run scripts/check_contracts.py --apps`（カードは `--base <基準パス>`）で確かめられます。

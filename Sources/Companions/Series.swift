@@ -9,9 +9,9 @@ import Foundation
 /// テストでは実際の設定に触れないよう、環境変数 KOBITO_CONFIG_DIR で場所を変えられる（シリーズ共通の決まり）。
 /// ほかのアプリの名前は書かない。何ができるかは、実行時に起動情報から知る。
 enum Series {
-    static let appID = "ingoodpaste"
-    static let appName = "InGoodPaste!"
-    static let defaultBundleID = "io.github.kobito-tools.ingoodpaste"
+    static let appID = "corkclip"
+    static let appName = "CorkClip"
+    static let defaultBundleID = "io.github.kobito-tools.corkclip"
 
     static var directory: URL {
         if let override = ProcessInfo.processInfo.environment["KOBITO_CONFIG_DIR"], !override.isEmpty {
@@ -123,15 +123,15 @@ enum Series {
     // MARK: - 受け付ける URL
 
     enum Route: Equatable {
-        /// kobito://ingoodpaste/day/<YYYY-MM-DD>：その日に残したクリップで絞り込む。
+        /// kobito://corkclip/day/<YYYY-MM-DD>：その日に残したクリップで絞り込む。
         case day(String)
-        /// kobito://ingoodpaste/open/<クリップID>：そのクリップを選ぶ。
+        /// kobito://corkclip/open/<クリップID>：そのクリップを選ぶ。
         case open(Int)
         /// そのほか：パネルを開くだけ。
         case panel
     }
 
-    /// 自分宛て（kobito://ingoodpaste/…）の URL を読む。ほかのアプリ宛てなら nil。
+    /// 自分宛て（kobito://corkclip/…）の URL を読む。ほかのアプリ宛てなら nil。
     /// 一度受け付けた形は、作りを変えても受け付け続ける（約束②）。
     static func route(_ url: URL) -> Route? {
         guard url.scheme?.lowercased() == "kobito", url.host?.lowercased() == appID else { return nil }

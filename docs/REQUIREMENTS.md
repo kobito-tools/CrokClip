@@ -2,7 +2,7 @@
 
 kobito-tools シリーズのクリップボード履歴アプリの要件です。Paste の代わりとして、それ以上に使えることを目指します。
 
-アプリ名は **InGoodPaste!**（「in good taste（趣味よく・おいしく）」と paste を掛けたもの。コック帽の小人が、コピーした物を味見して＝貼られる内容を先に確かめてから、いい具合に貼る）です。以前の名前は Pastephant で、そのときの履歴・設定・基準パスに残した物は、初めて起動・基準パスを開いたときに新しい名前のフォルダへ移します。
+アプリ名は **CorkClip**（コピーした物を、コルクボードにピンで留めるように取っておくクリップボード履歴）です。以前の名前は Pastephant で、そのときの履歴・設定・基準パスに残した物は、初めて起動・基準パスを開いたときに新しい名前のフォルダへ移します。
 
 kobito シリーズの1つです。ほかのアプリとは kobito-workspace の `docs/CONTRACTS.md` の約束だけでつながり、ほかのアプリの名前はこの文書にも書きません。シリーズの全体は kobito-workspace を参照してください。
 
@@ -13,8 +13,8 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 | 対応OS | macOS 13 以降（Apple Silicon / Intel のユニバーサルバイナリ） |
 | 実装 | Swift ネイティブ（SwiftUI ＋ AppKit）。`build.sh` と `swiftc` でビルド（Xcode プロジェクトは作らない） |
 | 同期 | しない。iCloud や他の端末との同期はなし |
-| 保存 | 履歴はすべてこのMacの `~/Library/Application Support/InGoodPaste/` に保存（SQLite ＋ 生データはファイル）。クラウドに上がらず、Macごとに別の履歴になる（→ 6章） |
-| 基準パス | 任意。指定すると、共有タグ（`.kobito-tools/Tags/tags.json`）と「workspace に残す」（`.kobito-tools/InGoodPaste/`）に使う。履歴の保存には使わない |
+| 保存 | 履歴はすべてこのMacの `~/Library/Application Support/CorkClip/` に保存（SQLite ＋ 生データはファイル）。クラウドに上がらず、Macごとに別の履歴になる（→ 6章） |
+| 基準パス | 任意。指定すると、共有タグ（`.kobito-tools/Tags/tags.json`）と「workspace に残す」（`.kobito-tools/CorkClip/`）に使う。履歴の保存には使わない |
 | 画面 | 画面の右端から出てくる縦のリスト。右か左かは設定で切り替え（→ 3章） |
 | ネットワーク | 使わない。LaTeX の描画もオフラインで行う |
 | 配布 | シリーズ共通（公証なし、Releases で dmg・zip、`xattr` の案内） |
@@ -97,7 +97,7 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 - 一緒に記録する情報：コピーした日時、コピー元のアプリ（コピーされた瞬間の最前面のアプリの bundle ID と名前）、代表の種類、プレビュー用のテキストとサムネ。
 - 代表の種類：`text` / `richText` / `image` / `file` / `url` / `color` / `office`（パワポなど独自の型が主）/ `formula`（F-06 で作ったもの）。
 - **重複の扱い**：全ての型のデータから計算したハッシュが同じなら新しい項目を作らず、既存の項目を先頭に移して「コピーした回数」を増やします。
-- 自分がクリップボードに書いたもの（ペーストのために戻したときなど）は、独自の型 `io.github.kobito-tools.ingoodpaste.own` を付けておき、履歴に二重に入れないようにします。
+- 自分がクリップボードに書いたもの（ペーストのために戻したときなど）は、独自の型 `io.github.kobito-tools.corkclip.own` を付けておき、履歴に二重に入れないようにします。
 - 1項目の上限を設定します（初期値 100MB）。超えた項目は、プレビューだけを残して生データは保存しません。一覧でもそれとわかるように表示します。
 
 ### F-02 取得しないもの（プライバシー）
@@ -136,7 +136,7 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 - 描画には **KaTeX をアプリに同梱**し（MIT ライセンス）、WKWebView で描きます。KaTeX が対応していない命令は、エラーの場所を表示します。
 - クリップボードに載せる型：**PDF（ベクター）＋ PNG（Retina 解像度）＋ TIFF**。
 - オプション：文字色、文字の大きさ（pt）、背景（透明 / 白 / 任意の色）、インライン / ディスプレイ、余白。設定はよく使う組み合わせを「プリセット」として保存できます（例：「暗いスライド用（白文字）」）。
-- **元の式を埋め込む**：PDF のメタデータ、PNG の `iTXt` チャンク、独自の型 `io.github.kobito-tools.ingoodpaste.latex` の3か所に元の式とオプションを入れます。
+- **元の式を埋め込む**：PDF のメタデータ、PNG の `iTXt` チャンク、独自の型 `io.github.kobito-tools.corkclip.latex` の3か所に元の式とオプションを入れます。
   - 履歴の数式の項目から、元の式を開き直して直せます。
   - 作った画像がほかのアプリからコピーされて戻ってきたときも、埋め込まれた式を読み取り、`formula` として扱います。
 - よく使う式やマクロ（`\newcommand`）は設定に登録でき、全ての式の前に付けて描画します。
@@ -227,9 +227,9 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 ### F-17 workspace に残す（③ カード）
 
 - `⌘S`（`→` の `S`）で選んだ項目を、基準パスに残します。「このタグが付いたら自動で残す」という規則も設定できます。workspace を使わない人のために、設定でこの機能を隠せます（操作の一覧からも消える）。
-- 残した項目は、基準パスの InGoodPaste! 自身の DB（`.kobito-tools/InGoodPaste/database/kept.sqlite3`、`schema/kept/`）に、残した日と中身の写し（時刻・コピー元・タグの行、文字・数式の元の式・ファイルのパス・画像の文字、タグID、画像）を記録します。履歴の項目が期限で消えても、残した物は消えません。複数のMacが同じ基準パスに残せるよう、このMacの履歴ではなく基準パスに置き、`lock.json`（`app: "ingoodpaste"`、30秒ごとに更新、2分で期限切れ）で同時に書かないようにします。
-- 画像は PNG にそろえて `.kobito-tools/InGoodPaste/uploads/` に保存します。カードには画像を入れません。
-- 残すたびに（と、起動時・基準パスを変えたときに）、`<基準パス>/.kobito-tools/InGoodPaste/cards.jsonl` を**日ごとに1枚のカード**で書き直します（一時ファイルから置き換え）。
+- 残した項目は、基準パスの CorkClip 自身の DB（`.kobito-tools/CorkClip/database/kept.sqlite3`、`schema/kept/`）に、残した日と中身の写し（時刻・コピー元・タグの行、文字・数式の元の式・ファイルのパス・画像の文字、タグID、画像）を記録します。履歴の項目が期限で消えても、残した物は消えません。複数のMacが同じ基準パスに残せるよう、このMacの履歴ではなく基準パスに置き、`lock.json`（`app: "corkclip"`、30秒ごとに更新、2分で期限切れ）で同時に書かないようにします。
+- 画像は PNG にそろえて `.kobito-tools/CorkClip/uploads/` に保存します。カードには画像を入れません。
+- 残すたびに（と、起動時・基準パスを変えたときに）、`<基準パス>/.kobito-tools/CorkClip/cards.jsonl` を**日ごとに1枚のカード**で書き直します（一時ファイルから置き換え）。
 
 | 項目 | 値 |
 |---|---|
@@ -239,41 +239,41 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 | `date` | その日 |
 | `tags` | その日に残したクリップのタグID（重複を除く） |
 | `text` | その日に残したクリップの文字（OCR の文字を含む）を、2000 文字まで |
-| `url` | `kobito://ingoodpaste/day/<YYYY-MM-DD>` |
+| `url` | `kobito://corkclip/day/<YYYY-MM-DD>` |
 | `updated` | その日に最後に残した日時（時差付き） |
 
 - 日付の区切りは、項目を**残した日**（このMacの日付）で判断します（コピーした日ではありません）。
 - 残した項目には、このMacの履歴にも印（`exported_at`）を付け、二重に残さないようにします。`kept:<日付>` でその日に残した物を絞り込めます（以前の `exported:` も使えます）。
-- 以前の版は、残した物を日ごとのメモとして別の形の DB（`database/ingoodpaste.sqlite3` の `memos` 表）に書いていました。`kept.sqlite3` を初めて開いたときに、そのメモを文字とタグごと一度だけ写します（元のファイルは消しません）。
+- 以前の版は、残した物を日ごとのメモとして別の形の DB（`database/corkclip.sqlite3` の `memos` 表）に書いていました。`kept.sqlite3` を初めて開いたときに、そのメモを文字とタグごと一度だけ写します（元のファイルは消しません）。
 
 ### F-18 URL での呼び出し
 
-- URL スキーム `ingoodpaste://` で、次の操作をアプリの外から呼べるようにします。ランチャーに登録すれば1キーで使えます。
+- URL スキーム `corkclip://` で、次の操作をアプリの外から呼べるようにします。ランチャーに登録すれば1キーで使えます。
 
 | URL | 動作 |
 |---|---|
-| `ingoodpaste://open` | 履歴パネルを開く |
-| `ingoodpaste://open?tag=論文` | タグで絞り込んで開く |
-| `ingoodpaste://latex` | LaTeX 入力を開く |
-| `ingoodpaste://stack/toggle` | ペーストスタックを始める / 終える |
-| `ingoodpaste://pause` | 取得を一時停止 / 再開 |
+| `corkclip://open` | 履歴パネルを開く |
+| `corkclip://open?tag=論文` | タグで絞り込んで開く |
+| `corkclip://latex` | LaTeX 入力を開く |
+| `corkclip://stack/toggle` | ペーストスタックを始める / 終える |
+| `corkclip://pause` | 取得を一時停止 / 再開 |
 
-- kobito シリーズの約束（②・④）として、起動のたびに起動情報 `~/Library/Application Support/kobito-tools/apps/ingoodpaste.json`（`{"app": "ingoodpaste", "name": "InGoodPaste!", "command": ["/usr/bin/open", "-b", "<バンドルID>"]}`）を書き出します。`embed` と `receive` は持ちません（workspace の中には表示せず、「起動する」ボタンとして並ぶ）。
+- kobito シリーズの約束（②・④）として、起動のたびに起動情報 `~/Library/Application Support/kobito-tools/apps/corkclip.json`（`{"app": "corkclip", "name": "CorkClip", "command": ["/usr/bin/open", "-b", "<バンドルID>"]}`）を書き出します。`embed` と `receive` は持ちません（workspace の中には表示せず、「起動する」ボタンとして並ぶ）。
 - 次の `kobito://` の URL を受け付けます。一度受け付けた形は、作りを変えても受け付け続けます。
 
 | URL | 動作 |
 |---|---|
-| `kobito://ingoodpaste/day/<YYYY-MM-DD>` | パネルを開き、その日に残したクリップで絞り込む |
-| `kobito://ingoodpaste/open/<クリップID>` | パネルを開き、そのクリップを選ぶ |
+| `kobito://corkclip/day/<YYYY-MM-DD>` | パネルを開き、その日に残したクリップで絞り込む |
+| `kobito://corkclip/open/<クリップID>` | パネルを開き、そのクリップを選ぶ |
 
-- URL は「URL を開く」Apple Event（`kAEGetURL`）として届きます。`applicationWillFinishLaunching` で `NSAppleEventManager` に受け口を登録します（未起動から開かれたときは `didFinishLaunching` より前に届くため）。`kobito` スキームは Info.plist に登録しません（ほかのアプリ宛ての URL まで受け取ってしまうため）。自分宛て（`kobito://ingoodpaste/…`）以外は無視します。
+- URL は「URL を開く」Apple Event（`kAEGetURL`）として届きます。`applicationWillFinishLaunching` で `NSAppleEventManager` に受け口を登録します（未起動から開かれたときは `didFinishLaunching` より前に届くため）。`kobito` スキームは Info.plist に登録しません（ほかのアプリ宛ての URL まで受け取ってしまうため）。自分宛て（`kobito://corkclip/…`）以外は無視します。
 
 ### F-19 メニューバーと設定
 
 - メニューバーのアイコンから、パネルを開く、LaTeX 入力、一時停止、スタック、設定、終了を選べます。Dock には出しません（`LSUIElement`）。
 - ログイン時に起動（`SMAppService`）。
 - 設定の項目：ショートカット、パネルの出る側・幅・ディスプレイ、除外するアプリ、自動タグの規則、保存期間と容量、LaTeX のプリセットとマクロ、変換の組み合わせ、ペースト後にクリップボードを戻すか、基準パス。
-- 基準パスの候補として、⑥ 基準パスの履歴（`~/Library/Application Support/kobito-tools/datasets.json`）にある「kobito シリーズで使っているフォルダ」を、最後に開いた順に示します（`.kobito-tools/dataset.json` が今もあるものだけ）。基準パスを開いたら、自分の1件（`app: "ingoodpaste"`）を書き込みます。
+- 基準パスの候補として、⑥ 基準パスの履歴（`~/Library/Application Support/kobito-tools/datasets.json`）にある「kobito シリーズで使っているフォルダ」を、最後に開いた順に示します（`.kobito-tools/dataset.json` が今もあるものだけ）。基準パスを開いたら、自分の1件（`app: "corkclip"`）を書き込みます。
 - 「連携」の画面には、シリーズの紹介として「kobito シリーズについて（kobito-workspace の README を開く）」のリンクを1つだけ置きます。
 
 ## 5. 非機能要件
@@ -291,7 +291,7 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 ## 6. 保存の設計
 
 ```text
-~/Library/Application Support/InGoodPaste/
+~/Library/Application Support/CorkClip/
 ├── database/history.sqlite3   項目・型の一覧・タグの写し・全文検索
 ├── blobs/ab/abcdef….bin       生データ（中身のハッシュ名。同じデータは1つだけ）
 ├── thumbs/<項目ID>.png        一覧用のサムネ
@@ -304,7 +304,7 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 <基準パス>/.kobito-tools/
 ├── dataset.json                    読むだけ（無ければ ID を尋ねて作る）
 ├── Tags/tags.json                  共有タグ（F-04）
-└── InGoodPaste/                    workspace に残す（F-17）
+└── CorkClip/                    workspace に残す（F-17）
     ├── lock.json
     ├── database/kept.sqlite3       残したクリップの写し（schema/kept/）
     ├── uploads/                    残した画像（PNG）
@@ -329,7 +329,7 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 
 | パス | 内容 |
 |---|---|
-| `Sources/InGoodPasteApp.swift` | 起動、メニューバー、URL の受け取り、ショートカット |
+| `Sources/CorkClipApp.swift` | 起動、メニューバー、URL の受け取り、ショートカット |
 | `Sources/PasteboardWatcher.swift` | クリップボードの監視と取得（F-01, F-02） |
 | `Sources/ClipStore.swift` | SQLite と `blobs/` の読み書き、整理（F-15） |
 | `Sources/Paster.swift` | 書き戻しと `⌘V` の送信、ペーストスタック（F-03, F-14） |
@@ -344,7 +344,7 @@ kobito シリーズの1つです。ほかのアプリとは kobito-workspace の
 
 ## 8. ほかのアプリとのつながり
 
-ほかのアプリとは約束（kobito-workspace の `docs/CONTRACTS.md`）だけでつながるので、ほかのアプリ側に InGoodPaste! のための変更は要りません。送り先・カードの表示・URL の開き方は、すべて約束の形で決まります。
+ほかのアプリとは約束（kobito-workspace の `docs/CONTRACTS.md`）だけでつながるので、ほかのアプリ側に CorkClip のための変更は要りません。送り先・カードの表示・URL の開き方は、すべて約束の形で決まります。
 
 ## 9. 作る順番
 

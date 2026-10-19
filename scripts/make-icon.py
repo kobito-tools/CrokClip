@@ -1,4 +1,4 @@
-# InGoodPaste! のアイコン（assets/icon/icon.svg）を、kobito-tools シリーズの小人で描く。
+# CorkClip のアイコン（assets/icon/icon.svg）を、kobito-tools シリーズの小人で描く。
 # 小人の描き方はシリーズ共通（kobito-workspace の assets/ を参照。元の座標系 viewBox 0 0 49 44 を translate + scale で置く）。
 # 使い方: scripts/make-icon.sh から呼ぶ（SVG → PNG・icns への変換もそちらで行う）。
 import sys
@@ -49,14 +49,14 @@ def ground(y=842, color="#000", opacity=".10", rx=210):
     return f'<ellipse cx="512" cy="{y}" rx="{rx}" ry="22" fill="{color}" opacity="{opacity}"/>'
 
 
-# --- InGoodPaste!：コック帽の小人が、コピーした物をはさんだクリップボードを片手に、木のさじで味見する（in good taste）---
+# --- CorkClip：コック帽の小人が、コピーした物をはさんだクリップボードを片手に、木のさじで味見する（in good taste）---
 def toque():
     # 頭の上のコック帽（帯と、ふくらんだ上の部分）。
     return f'''<path d="M15.5 4.5 C9.5 4 8.5 -5 15 -5.5 C15 -11.5 22.5 -13.5 25 -8.5 C27.5 -13.5 35 -11.5 34 -5.5 C40.5 -5 39.5 4 33.5 4.5 Z" fill="{HAT}" stroke="{INK}" stroke-width="1.6"/>
     <g fill="none" stroke="#C9C4B6" stroke-width="1.1"><path d="M20 3 C19.5 0 19.5 -2.5 20.5 -4.5"/><path d="M29 3 C29.5 0 29.5 -2.5 28.5 -4.5"/></g>
     <path d="M14.8 3.2 Q24.5 0.2 34.2 3.2 L33.8 8.6 Q24.5 6 15.2 8.6 Z" fill="{HAT}" stroke="{INK}" stroke-width="1.6"/>'''
 
-def ingoodpaste():
+def corkclip():
     s = 11.5
     tx, ty = 512 - 24 * s, 300
     arms = '<path d="M11 27 Q7 29.5 6.6 34"/><path d="M37 27 Q41.5 29.5 40.6 24.8"/>'
@@ -80,7 +80,7 @@ def ingoodpaste():
     </g>'''
     sparkle = '<g stroke="#EEF2F5" stroke-width="14" stroke-linecap="round" opacity=".9"><path d="M712 398 L748 364"/><path d="M736 456 L784 452"/><path d="M682 352 L690 306"/></g>'
     content = ground(872, rx=230) + sparkle + kobito(tx, ty, s=s, arms=arms, extra_front=toque() + spoon, face="open") + board
-    return squircle("#8FA2B3", "#728698", content, "ingoodpaste")
+    return squircle("#8FA2B3", "#728698", content, "corkclip")
 
 
 # --- パネルの縁にしがみつく小人（Resources/kobito-cling.png）。右側の x=54 がパネルの縁で、両手でつかむ（コック帽の分だけ下げて描く。手は KobitoWindow.grip）---
@@ -98,7 +98,7 @@ def cling():
     return f'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">{body}</svg>\n'
 
 
-# --- dmg を開いたときの背景（600×400pt）。左の InGoodPaste! から右の Applications へ、小人が案内する ---
+# --- dmg を開いたときの背景（600×400pt）。左の CorkClip から右の Applications へ、小人が案内する ---
 def dmg_background():
     arms = '<path d="M37 24 Q41 22 44.5 17"/><path d="M11.5 26 Q8.5 29 8 32.5"/>'
     guide = kobito(300 - 24 * 1.9, 280, s=1.9, arms=arms, legs="walk", extra_front=toque(), face="open")
@@ -106,7 +106,7 @@ def dmg_background():
   <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6F3EC"/><stop offset="1" stop-color="#E7E2D6"/></linearGradient></defs>
   <rect width="600" height="400" fill="url(#bg)"/>
   <path d="M0 0 H600 V56 H0 Z" fill="#8FA2B3" opacity=".22"/>
-  <text x="300" y="36" text-anchor="middle" font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, sans-serif" font-size="17" font-weight="600" fill="{INK}">InGoodPaste! を Applications フォルダへドラッグしてください</text>
+  <text x="300" y="36" text-anchor="middle" font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, sans-serif" font-size="17" font-weight="600" fill="{INK}">CorkClip を Applications フォルダへドラッグしてください</text>
   <path d="M225 190 C265 160 335 160 375 190" fill="none" stroke="#728698" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 12"/>
   <path d="M366 176 L380 193 L360 199" fill="none" stroke="#728698" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
   {guide}
@@ -116,7 +116,7 @@ def dmg_background():
 
 
 if __name__ == "__main__":
-    open(sys.argv[1], "w").write(ingoodpaste())
+    open(sys.argv[1], "w").write(corkclip())
     if len(sys.argv) > 2:
         open(sys.argv[2], "w").write(cling())
     if len(sys.argv) > 3:

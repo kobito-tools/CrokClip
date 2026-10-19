@@ -1,11 +1,11 @@
 #!/bin/zsh
-# InGoodPaste! を、この Mac で使える状態にする（kobito シリーズの初期設定。決まりは kobito-workspace の docs/SETUP.md）。
+# CorkClip を、この Mac で使える状態にする（kobito シリーズの初期設定。決まりは kobito-workspace の docs/SETUP.md）。
 # 何度動かしても安全。履歴・設定には触れず、書くのは起動情報だけ。sudo は使わない。
 set -euo pipefail
 cd "${0:A:h}"
 
-APP_NAME="InGoodPaste!"
-EXEC_NAME="InGoodPaste"
+APP_NAME="CorkClip"
+EXEC_NAME="CorkClip"
 # 試すときは別のフォルダを指せる（実際のアプリケーションフォルダに触れないため）。
 APPLICATIONS_DIR="${KOBITO_APPLICATIONS_DIR:-/Applications}"
 
@@ -13,7 +13,7 @@ usage() {
   cat <<'EOF'
 使い方: ./setup.sh [--yes] [--dry-run] [--help]
 
-InGoodPaste! をソースからビルドして、この Mac で使える状態にします。
+CorkClip をソースからビルドして、この Mac で使える状態にします。
 
   （なし）    尋ねる場面では、その都度尋ねます
   --yes       尋ねる場面では、すべて既定の答えを選びます（アプリケーションフォルダへは移しません）
@@ -122,7 +122,7 @@ if $dry_run; then
   say "（--dry-run）$placed/Contents/MacOS/$EXEC_NAME --write-launch-info で書き出します"
 else
   "$placed/Contents/MacOS/$EXEC_NAME" --write-launch-info
-  say "書き出しました（${KOBITO_CONFIG_DIR:-$HOME/Library/Application Support/kobito-tools}/apps/ingoodpaste.json）。"
+  say "書き出しました（${KOBITO_CONFIG_DIR:-$HOME/Library/Application Support/kobito-tools}/apps/corkclip.json）。"
 fi
 
 # 6. 起動のしかた

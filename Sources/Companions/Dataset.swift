@@ -12,11 +12,11 @@ struct StoreError: Error, CustomStringConvertible {
 }
 
 /// kobito シリーズ共通の保存フォルダ（約束 ⓪-1。kobito-workspace の docs/CONTRACTS.md）で基準パスを扱う。
-/// InGoodPaste! の履歴はこのMacの中に置き、基準パスには共有タグと「workspace に残す」の分だけを置く。
+/// CorkClip の履歴はこのMacの中に置き、基準パスには共有タグと「workspace に残す」の分だけを置く。
 ///
 ///   <基準パス>/.kobito-tools/
 ///     dataset.json   format: "kobito-tools-dataset"・ID（シリーズ共通）
-///     InGoodPaste/   lock.json・database/kept.sqlite3・uploads/・cards.jsonl（InGoodPaste! だけが書き込む。WorkspaceCards.swift）
+///     CorkClip/   lock.json・database/kept.sqlite3・uploads/・cards.jsonl（CorkClip だけが書き込む。WorkspaceCards.swift）
 ///     Tags/tags.json シリーズで共有するタグ（TagStore.swift）
 struct DatasetInfo {
     let basePath: String
@@ -26,9 +26,9 @@ struct DatasetInfo {
 
 enum Dataset {
     static let rootName = ".kobito-tools"
-    static let directoryName = "InGoodPaste"
-    /// 以前の名前（Pastephant）の書き出し先。見つけたら ensureDirectories で移す。
-    static let renamedDirectoryName = "Pastephant"
+    static let directoryName = "CorkClip"
+    /// 以前の名前の書き出し先と、そのときの DB の名前。見つけたら ensureDirectories で移す（Pastephant が、いま使われている版）。
+    static let renamedDirectories = [(name: "Pastephant", database: "pastephant.sqlite3"), (name: "InGoodPaste", database: "ingoodpaste.sqlite3")]
     static let legacyDirectoryName = ".TickTockTome"
     static let format = "kobito-tools-dataset"
     static let subdirectories = ["database", "uploads"]
@@ -62,7 +62,7 @@ enum Dataset {
     static func keptDatabasePath(_ basePath: String) -> String { directory(basePath).appendingPathComponent("database").appendingPathComponent("kept.sqlite3").path }
 
     /// 以前の書き出し先の DB。初めて kept.sqlite3 を開いたときに中身を移す（WorkspaceCards.importLegacy）。
-    static func legacyDatabasePath(_ basePath: String) -> String { directory(basePath).appendingPathComponent("database").appendingPathComponent("ingoodpaste.sqlite3").path }
+    static func legacyDatabasePath(_ basePath: String) -> String { directory(basePath).appendingPathComponent("database").appendingPathComponent("corkclip.sqlite3").path }
 
     private static func datasetFile(_ basePath: String) -> URL { root(basePath).appendingPathComponent("dataset.json") }
 
@@ -70,7 +70,7 @@ enum Dataset {
         FileManager.default.fileExists(atPath: URL(fileURLWithPath: basePath).appendingPathComponent(legacyDirectoryName).appendingPathComponent("dataset.json").path)
     }
 
-    /// 旧形式（.TickTockTome）は InGoodPaste! では移行しない。移し方は kobito-workspace の docs/MIGRATION_FROM_TOMELET.md にある。
+    /// 旧形式（.TickTockTome）は CorkClip では移行しない。移し方は kobito-workspace の docs/MIGRATION_FROM_TOMELET.md にある。
     private static let legacyError = StoreError(status: 409, message: "このフォルダには以前の形式（.TickTockTome）のデータがあります。新しい形式（.kobito-tools）への移し方は、kobito-workspace の docs/MIGRATION_FROM_TOMELET.md を参照してください。", extra: ["legacyLayout": true])
 
     // MARK: - dataset.json
@@ -93,7 +93,7 @@ enum Dataset {
     }
 
     /// .kobito-tools が無ければ一時フォルダで作ってから名前を変えて完成させる（途中で失敗しても中途半端なフォルダを残さない）。
-    /// dataset.json の無い .kobito-tools（タグだけがあるなど）なら、dataset.json と InGoodPaste/ だけを加える。
+    /// dataset.json の無い .kobito-tools（タグだけがあるなど）なら、dataset.json と CorkClip/ だけを加える。
     static func create(_ basePath: String, datasetId: String) throws -> DatasetInfo {
         let id = try validateId(datasetId)
         let manager = FileManager.default
@@ -125,14 +125,14 @@ enum Dataset {
         for name in subdirectories { try FileManager.default.createDirectory(at: directory(basePath).appendingPathComponent(name), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]) }
     }
 
-    /// 以前の名前（Pastephant）で書き出したフォルダとDBを、この名前に移す。
+    /// 以前の名前（Pastephant・InGoodPaste）で書き出したフォルダとDBを、この名前に移す。
     private static func moveRenamedDirectory(_ basePath: String) throws {
         let manager = FileManager.default
-        let legacy = root(basePath).appendingPathComponent(renamedDirectoryName, isDirectory: true)
-        guard !manager.fileExists(atPath: directory(basePath).path), manager.fileExists(atPath: legacy.path) else { return }
-        try manager.moveItem(at: legacy, to: directory(basePath))
+        guard !manager.fileExists(atPath: directory(basePath).path),
+              let renamed = renamedDirectories.first(where: { manager.fileExists(atPath: root(basePath).appendingPathComponent($0.name).path) }) else { return }
+        try manager.moveItem(at: root(basePath).appendingPathComponent(renamed.name, isDirectory: true), to: directory(basePath))
         let database = directory(basePath).appendingPathComponent("database", isDirectory: true)
-        let legacyDatabase = database.appendingPathComponent("pastephant.sqlite3")
+        let legacyDatabase = database.appendingPathComponent(renamed.database)
         if manager.fileExists(atPath: legacyDatabase.path) {
             for suffix in ["", "-journal"] where manager.fileExists(atPath: legacyDatabase.path + suffix) {
                 try manager.moveItem(atPath: legacyDatabase.path + suffix, toPath: legacyDatabasePath(basePath) + suffix)
@@ -164,8 +164,8 @@ enum Dataset {
     }
 }
 
-/// 同じ基準パスへ複数のPCの InGoodPaste! が同時に書き出さないための使用中の印（.kobito-tools/InGoodPaste/lock.json）。
-/// 印は InGoodPaste/ の中に置くので、ほかのアプリの印とは干渉しない。
+/// 同じ基準パスへ複数のPCの CorkClip が同時に書き出さないための使用中の印（.kobito-tools/CorkClip/lock.json）。
+/// 印は CorkClip/ の中に置くので、ほかのアプリの印とは干渉しない。
 final class DatasetLock {
     enum State {
         case free
@@ -182,12 +182,12 @@ final class DatasetLock {
     }()
     static let machineId: String = {
         if let saved = UserDefaults.standard.string(forKey: "MachineId") { return saved }
-        // 以前の名前（Pastephant）のときのIDがあれば引き継ぐ。
-        if let saved = UserDefaults(suiteName: "io.github.kobito-tools.pastephant")?.string(forKey: "MachineId") {
+        // 以前の名前（Pastephant・InGoodPaste）のときのIDがあれば引き継ぐ。
+        if let saved = ["io.github.kobito-tools.pastephant", "io.github.kobito-tools.ingoodpaste"].lazy.compactMap({ UserDefaults(suiteName: $0)?.string(forKey: "MachineId") }).first {
             UserDefaults.standard.set(saved, forKey: "MachineId")
             return saved
         }
-        let value = "ingoodpaste-\(UUID().uuidString.lowercased())"
+        let value = "corkclip-\(UUID().uuidString.lowercased())"
         UserDefaults.standard.set(value, forKey: "MachineId")
         return value
     }()
@@ -207,7 +207,7 @@ final class DatasetLock {
     func state(now: Date = Date()) -> State {
         guard let lock = current() else { return .free }
         let pid = lock["pid"] as? Int ?? -1, host = lock["hostname"] as? String ?? ""
-        if lock["app"] as? String == "ingoodpaste", host == Self.hostname, pid == Int(getpid()) { return .mine }
+        if lock["app"] as? String == "corkclip", host == Self.hostname, pid == Int(getpid()) { return .mine }
         let heartbeat = (lock["heartbeatAt"] as? String).flatMap(Dataset.parseTimestamp) ?? .distantPast
         guard now.timeIntervalSince(heartbeat) < Self.staleInterval else { return .free }
         if host == Self.hostname { return pid > 0 && (kill(pid_t(pid), 0) == 0 || errno == EPERM) ? .heldOnThisMac : .free }
@@ -221,8 +221,8 @@ final class DatasetLock {
         switch state() {
         case .mine: break
         case .free: try write()
-        case .heldOnThisMac: throw StoreError(status: 423, message: "この基準パスはこのMacの別の InGoodPaste! が使用中です。", extra: ["lockHolder": ["hostname": Self.hostname, "samePc": true]])
-        case .heldElsewhere(let hostname): throw StoreError(status: 423, message: "この基準パスは「\(hostname)」の InGoodPaste! が使用中です。", extra: ["lockHolder": ["hostname": hostname, "samePc": false]])
+        case .heldOnThisMac: throw StoreError(status: 423, message: "この基準パスはこのMacの別の CorkClip が使用中です。", extra: ["lockHolder": ["hostname": Self.hostname, "samePc": true]])
+        case .heldElsewhere(let hostname): throw StoreError(status: 423, message: "この基準パスは「\(hostname)」の CorkClip が使用中です。", extra: ["lockHolder": ["hostname": hostname, "samePc": false]])
         }
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: Self.heartbeatInterval, repeats: true) { [weak self] _ in
@@ -233,7 +233,7 @@ final class DatasetLock {
 
     private func write() throws {
         if startedAt == nil { startedAt = Dataset.timestamp() }
-        let lock: [String: Any] = ["app": "ingoodpaste", "machineId": Self.machineId, "hostname": Self.hostname, "pid": Int(getpid()), "startedAt": startedAt!, "heartbeatAt": Dataset.timestamp()]
+        let lock: [String: Any] = ["app": "corkclip", "machineId": Self.machineId, "hostname": Self.hostname, "pid": Int(getpid()), "startedAt": startedAt!, "heartbeatAt": Dataset.timestamp()]
         try Dataset.writeJSON(lock, to: file)
     }
 

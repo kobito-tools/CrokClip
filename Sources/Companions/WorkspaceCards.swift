@@ -1,10 +1,10 @@
 import Foundation
 
-/// workspace に残す（F-17）。⌘S や「自動で残すタグ」で残したクリップを、基準パスの InGoodPaste! 自身の DB に写し、
-/// 日ごとに1枚のカード（約束③）にして <基準パス>/.kobito-tools/InGoodPaste/cards.jsonl に書き出す。
-/// workspace はこのカードを HOME・カレンダー・検索に並べ、押すと kobito://ingoodpaste/day/<日付> で InGoodPaste! を開く。
+/// workspace に残す（F-17）。⌘S や「自動で残すタグ」で残したクリップを、基準パスの CorkClip 自身の DB に写し、
+/// 日ごとに1枚のカード（約束③）にして <基準パス>/.kobito-tools/CorkClip/cards.jsonl に書き出す。
+/// workspace はこのカードを HOME・カレンダー・検索に並べ、押すと kobito://corkclip/day/<日付> で CorkClip を開く。
 ///
-///   <基準パス>/.kobito-tools/InGoodPaste/
+///   <基準パス>/.kobito-tools/CorkClip/
 ///     database/kept.sqlite3   残したクリップ（schema/kept/）
 ///     uploads/<UUID>.png      残した画像（PNG にそろえる。カードには入れない）
 ///     cards.jsonl             日ごとのカード
@@ -142,7 +142,7 @@ enum WorkspaceCards {
 
     // MARK: - 以前の書き出し先からの移し替え
 
-    /// 以前は、残したクリップを日ごとのメモとして別の形の DB（database/ingoodpaste.sqlite3 の memos 表）に書いていた。
+    /// 以前は、残したクリップを日ごとのメモとして別の形の DB（database/corkclip.sqlite3 の memos 表）に書いていた。
     /// 初めて開いたときに、そのメモを1件ずつ kept_clips に写す（元の DB は消さずに残す）。画像は uploads/ にそのまま残る。
     static func importLegacy(_ database: SQLiteDatabase, basePath: String) throws {
         guard try database.first("SELECT value FROM kept_meta WHERE key = ?", legacyImportedKey) == nil else { return }

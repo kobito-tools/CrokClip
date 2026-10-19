@@ -2,12 +2,12 @@ import AppKit
 import Carbon
 import ServiceManagement
 
-// InGoodPaste! — コック帽の小人が味見してから貼る（in good taste）。クリップボードの履歴をこのMacに保存し、⌥⌘V で画面の端から呼び出す。
-// Dock には出さず、メニューバーに常駐する（LSUIElement）。ingoodpaste:// と、kobito シリーズの約束の kobito://ingoodpaste/… で呼べる（F-18）。
+// CorkClip — コピーした物を、コルクボードにピンで留めるように取っておく。クリップボードの履歴をこのMacに保存し、⌥⌘V で画面の端から呼び出す。
+// Dock には出さず、メニューバーに常駐する（LSUIElement）。corkclip:// と、kobito シリーズの約束の kobito://corkclip/… で呼べる（F-18）。
 
 @main
 @MainActor
-struct InGoodPasteApplication {
+struct CorkClipApplication {
     static func main() {
         // 起動情報（④）だけを書いて終わる（開発中に約束の確かめに使う。履歴やクリップボードには触れない）。
         if CommandLine.arguments.contains("--write-launch-info") {
@@ -42,9 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var launched = false
     private var ocrRunning = false
     /// 保存・整理・タグの同期・書き出しは裏の1本のキューで順に行う。
-    private let storeQueue = DispatchQueue(label: "io.github.kobito-tools.ingoodpaste.store", qos: .utility)
+    private let storeQueue = DispatchQueue(label: "io.github.kobito-tools.corkclip.store", qos: .utility)
     /// 文字認識は重いので別のキューで行う。
-    private let ocrQueue = DispatchQueue(label: "io.github.kobito-tools.ingoodpaste.ocr", qos: .background)
+    private let ocrQueue = DispatchQueue(label: "io.github.kobito-tools.corkclip.ocr", qos: .background)
 
     // MARK: - 起動
 
@@ -122,7 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 let id = try store.save(capture, maxItemBytes: maxItemBytes).id
                 for name in autoTags { try store.addTag(try store.findOrCreateTag(name), to: [id], source: "auto") }
                 savedID = id
-            } catch { NSLog("InGoodPaste: 保存できませんでした: \(error)") }
+            } catch { NSLog("CorkClip: 保存できませんでした: \(error)") }
             DispatchQueue.main.async {
                 guard let self else { return }
                 if let savedID, self.stack.isActive { self.stack.push([savedID]) }
@@ -198,14 +198,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let basePath = settings.basePath, (try? Dataset.read(basePath)) != nil else { return }
         let store = store!
         storeQueue.async {
-            do { try store.syncTags(basePath: basePath) } catch { NSLog("InGoodPaste: 共有タグを同期できません: \(error)") }
+            do { try store.syncTags(basePath: basePath) } catch { NSLog("CorkClip: 共有タグを同期できません: \(error)") }
         }
     }
 
     /// ⑥ 基準パスの履歴に、開いている基準パスを記録する（ほかのアプリが保存先を選ぶときの候補になる）。
     private func recordDataset() {
         guard let basePath = settings.basePath, let info = try? Dataset.read(basePath) else { return }
-        do { try Series.recordDataset(path: basePath, id: info.datasetId) } catch { NSLog("InGoodPaste: 基準パスの履歴に書けません: \(error)") }
+        do { try Series.recordDataset(path: basePath, id: info.datasetId) } catch { NSLog("CorkClip: 基準パスの履歴に書けません: \(error)") }
     }
 
     private func tagsChanged(_ ids: [Int]) {
@@ -250,7 +250,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     self?.panel.refreshIfVisible()
                 case .failure(let error):
                     let message = (error as? StoreError)?.message ?? "\(error)"
-                    if automatic { NSLog("InGoodPaste: workspace に残せませんでした: \(message)") }
+                    if automatic { NSLog("CorkClip: workspace に残せませんでした: \(message)") }
                     else { self?.alert("workspace に残せませんでした", message) }
                 }
             }
@@ -270,7 +270,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard settings.workspaceKeep, let basePath = settings.basePath, (try? Dataset.read(basePath)) != nil else { return }
         let schema = keptSchema!
         storeQueue.async {
-            do { try WorkspaceCards.refresh(basePath: basePath, schemaDirectory: schema) } catch { NSLog("InGoodPaste: カードを書き出せません: \(error)") }
+            do { try WorkspaceCards.refresh(basePath: basePath, schemaDirectory: schema) } catch { NSLog("CorkClip: カードを書き出せません: \(error)") }
         }
     }
 
@@ -403,17 +403,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: - URL（F-18）
 
-    /// ④ 起動情報。workspace などが、これを使って InGoodPaste! を起動し、kobito://ingoodpaste/… を渡す。
+    /// ④ 起動情報。workspace などが、これを使って CorkClip を起動し、kobito://corkclip/… を渡す。
     private func writeLaunchInfo() {
         do { try Series.writeLaunchInfo(bundleID: Bundle.main.bundleIdentifier ?? Series.defaultBundleID) }
-        catch { NSLog("InGoodPaste: 起動情報を書き出せません: \(error)") }
+        catch { NSLog("CorkClip: 起動情報を書き出せません: \(error)") }
     }
 
     @objc private func handleGetURL(_ event: NSAppleEventDescriptor, withReply reply: NSAppleEventDescriptor) {
         guard let text = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue, let url = URL(string: text) else { return }
         let scheme = url.scheme?.lowercased()
-        // kobito:// はこのアプリ宛て（kobito://ingoodpaste/…）だけを受け取る。
-        guard scheme == "ingoodpaste" || Series.route(url) != nil else { return }
+        // kobito:// はこのアプリ宛て（kobito://corkclip/…）だけを受け取る。
+        guard scheme == "corkclip" || Series.route(url) != nil else { return }
         if launched { handle(url) } else { pendingURLs.append(url) }
     }
 
@@ -463,7 +463,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateStatusIcon() {
         let name = stack?.isActive == true ? "square.stack.3d.up.fill" : watcher.effectivelyPaused ? "pause.rectangle" : "list.clipboard"
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "InGoodPaste!")
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "CorkClip")
         image?.isTemplate = true
         statusItem?.button?.image = image
     }
@@ -498,7 +498,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(item("今すぐ整理", #selector(cleanupFromMenu)))
         menu.addItem(item("設定…", #selector(openSettings), key: ","))
         menu.addItem(.separator())
-        menu.addItem(item("InGoodPaste! を終了", #selector(quit), key: "q"))
+        menu.addItem(item("CorkClip を終了", #selector(quit), key: "q"))
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {

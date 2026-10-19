@@ -1,5 +1,5 @@
--- 基準パスの .kobito-tools/InGoodPaste/database/kept.sqlite3。workspace に残したクリップ（F-17）。
--- 同じ基準パスに複数のMacの InGoodPaste! が残すので、このMacの履歴ではなく基準パスに置き、残した時点の中身を写しておく
+-- 基準パスの .kobito-tools/CorkClip/database/kept.sqlite3。workspace に残したクリップ（F-17）。
+-- 同じ基準パスに複数のMacの CorkClip が残すので、このMacの履歴ではなく基準パスに置き、残した時点の中身を写しておく
 -- （履歴の項目が期限で消えても、残した物は消えない）。cards.jsonl（約束③）はここから日ごとに作り直す。
 
 CREATE TABLE kept_clips (

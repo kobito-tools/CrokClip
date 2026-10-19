@@ -1,11 +1,11 @@
 #!/bin/zsh
-# InGoodPaste!.appをこのフォルダ直下に作る。Xcode Command Line Tools（swiftc）が必要。
+# CorkClip.appをこのフォルダ直下に作る。Xcode Command Line Tools（swiftc）が必要。
 set -euo pipefail
 cd "${0:A:h}"
 
-APP_NAME="InGoodPaste!"
-# 実行ファイルの名前（「!」を付けない）。
-EXEC_NAME="InGoodPaste"
+APP_NAME="CorkClip"
+# 実行ファイルの名前。
+EXEC_NAME="CorkClip"
 VERSION="0.1.0"
 BUILD_DIR=".build"
 STAGE="$BUILD_DIR/$APP_NAME.app"
@@ -29,7 +29,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 <key>CFBundleName</key><string>$APP_NAME</string>
 <key>CFBundleExecutable</key><string>$EXEC_NAME</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
-<key>CFBundleIdentifier</key><string>io.github.kobito-tools.ingoodpaste</string>
+<key>CFBundleIdentifier</key><string>io.github.kobito-tools.corkclip</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$VERSION</string>
@@ -38,8 +38,8 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
 <key>CFBundleURLTypes</key><array><dict>
-  <key>CFBundleURLName</key><string>io.github.kobito-tools.ingoodpaste</string>
-  <key>CFBundleURLSchemes</key><array><string>ingoodpaste</string></array>
+  <key>CFBundleURLName</key><string>io.github.kobito-tools.corkclip</string>
+  <key>CFBundleURLSchemes</key><array><string>corkclip</string></array>
 </dict></array>
 </dict></plist>
 PLIST
@@ -57,7 +57,7 @@ rm -rf "$APP_NAME.app"
 mv "$STAGE" "$APP_NAME.app"
 rm -rf "$BUILD_DIR"
 
-# ingoodpaste:// をすぐ使えるように Launch Services へ登録する。
+# corkclip:// をすぐ使えるように Launch Services へ登録する。
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 [[ -x "$LSREGISTER" ]] && "$LSREGISTER" -f "$PWD/$APP_NAME.app"
 echo "$PWD/$APP_NAME.app"

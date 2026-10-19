@@ -39,8 +39,8 @@ func contents(of pasteboard: NSPasteboard) -> [[Representation]] {
     }
 }
 
-let source = NSPasteboard(name: NSPasteboard.Name("ingoodpaste-test-source-\(UUID().uuidString)"))
-let destination = NSPasteboard(name: NSPasteboard.Name("ingoodpaste-test-destination-\(UUID().uuidString)"))
+let source = NSPasteboard(name: NSPasteboard.Name("corkclip-test-source-\(UUID().uuidString)"))
+let destination = NSPasteboard(name: NSPasteboard.Name("corkclip-test-destination-\(UUID().uuidString)"))
 defer { source.releaseGlobally(); destination.releaseGlobally() }
 
 MainActor.assumeIsolated {
@@ -200,7 +200,7 @@ keepAll.maxItems = 0
 try store2.cleanup(settings: keepAll)
 check(Set(try store2.pinned().map(\.id)) == [snippetID, wordID], "整理してもピンと定型文は消さない")
 MainActor.assumeIsolated {
-    let pasteboard = NSPasteboard(name: NSPasteboard.Name("ingoodpaste-test-snippet-\(UUID().uuidString)"))
+    let pasteboard = NSPasteboard(name: NSPasteboard.Name("corkclip-test-snippet-\(UUID().uuidString)"))
     defer { pasteboard.releaseGlobally() }
     try! store2.updateSnippet(snippetID, title: "署名", body: "ab{cursor}cd")
     let resolved = Paster(store: store2, pasteboard: pasteboard) { Settings() }.items(for: snippetID, mode: .original)
@@ -224,19 +224,19 @@ func textImage(_ text: String) -> Data {
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }
-let screenshotID = try store2.save(Capture(items: [[Representation(type: "public.png", data: textImage("InGoodPaste 画像の文字"))]], sourceAppName: "スクリーンショット"), maxItemBytes: 1 << 24).id
+let screenshotID = try store2.save(Capture(items: [[Representation(type: "public.png", data: textImage("CorkClip 画像の文字"))]], sourceAppName: "スクリーンショット"), maxItemBytes: 1 << 24).id
 let pending = try store2.pendingOCR()
 check(pending.map(\.id) == [screenshotID], "まだ文字を読んでいない画像を返す")
 let recognized = OCR.recognize(pending[0].data) ?? ""
-check(recognized.contains("InGoodPaste"), "画像の文字を読む（\(recognized.replacingOccurrences(of: "\n", with: " "))）")
+check(recognized.contains("CorkClip"), "画像の文字を読む（\(recognized.replacingOccurrences(of: "\n", with: " "))）")
 try store2.setOCR(screenshotID, text: recognized)
-check(try store2.pendingOCR().isEmpty && (try store2.recent(query: "InGoodPaste").map(\.id)) == [screenshotID], "読んだ文字で検索できる")
+check(try store2.pendingOCR().isEmpty && (try store2.recent(query: "CorkClip").map(\.id)) == [screenshotID], "読んだ文字で検索できる")
 
 // 13. 数式（F-06）
 let latex = LatexSource(source: "\\frac{a}{b}", options: LatexOptions())
 check(LatexSource(embedded: latex.embedded) == latex && LatexSource(json: latex.json) == latex, "元の式を埋め込み・取り出せる")
-check(LatexSource(embedded: latex.embedded.replacingOccurrences(of: LatexSource.marker, with: LatexSource.renamedMarker)) == latex, "以前の名前（Pastephant）で描いた画像からも元の式を取り出せる")
-check(Capture(items: [[Representation(type: Capture.renamedLatexType, data: Data(latex.json.utf8))]]).kind == .formula, "以前の名前（Pastephant）の数式の型も数式として扱う")
+check(LatexSource.renamedMarkers.allSatisfy { LatexSource(embedded: latex.embedded.replacingOccurrences(of: LatexSource.marker, with: $0)) == latex }, "以前の名前（Pastephant・InGoodPaste）で描いた画像からも元の式を取り出せる")
+check(Capture.renamedLatexTypes.allSatisfy { Capture(items: [[Representation(type: $0, data: Data(latex.json.utf8))]]).kind == .formula }, "以前の名前（Pastephant・InGoodPaste）の数式の型も数式として扱う")
 check(LatexSource.looksLikeLatex("$x^2$") && LatexSource.looksLikeLatex("\\frac{1}{2}") && !LatexSource.looksLikeLatex("ふつうの文章"), "LaTeX らしい文字を見分ける")
 check(LatexSource.stripDelimiters("\\[ x \\]") == "x" && LatexSource.stripDelimiters("$$y$$") == "y", "囲みを外す")
 _ = NSApplication.shared
@@ -259,7 +259,7 @@ case .success(let image)?:
         let capture = Capture(items: [representations])
         var read = capture
         read.latex = nil
-        let pasteboard = NSPasteboard(name: NSPasteboard.Name("ingoodpaste-test-latex-\(UUID().uuidString)"))
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("corkclip-test-latex-\(UUID().uuidString)"))
         put([representations.map { ($0.type, $0.data) }], on: pasteboard)
         let captured = Capture.read(from: pasteboard)
         pasteboard.releaseGlobally()
@@ -306,9 +306,9 @@ let cardLines = (try? String(contentsOf: WorkspaceCards.cardsFile(base), encodin
 let cardList = cardLines.compactMap { (try? JSONSerialization.jsonObject(with: Data($0.utf8))) as? [String: Any] }
 check(cardList.map { $0["id"] as? String } == ["clips-2026-09-28", "clips-\(today)"], "日ごとに1枚のカードを書く（以前の書き出し先から移した日と、今日。消したメモは移さない）")
 let todayCard = cardList.last ?? [:]
-check(todayCard["v"] as? Int == 1 && todayCard["app"] as? String == "ingoodpaste" && todayCard["kind"] as? String == "クリップ" && todayCard["date"] as? String == today, "カードは約束③の形（v・app・kind・date）")
+check(todayCard["v"] as? Int == 1 && todayCard["app"] as? String == "corkclip" && todayCard["kind"] as? String == "クリップ" && todayCard["date"] as? String == today, "カードは約束③の形（v・app・kind・date）")
 check(todayCard["title"] as? String == WorkspaceCards.title(day: today) && WorkspaceCards.title(day: "2026-10-05") == "10月5日のクリップ", "見出しは「10月5日のクリップ」")
-check(todayCard["url"] as? String == "kobito://ingoodpaste/day/\(today)" && Series.route(URL(string: todayCard["url"] as! String)!) == .day(today), "カードの URL で、その日に残した物を開ける")
+check(todayCard["url"] as? String == "kobito://corkclip/day/\(today)" && Series.route(URL(string: todayCard["url"] as! String)!) == .day(today), "カードの URL で、その日に残した物を開ける")
 check(todayCard["tags"] as? [String] == [exportTag.id], "タグは tags.json のタグID（重複を除く）")
 check((todayCard["text"] as? String).map { $0.contains("直した") && $0.contains("2件目") && !$0.contains("abs/1234\n") } == true, "同じ項目をもう一度残したら中身を新しくする")
 check((todayCard["updated"] as? String).map { Dataset.parseTimestamp($0) != nil && $0.range(of: "(Z|[+-]\\d{2}:\\d{2})$", options: .regularExpression) != nil } == true, "更新日時は時差付き")
@@ -324,13 +324,43 @@ try WorkspaceCards.refresh(basePath: base, schemaDirectory: keptSchema)
 check(((try? String(contentsOf: WorkspaceCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").count) == 2, "書き直しても移し替えは一度だけ")
 check(try store2.recent(query: "kept:\(today)").map(\.id) == [wordID] && (try store2.recent(query: "exported:\(today)").map(\.id)) == [wordID] && (try store2.recent(query: "kept:2000-01-01")).isEmpty, "kept: でその日に残した物を絞り込む（カードから開くとき）")
 check(!FileManager.default.fileExists(atPath: Dataset.directory(base).appendingPathComponent("lock.json").path), "残し終えたら使用中の印を外す")
-// 以前の名前（Pastephant）で書き出したフォルダとDBは、新しい名前へ移す。
-let renamedBase = work.appendingPathComponent("renamed-base").path
-let renamedDatabase = URL(fileURLWithPath: renamedBase).appendingPathComponent(".kobito-tools/Pastephant/database/pastephant.sqlite3")
-try FileManager.default.createDirectory(at: renamedDatabase.deletingLastPathComponent(), withIntermediateDirectories: true)
-try Data("db".utf8).write(to: renamedDatabase)
-try Dataset.ensureDirectories(renamedBase)
-check((try? Data(contentsOf: URL(fileURLWithPath: Dataset.legacyDatabasePath(renamedBase))))  == Data("db".utf8) && !FileManager.default.fileExists(atPath: renamedDatabase.deletingLastPathComponent().deletingLastPathComponent().path), "以前の名前（Pastephant）の書き出し先を InGoodPaste/ へ移す")
+// 以前の名前（Pastephant・InGoodPaste）で書き出したフォルダとDBは、新しい名前へ移す。
+for (oldName, oldDatabase) in [("Pastephant", "pastephant.sqlite3"), ("InGoodPaste", "ingoodpaste.sqlite3")] {
+    let oldBase = work.appendingPathComponent("renamed-base-\(oldName)").path
+    let oldPath = URL(fileURLWithPath: oldBase).appendingPathComponent(".kobito-tools/\(oldName)/database/\(oldDatabase)")
+    try FileManager.default.createDirectory(at: oldPath.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try Data("db".utf8).write(to: oldPath)
+    try Data("cards".utf8).write(to: oldPath.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("cards.jsonl"))
+    try Dataset.ensureDirectories(oldBase)
+    check((try? Data(contentsOf: URL(fileURLWithPath: Dataset.legacyDatabasePath(oldBase)))) == Data("db".utf8) && FileManager.default.fileExists(atPath: WorkspaceCards.cardsFile(oldBase).path) && !FileManager.default.fileExists(atPath: oldPath.deletingLastPathComponent().deletingLastPathComponent().path), "以前の名前（\(oldName)）の書き出し先を CorkClip/ へ移す")
+}
+// 両方あるときは、いま使われている Pastephant のほうを移し、もう片方には触れない。
+let bothBase = work.appendingPathComponent("renamed-base-both").path
+for oldName in ["Pastephant", "InGoodPaste"] {
+    try FileManager.default.createDirectory(atPath: bothBase + "/.kobito-tools/\(oldName)/database", withIntermediateDirectories: true)
+    try Data(oldName.utf8).write(to: URL(fileURLWithPath: bothBase + "/.kobito-tools/\(oldName)/mark"))
+}
+try Dataset.ensureDirectories(bothBase)
+check((try? String(contentsOf: Dataset.directory(bothBase).appendingPathComponent("mark"), encoding: .utf8)) == "Pastephant" && FileManager.default.fileExists(atPath: bothBase + "/.kobito-tools/InGoodPaste/mark"), "両方の古い名前があれば Pastephant を移し、もう片方は残す")
+// すでに CorkClip/ があれば、古い名前のフォルダは移さない。
+try FileManager.default.createDirectory(atPath: bothBase + "/.kobito-tools/Pastephant", withIntermediateDirectories: true)
+try Dataset.ensureDirectories(bothBase)
+check(FileManager.default.fileExists(atPath: bothBase + "/.kobito-tools/Pastephant") && (try? String(contentsOf: Dataset.directory(bothBase).appendingPathComponent("mark"), encoding: .utf8)) == "Pastephant", "CorkClip/ があれば古い名前のフォルダには触れない")
+// このMacの履歴と設定（~/Library/Application Support/<名前>/）も、一時フォルダで同じように確かめる。
+for oldName in ["Pastephant", "InGoodPaste"] {
+    let support = work.appendingPathComponent("support-\(oldName)", isDirectory: true)
+    try FileManager.default.createDirectory(at: support.appendingPathComponent(oldName).appendingPathComponent("database"), withIntermediateDirectories: true)
+    try Data("{}".utf8).write(to: support.appendingPathComponent(oldName).appendingPathComponent("settings.json"))
+    ClipStore.moveRenamedDirectory(in: support, to: support.appendingPathComponent("CorkClip"))
+    check(FileManager.default.fileExists(atPath: support.appendingPathComponent("CorkClip/settings.json").path) && !FileManager.default.fileExists(atPath: support.appendingPathComponent(oldName).path), "このMacの履歴と設定（\(oldName)/）を CorkClip/ へ移す")
+}
+let supportBoth = work.appendingPathComponent("support-both", isDirectory: true)
+for oldName in ["InGoodPaste", "Pastephant", "CorkClip"] {
+    try FileManager.default.createDirectory(at: supportBoth.appendingPathComponent(oldName), withIntermediateDirectories: true)
+}
+ClipStore.moveRenamedDirectory(in: supportBoth, to: supportBoth.appendingPathComponent("CorkClip"))
+check(["InGoodPaste", "Pastephant"].allSatisfy { FileManager.default.fileExists(atPath: supportBoth.appendingPathComponent($0).path) }, "このMacに CorkClip/ があれば古い名前のフォルダには触れない")
+let renamedBase = work.appendingPathComponent("renamed-base-Pastephant").path
 try FileManager.default.createDirectory(atPath: renamedBase + "/.kobito-tools/Pastephant", withIntermediateDirectories: true)
 check(Dataset.basePath(for: URL(fileURLWithPath: renamedBase).appendingPathComponent(".kobito-tools/Pastephant")) == Dataset.basePath(for: URL(fileURLWithPath: renamedBase)), "以前の名前のフォルダを選んでも基準パスに読み替える")
 print("KEPT_DB=\(Dataset.keptDatabasePath(base))")
@@ -394,15 +424,15 @@ MainActor.assumeIsolated {
 
 // 18. kobito シリーズの約束：④ 起動情報と、受け付ける URL
 check(Series.directory.path == ProcessInfo.processInfo.environment["KOBITO_CONFIG_DIR"], "PC 固有領域は KOBITO_CONFIG_DIR で変えられる")
-try Series.writeLaunchInfo(bundleID: "io.github.kobito-tools.ingoodpaste")
-let launchJSON = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Series.appsDirectory.appendingPathComponent("ingoodpaste.json")))) as? [String: Any]
-check(launchJSON?["app"] as? String == "ingoodpaste" && launchJSON?["name"] as? String == "InGoodPaste!" && launchJSON?["command"] as? [String] == ["/usr/bin/open", "-b", "io.github.kobito-tools.ingoodpaste"], "起動情報を書き出す（open -b <バンドルID>）")
+try Series.writeLaunchInfo(bundleID: "io.github.kobito-tools.corkclip")
+let launchJSON = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Series.appsDirectory.appendingPathComponent("corkclip.json")))) as? [String: Any]
+check(launchJSON?["app"] as? String == "corkclip" && launchJSON?["name"] as? String == "CorkClip" && launchJSON?["command"] as? [String] == ["/usr/bin/open", "-b", "io.github.kobito-tools.corkclip"], "起動情報を書き出す（open -b <バンドルID>）")
 check(launchJSON?["embed"] == nil && launchJSON?["receive"] == nil, "起動情報に embed・receive は持たない")
-check(Series.launchInfos().map(\.app) == ["ingoodpaste"], "書いた起動情報を約束どおりに読める")
-check(Series.route(URL(string: "kobito://ingoodpaste/day/2026-10-15")!) == .day("2026-10-15"), "kobito://ingoodpaste/day/<日付> を受け付ける")
-check(Series.route(URL(string: "kobito://ingoodpaste/open/42?dataset=abc")!) == .open(42), "kobito://ingoodpaste/open/<ID> を受け付ける")
-check(Series.route(URL(string: "kobito://ingoodpaste/day/昨日")!) == .panel && Series.route(URL(string: "kobito://ingoodpaste")!) == .panel, "知らない形はパネルを開くだけ")
-check(Series.route(URL(string: "kobito://another/open/1")!) == nil && Series.route(URL(string: "ingoodpaste://open")!) == nil, "ほかのアプリ宛ての URL は受け取らない")
+check(Series.launchInfos().map(\.app) == ["corkclip"], "書いた起動情報を約束どおりに読める")
+check(Series.route(URL(string: "kobito://corkclip/day/2026-10-15")!) == .day("2026-10-15"), "kobito://corkclip/day/<日付> を受け付ける")
+check(Series.route(URL(string: "kobito://corkclip/open/42?dataset=abc")!) == .open(42), "kobito://corkclip/open/<ID> を受け付ける")
+check(Series.route(URL(string: "kobito://corkclip/day/昨日")!) == .panel && Series.route(URL(string: "kobito://corkclip")!) == .panel, "知らない形はパネルを開くだけ")
+check(Series.route(URL(string: "kobito://another/open/1")!) == nil && Series.route(URL(string: "corkclip://open")!) == nil, "ほかのアプリ宛ての URL は受け取らない")
 check(try store2.recent(query: "id:\(wordID)").map(\.id) == [wordID], "id: でその項目だけにする")
 check(Series.timestamp(Date(timeIntervalSince1970: 0)).range(of: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})$", options: .regularExpression) != nil, "日時は時差付きの ISO 8601")
 
@@ -421,7 +451,7 @@ try Series.recordDataset(path: base, id: "テスト", now: Date(timeIntervalSinc
 let history = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Series.datasetsFile))) as? [String: Any]
 let historyItems = history?["datasets"] as? [[String: Any]] ?? []
 check(history?["v"] as? Int == 1 && historyItems.filter { $0["path"] as? String == base }.count == 1, "同じ基準パスは1件にまとめる")
-check(historyItems.first?["app"] as? String == "ingoodpaste" && historyItems.first?["id"] as? String == "テスト" && historyItems.contains { $0["app"] as? String == "another" }, "自分の1件を先頭に足し、ほかのアプリの分は残す")
+check(historyItems.first?["app"] as? String == "corkclip" && historyItems.first?["id"] as? String == "テスト" && historyItems.contains { $0["app"] as? String == "another" }, "自分の1件を先頭に足し、ほかのアプリの分は残す")
 check(Series.datasetCandidates().map(\.path) == [base, otherBase], "最後に開いた順に並べる")
 
 // 20. ⑦ 送る：送り先は起動情報の receive から作る
@@ -433,7 +463,7 @@ try Series.writeJSON(["app": "mismatch", "name": "名前違い", "command": ["/u
                      to: Series.appsDirectory.appendingPathComponent("wrong-name.json"))
 check(Share.targets(for: ["text"]).map(\.title) == ["別のアプリ：新しく作る"], "文字を受け取れる口だけを並べる（形の違う口・ファイル名とIDの違う起動情報は捨てる）")
 check(Share.targets(for: ["image"]).map(\.key) == ["another/pictures", "another/new"] || Share.targets(for: ["image"]).map(\.key) == ["another/new", "another/pictures"], "画像なら画像を受け取れる口を全部並べる")
-check(Share.targets(for: ["text"], launchInfos: [Series.LaunchInfo(app: "ingoodpaste", name: "InGoodPaste!", command: ["/x"], receive: [Series.Receive(id: "a", label: "a", accepts: ["text"], url: "kobito://ingoodpaste/a?file={file}")])]).isEmpty, "自分の口は並べない")
+check(Share.targets(for: ["text"], launchInfos: [Series.LaunchInfo(app: "corkclip", name: "CorkClip", command: ["/x"], receive: [Series.Receive(id: "a", label: "a", accepts: ["text"], url: "kobito://corkclip/a?file={file}")])]).isEmpty, "自分の口は並べない")
 var launched: [String] = []
 let sharePayload = Share.Payload(text: "送る文字", images: [Share.Image(name: "クリップ1.png", mimeType: "image/png", data: makePNG(width: 4, height: 4))], files: [Share.File(path: "/tmp/ある ファイル.pdf", name: "ある ファイル.pdf")])
 let target = Share.targets(for: sharePayload.kinds).first { $0.receive.id == "new" }!
@@ -445,7 +475,7 @@ let shareAttributes = try? FileManager.default.attributesOfItem(atPath: sentPath
 let directoryAttributes = try? FileManager.default.attributesOfItem(atPath: Share.directory.path)
 check((shareAttributes?[.posixPermissions] as? Int) == 0o600 && (directoryAttributes?[.posixPermissions] as? Int) == 0o700, "受け渡しファイルは 600、フォルダは 700")
 let shared = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: sentPath)))) as? [String: Any]
-check(shared?["kobito"] as? Int == 1 && shared?["type"] as? String == "share" && shared?["from"] as? String == "ingoodpaste" && shared?["created"] is String, "約束⑦の形（kobito・type・from・created）")
+check(shared?["kobito"] as? Int == 1 && shared?["type"] as? String == "share" && shared?["from"] as? String == "corkclip" && shared?["created"] is String, "約束⑦の形（kobito・type・from・created）")
 check(shared?["text"] as? String == "送る文字" && ((shared?["images"] as? [[String: Any]])?.first?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == sharePayload.images[0].data
       && (shared?["files"] as? [[String: String]]) == [["path": "/tmp/ある ファイル.pdf", "name": "ある ファイル.pdf"]], "文字・画像・ファイルを入れる")
 let imageTarget = Share.targets(for: ["image"]).first { $0.receive.id == "pictures" }!

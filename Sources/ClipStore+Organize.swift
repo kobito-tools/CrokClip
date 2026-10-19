@@ -37,7 +37,7 @@ struct ClipQuery: Equatable {
     var before: Date?
     /// その日（このMacの日付）に workspace に残した物（kept:YYYY-MM-DD。日ごとのカードから開くとき）。exported: は以前の書き方。
     var exportedDay: Date?
-    /// この ID の項目だけ（id:123。kobito://ingoodpaste/open/123 から開くとき）。
+    /// この ID の項目だけ（id:123。kobito://corkclip/open/123 から開くとき）。
     var ids: [Int] = []
 
     static let kindAliases: [String: ClipKind] = [
