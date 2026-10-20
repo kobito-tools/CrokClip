@@ -46,8 +46,15 @@ struct HexColorField: View {
                     .help(name)
                     .onTapGesture { hex = color }
             }
-            TextField("#RRGGBB", text: $hex).textFieldStyle(.roundedBorder).frame(width: 78).font(.system(size: 11, design: .monospaced))
+            // 設定の Form の中では題がラベルとして欄の横に出て、欄が狭くなるので、題は隠して入力の例だけ見せる。
+            TextField("色", text: $hex, prompt: Text("#RRGGBB"))
+                .labelsHidden()
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 11, design: .monospaced))
+                .multilineTextAlignment(.leading)
+                .frame(width: 80)
         }
+        .fixedSize()
     }
 }
 
