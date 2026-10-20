@@ -243,10 +243,11 @@ struct ModeView: View {
                 }
             }
             ZStack {
-                Checkerboard().clipShape(RoundedRectangle(cornerRadius: 6))
-                if let image = model.latexPreviewImage {
+                LatexTile(options: model.latexOptions)
+                // 画像は 4 倍の細かさで作り、解像度を書き込んであるので、latexImage.size が実際に貼られる大きさ（pt）になる。
+                if let image = model.latexPreviewImage, let size = model.latexImage?.size {
                     Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: min(image.size.width / LatexRenderer.rasterScale, 1000), maxHeight: image.size.height / LatexRenderer.rasterScale)
+                        .frame(maxWidth: min(size.width, 1000), maxHeight: size.height)
                         .padding(6)
                 } else if model.latexSource.isEmpty {
                     Text("例：\\int_0^1 f(x)\\,dx").font(.system(size: 12)).foregroundStyle(.secondary)

@@ -113,6 +113,24 @@ struct LatexOptionsEditor: View {
     }
 }
 
+/// 数式の下に敷く地。透明のときは、文字色が暗ければ白い市松模様、明るければ暗い地にして、画面の明るさによらず式が見えるようにする。
+struct LatexTile: View {
+    let options: LatexOptions
+    var cornerRadius: CGFloat = 6
+
+    private var dark: Bool {
+        guard options.background == nil, let color = NSColor(hex: options.color).usingColorSpace(.sRGB) else { return false }
+        return 0.299 * color.redComponent + 0.587 * color.greenComponent + 0.114 * color.blueComponent > 0.7
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: cornerRadius).fill(dark ? Color(hex: "#3B4441") : Color.white)
+            if !dark { Checkerboard().clipShape(RoundedRectangle(cornerRadius: cornerRadius)) }
+        }
+    }
+}
+
 /// 描き方の見本（同梱の KaTeX で実際に描く）。明るい文字色なら暗い地に置く。
 struct LatexSample: View {
     let options: LatexOptions
@@ -124,15 +142,9 @@ struct LatexSample: View {
     @State private var image: NSImage?
     @State private var error: String?
 
-    private var darkTile: Bool {
-        guard options.background == nil, let color = NSColor(hex: options.color).usingColorSpace(.sRGB) else { return false }
-        return 0.299 * color.redComponent + 0.587 * color.greenComponent + 0.114 * color.blueComponent > 0.7
-    }
-
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8).fill(darkTile ? Color(hex: "#3B4441") : Color.white)
-            if !darkTile { Checkerboard().clipShape(RoundedRectangle(cornerRadius: 8)) }
+            LatexTile(options: options, cornerRadius: 8)
             if let image {
                 Image(nsImage: image).resizable().aspectRatio(contentMode: .fit).padding(6)
             } else if let error {
