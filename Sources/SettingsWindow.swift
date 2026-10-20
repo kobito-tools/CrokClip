@@ -56,16 +56,25 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 }
 
 struct SettingsView: View {
+    enum Tab: Hashable, CaseIterable { case general, capture, storage, transforms, latex, companions }
+
     @ObservedObject var model: SettingsModel
+    @State private var tab: Tab
+
+    /// tab は最初に開くタブ（見た目を書き出すときに使う）。
+    init(model: SettingsModel, tab: Tab = .general) {
+        self.model = model
+        _tab = State(initialValue: tab)
+    }
 
     var body: some View {
-        TabView {
-            general.tabItem { Label("一般", systemImage: "gearshape") }
-            capture.tabItem { Label("取得とタグ", systemImage: "tray.and.arrow.down") }
-            storage.tabItem { Label("保存", systemImage: "externaldrive") }
-            transforms.tabItem { Label("変換", systemImage: "wand.and.stars") }
-            latex.tabItem { Label("数式", systemImage: "function") }
-            companions.tabItem { Label("連携", systemImage: "link") }
+        TabView(selection: $tab) {
+            general.tabItem { Label("一般", systemImage: "gearshape") }.tag(Tab.general)
+            capture.tabItem { Label("取得とタグ", systemImage: "tray.and.arrow.down") }.tag(Tab.capture)
+            storage.tabItem { Label("保存", systemImage: "externaldrive") }.tag(Tab.storage)
+            transforms.tabItem { Label("変換", systemImage: "wand.and.stars") }.tag(Tab.transforms)
+            latex.tabItem { Label("数式", systemImage: "function") }.tag(Tab.latex)
+            companions.tabItem { Label("連携", systemImage: "link") }.tag(Tab.companions)
         }
         .padding(16)
         .frame(minWidth: 640, minHeight: 540)

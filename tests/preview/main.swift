@@ -78,6 +78,31 @@ MainActor.assumeIsolated {
         render(PanelView(model: model), size: NSSize(width: 380, height: 760), dark: dark, name: "panel")
     }
 
+    // ファイルを選んだとき（貼り方が多い）。
+    let fileStore = try! ClipStore(directory: work.appendingPathComponent("files-store"), schemaDirectory: schema)
+    let document = work.appendingPathComponent("files/見積書_2026年10月.pdf")
+    try! FileManager.default.createDirectory(at: document.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try! Data("%PDF-1.4\n".utf8).write(to: document)
+    pasteboard.clearContents()
+    pasteboard.writeObjects([document as NSURL])
+    let fileID = try! fileStore.save(Capture.read(from: pasteboard, sourceBundleID: finder.0, sourceAppName: finder.1)!, maxItemBytes: .max).id
+    let fileModel = PanelModel(store: fileStore)
+    fileModel.prepareForShow()
+    fileModel.selection = fileID
+    for dark in [false, true] {
+        render(PanelView(model: fileModel), size: NSSize(width: 380, height: 760), dark: dark, name: "panel-selected-file")
+    }
+
+    // 数式画像の画面（描き終わるまで待つ）。
+    for dark in [false, true] {
+        let latexModel = PanelModel(store: store)
+        latexModel.prepareForShow()
+        latexModel.beginLatex(text: "\\int_0^1 x^2\\,dx = \\frac{1}{3}", fromSelection: false)
+        let deadline = Date().addingTimeInterval(15)
+        while latexModel.latexPreviewImage == nil, latexModel.latexError == nil, Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.1)) }
+        render(PanelView(model: latexModel), size: NSSize(width: 380, height: 760), dark: dark, name: "mode-latex")
+    }
+
     // 何も無いときの案内。
     let emptyStore = try! ClipStore(directory: work.appendingPathComponent("empty"), schemaDirectory: schema)
     let empty = PanelModel(store: emptyStore)
@@ -87,6 +112,9 @@ MainActor.assumeIsolated {
     let settings = SettingsModel(settings: Settings())
     for dark in [false, true] {
         render(SettingsView(model: settings), size: NSSize(width: 680, height: 640), dark: dark, name: "settings")
+        for tab in SettingsView.Tab.allCases {
+            render(SettingsView(model: settings, tab: tab), size: NSSize(width: 680, height: 640), dark: dark, name: "settings-\(tab)")
+        }
     }
 
     // メニューバーのアイコン（明るい・暗いメニューバーの色で、大きくして描く）。

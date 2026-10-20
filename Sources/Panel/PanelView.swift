@@ -324,38 +324,81 @@ private struct ClipCard: View, Equatable {
 }
 
 /// 貼り方の帯。選んだ項目に合う貼り方だけを並べる。⇥ で切り替え、クリックでも選べる。
+/// 幅に収まらないときは次の行へ折り返し、どの貼り方も切れずに見えるようにする。
 private struct StyleStrip: View {
     let model: PanelModel
     @ObservedObject var state: PreviewState
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    Text("貼り方").font(.system(size: 10.5, weight: .semibold)).foregroundStyle(Theme.subtle)
-                    ForEach(Array(state.styles.enumerated()), id: \.element.id) { index, style in
-                        let selected = index == state.styleIndex
-                        Label(style.label, systemImage: style.symbol)
-                            .font(.system(size: 12, weight: selected ? .semibold : .regular))
-                            .padding(.horizontal, 9).padding(.vertical, 4)
-                            .background(Capsule().fill(selected ? Theme.accent : Theme.card))
-                            .overlay(Capsule().strokeBorder(selected ? Color.clear : Theme.cardBorder))
-                            .foregroundStyle(selected ? Color.white : Theme.ink)
-                            .contentShape(Capsule())
-                            .id(style.id)
-                            .onTapGesture {
-                                model.selectStyle(index)
-                                if clickCount >= 2 { model.pasteSelected() }
-                            }
-                    }
+        HStack(alignment: .top, spacing: 6) {
+            Text("貼り方").font(.system(size: 10.5, weight: .semibold)).foregroundStyle(Theme.subtle).padding(.top, 5)
+            FlowLayout(spacing: 6, lineSpacing: 5) {
+                ForEach(Array(state.styles.enumerated()), id: \.element.id) { index, style in
+                    let selected = index == state.styleIndex
+                    Label(style.label, systemImage: style.symbol)
+                        .font(.system(size: 12, weight: selected ? .semibold : .regular))
+                        .lineLimit(1)
+                        .padding(.horizontal, 9).padding(.vertical, 4)
+                        .background(Capsule().fill(selected ? Theme.accent : Theme.card))
+                        .overlay(Capsule().strokeBorder(selected ? Color.clear : Theme.cardBorder))
+                        .foregroundStyle(selected ? Color.white : Theme.ink)
+                        .contentShape(Capsule())
+                        .onTapGesture {
+                            model.selectStyle(index)
+                            if clickCount >= 2 { model.pasteSelected() }
+                        }
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-            }
-            .onChange(of: state.styleIndex) { index in
-                if state.styles.indices.contains(index) { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(state.styles[index].id, anchor: .center) } }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+    }
+}
+
+/// 子を左から並べ、幅に収まらなければ次の行へ送る。
+private struct FlowLayout: Layout {
+    var spacing: CGFloat
+    var lineSpacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = rows.map { $0.width }.max() ?? 0
+        let height = rows.map { $0.height }.reduce(0, +) + lineSpacing * CGFloat(max(rows.count - 1, 0))
+        return CGSize(width: proposal.width.map { min($0, width) } ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + lineSpacing
+        }
+    }
+
+    private struct Row { var indices: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0 }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
+        var rows: [Row] = []
+        var row = Row()
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let needed = row.indices.isEmpty ? size.width : row.width + spacing + size.width
+            if !row.indices.isEmpty, needed > width {
+                rows.append(row)
+                row = Row()
+            }
+            row.width = row.indices.isEmpty ? size.width : row.width + spacing + size.width
+            row.height = max(row.height, size.height)
+            row.indices.append(index)
+        }
+        if !row.indices.isEmpty { rows.append(row) }
+        return rows
     }
 }
 
