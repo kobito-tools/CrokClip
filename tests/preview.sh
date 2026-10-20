@@ -13,5 +13,7 @@ if ! xcrun swiftc -o "$work/preview" $sources tests/preview/main.swift \
   -framework Cocoa -framework SwiftUI -framework Carbon -framework WebKit -framework PDFKit -framework Vision -framework Quartz -framework ServiceManagement -lsqlite3 > "$work/build.log" 2>&1; then
   cat "$work/build.log"; exit 1
 fi
+# 数式を描く KaTeX は、実行ファイルの隣（Bundle.main の resourceURL）から読む。
+cp -R Resources/katex "$work/katex"
 export KOBITO_CONFIG_DIR="$work/kobito-tools" KOBITO_SHARE_DIR="$work/kobito-share"
 "$work/preview" "$work" schema "$out"
