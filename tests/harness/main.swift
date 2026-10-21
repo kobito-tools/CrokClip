@@ -455,11 +455,12 @@ check(launchActions.allSatisfy { action in
 let launchRoutes = launchActions.map { Series.route(URL(string: ($0["url"] as! String).replacingOccurrences(of: "{today}", with: "2026-10-20"))!) }
 check(launchRoutes == [.panel, .day("2026-10-20"), .snippet, .latex, .settings], "操作の URL が、それぞれの画面に届く")
 check(launchActions.first { $0["role"] as? String == "settings" }?["id"] as? String == "settings" && launchActions.first { $0["role"] as? String == "new" }?["id"] as? String == "snippet", "設定と新しく作る操作に role を付ける")
-let iconPNG = work.appendingPathComponent("icon-256.png")
-try Data([0x89, 0x50, 0x4e, 0x47]).write(to: iconPNG)
-try Series.writeLaunchInfo(bundleID: "io.github.kobito-tools.corkclip", iconFile: iconPNG)
+let iconSVG = work.appendingPathComponent("kobito/icon.svg")
+try FileManager.default.createDirectory(at: iconSVG.deletingLastPathComponent(), withIntermediateDirectories: true)
+try Data("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 1\"/>".utf8).write(to: iconSVG)
+try Series.writeLaunchInfo(bundleID: "io.github.kobito-tools.corkclip", iconFile: iconSVG)
 let launchWithIcon = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Series.appsDirectory.appendingPathComponent("corkclip.json")))) as? [String: Any]
-check(((launchWithIcon?["icon"] as? [String: Any])?["file"] as? String) == iconPNG.standardizedFileURL.path && (iconPNG.path as NSString).isAbsolutePath, "アイコン画像があれば、その絶対パスを書く")
+check(((launchWithIcon?["icon"] as? [String: Any])?["file"] as? String) == iconSVG.standardizedFileURL.path && (iconSVG.path as NSString).isAbsolutePath, "アイコン画像があれば、その絶対パスを書く")
 check(Series.route(URL(string: "kobito://corkclip/day/2026-10-15")!) == .day("2026-10-15"), "kobito://corkclip/day/<日付> を受け付ける")
 check(Series.route(URL(string: "kobito://corkclip/open/42?dataset=abc")!) == .open(42), "kobito://corkclip/open/<ID> を受け付ける")
 check(Series.route(URL(string: "kobito://corkclip/day/昨日")!) == .panel && Series.route(URL(string: "kobito://corkclip")!) == .panel, "知らない形はパネルを開くだけ")

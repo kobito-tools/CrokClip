@@ -18,10 +18,17 @@ mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 cp -R schema "$CONTENTS/Resources/schema"
 # 数式画像を描く KaTeX（MIT）と、その描画ページ。
 cp -R Resources/. "$CONTENTS/Resources/"
-[[ -f assets/icon/AppIcon.icns ]] && cp assets/icon/AppIcon.icns "$CONTENTS/Resources/AppIcon.icns"
-# 起動情報（④）の icon.file に書く、256px のアイコン画像（約束で 256 KB まで）。
-sips -z 256 256 assets/icon/icon-1024.png --out "$CONTENTS/Resources/icon-256.png" > /dev/null
-(( $(stat -f %z "$CONTENTS/Resources/icon-256.png") <= 262144 )) || { echo "icon-256.png が 256 KB を超えています" >&2; exit 1; }
+# .app のアイコン（AppIcon.icns）を、シリーズの決まった場所のアイコン（kobito/icon-1024.png）から作る。
+mkdir "$BUILD_DIR/AppIcon.iconset"
+for size in 16 32 128 256 512; do
+  sips -z $size $size kobito/icon-1024.png --out "$BUILD_DIR/AppIcon.iconset/icon_${size}x${size}.png" > /dev/null
+  sips -z $((size * 2)) $((size * 2)) kobito/icon-1024.png --out "$BUILD_DIR/AppIcon.iconset/icon_${size}x${size}@2x.png" > /dev/null
+done
+iconutil -c icns "$BUILD_DIR/AppIcon.iconset" -o "$CONTENTS/Resources/AppIcon.icns"
+# 起動情報（④）の icon.file が指すアイコンの元。リポジトリと同じ kobito/icon.svg の形で入れる（約束で 256 KB まで）。
+mkdir -p "$CONTENTS/Resources/kobito"
+cp kobito/icon.svg "$CONTENTS/Resources/kobito/icon.svg"
+(( $(stat -f %z kobito/icon.svg) <= 262144 )) || { echo "kobito/icon.svg が 256 KB を超えています" >&2; exit 1; }
 
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
