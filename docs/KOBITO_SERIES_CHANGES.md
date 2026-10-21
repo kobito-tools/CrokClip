@@ -34,7 +34,7 @@ kobito シリーズは「各アプリが単体で完結し、kobito-workspace �
 | `Sources/Panel/PanelController.swift`（特定のアプリ向けの書き出し・送りの操作） | 同上 |
 | `Sources/CorkClipApp.swift`（書き出し・送る処理と、その文言） | 同上 |
 | 特定のアプリへ送る `Sources/Companions/` のファイル | `Companions/Share.swift`（⑦）に置き換える（§3） |
-| `Sources/Companions/TomeletExport.swift`・`schema/tomelet/`・`scripts/sync-schema.sh` | `Companions/WorkspaceCards.swift`（③）に置き換え、`schema/tomelet/` と写しのスクリプトは消す（§4） |
+| 以前の書き出し（ほかのアプリの DB の形にそろえたもの）と写しのスクリプト | `Companions/WorkspaceCards.swift`（③）に置き換え、写しの表の定義とスクリプトは消す（§4） |
 | `Sources/ClipStore+Organize.swift`・`Settings.swift`・`SQLiteDatabase.swift`・`ClipStore.swift`・`ClipContent.swift`・`PasteStack.swift`・`Panel/Theme.swift`・`Panel/ModeViews.swift`・`Companions/Dataset.swift`・`Companions/TagStore.swift` のコメント・文言 | ほかのアプリの名前を「kobito シリーズ」「共有タグ（tags.json）」などに書き換える |
 | `schema/001_initial.sql` のコメント | 同上 |
 | `tests/harness/main.swift`・`tests/run.sh` | ほかのアプリを前提にした場面を、約束を前提にした場面に書き換える |
@@ -60,7 +60,7 @@ kobito シリーズは「各アプリが単体で完結し、kobito-workspace �
 
 ### 今
 
-`⌘S` と「自動で残すタグ」で、その日のクリップを1件のメモにまとめ、ほかのアプリが読む形の DB（`.kobito-tools/CorkClip/database/corkclip.sqlite3`、`schema/tomelet/`）に書いています。
+`⌘S` と「自動で残すタグ」で、その日のクリップを1件のメモにまとめ、ほかのアプリが読む形の DB（`.kobito-tools/CorkClip/database/corkclip.sqlite3`）に書いています。
 
 ### 変更後
 

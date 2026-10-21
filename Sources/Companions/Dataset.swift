@@ -29,18 +29,17 @@ enum Dataset {
     static let directoryName = "CorkClip"
     /// 以前の名前の書き出し先と、そのときの DB の名前。見つけたら ensureDirectories で移す（Pastephant が、いま使われている版）。
     static let renamedDirectories = [(name: "Pastephant", database: "pastephant.sqlite3"), (name: "InGoodPaste", database: "ingoodpaste.sqlite3")]
-    static let legacyDirectoryName = ".TickTockTome"
     static let format = "kobito-tools-dataset"
     static let subdirectories = ["database", "uploads"]
 
     // MARK: - 場所と識別子
 
-    /// 選んだフォルダをシリーズ共通の規則で絶対パスにする（シンボリックリンクを解決し、.kobito-tools・その中のアプリのフォルダ・旧.TickTockTomeなら基準パスへ読み替える）。
+    /// 選んだフォルダをシリーズ共通の規則で絶対パスにする（シンボリックリンクを解決し、.kobito-tools・その中のアプリのフォルダなら基準パスへ読み替える）。
     static func basePath(for url: URL) -> String {
         var resolved = url.standardizedFileURL.path
         if let real = realpath(resolved, nil) { resolved = String(cString: real); free(real) }
         let name = (resolved as NSString).lastPathComponent, parent = (resolved as NSString).deletingLastPathComponent
-        if name == rootName || name == legacyDirectoryName { return parent }
+        if name == rootName { return parent }
         if (parent as NSString).lastPathComponent == rootName { return (parent as NSString).deletingLastPathComponent }
         return resolved
     }
@@ -66,13 +65,6 @@ enum Dataset {
 
     private static func datasetFile(_ basePath: String) -> URL { root(basePath).appendingPathComponent("dataset.json") }
 
-    private static func hasLegacyData(_ basePath: String) -> Bool {
-        FileManager.default.fileExists(atPath: URL(fileURLWithPath: basePath).appendingPathComponent(legacyDirectoryName).appendingPathComponent("dataset.json").path)
-    }
-
-    /// 旧形式（.TickTockTome）は CorkClip では移行しない。移し方は kobito-workspace の docs/MIGRATION_FROM_TOMELET.md にある。
-    private static let legacyError = StoreError(status: 409, message: "このフォルダには以前の形式（.TickTockTome）のデータがあります。新しい形式（.kobito-tools）への移し方は、kobito-workspace の docs/MIGRATION_FROM_TOMELET.md を参照してください。", extra: ["legacyLayout": true])
-
     // MARK: - dataset.json
 
     static func validateId(_ value: String) throws -> String {
@@ -83,10 +75,7 @@ enum Dataset {
     }
 
     static func read(_ basePath: String) throws -> DatasetInfo? {
-        guard let data = try? Data(contentsOf: datasetFile(basePath)) else {
-            if hasLegacyData(basePath) { throw legacyError }
-            return nil
-        }
+        guard let data = try? Data(contentsOf: datasetFile(basePath)) else { return nil }
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any], object["format"] as? String == format,
               let id = object["datasetId"] as? String else { throw StoreError(status: 422, message: "保存先のデータ（.kobito-tools/dataset.json）を読み取れません。") }
         return DatasetInfo(basePath: basePath, datasetId: try validateId(id))
@@ -99,7 +88,6 @@ enum Dataset {
         let manager = FileManager.default
         var isDirectory: ObjCBool = false
         guard manager.fileExists(atPath: basePath, isDirectory: &isDirectory), isDirectory.boolValue else { throw StoreError.badRequest("保存先はフォルダを指定してください。") }
-        if hasLegacyData(basePath) { throw legacyError }
         guard !manager.fileExists(atPath: datasetFile(basePath).path) else { throw StoreError(status: 409, message: "このフォルダには既に保存先のデータがあります。") }
         let record: [String: Any] = ["format": format, "schemaVersion": 1, "datasetId": id, "createdAt": timestamp(), "revision": 1, "settings": [String: Any](), "legacyRoots": [String: Any]()]
         if manager.fileExists(atPath: root(basePath).path) {
