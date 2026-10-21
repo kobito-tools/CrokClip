@@ -1,5 +1,5 @@
 #!/bin/zsh
-# CorkClip を、この Mac で使える状態にする（kobito シリーズの初期設定。決まりは kobito-workspace の docs/SETUP.md）。
+# CorkClip を、この Mac で使える状態にする（kobito シリーズの初期設定。決まりは docs/kobito-spec/SETUP.md）。
 # 何度動かしても安全。履歴・設定には触れず、書くのは起動情報だけ。sudo は使わない。
 set -euo pipefail
 cd "${0:A:h}"

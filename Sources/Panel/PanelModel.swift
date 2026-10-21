@@ -13,7 +13,7 @@ enum PanelCommand {
     case copyOnly(Int)
     case pasteText(String, copyOnly: Bool)
     case pasteLatex(LatexImage, copyOnly: Bool)
-    /// workspace に残す（F-17）。
+    /// カードに残す（F-17）。
     case keep([Int])
     /// 送る（F-16）。送り先は Share.targets から選んだもの。
     case share([Int], Share.Target)
@@ -574,7 +574,7 @@ final class PanelModel: ObservableObject {
         if single { add("transform", "r", "変換を選ぶ（つなげる・保存する）", "wand.and.stars", nil) { [unowned self] in beginTransform() } }
         if single { add("latex", "l", clip?.kind == .formula ? "数式を開き直す" : "数式画像を作る", "function", "⌘L") { [unowned self] in beginLatex() } }
         add("stack", "k", "ペーストスタックに積む", "square.stack", nil) { [unowned self] in onCommand(.pushToStack(ids)) }
-        if settings().workspaceKeep { add("keep", "s", "workspace に残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.keep(ids)) } }
+        if settings().keepCards { add("keep", "s", "カードに残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.keep(ids)) } }
         add("share", "n", "送る…", "paperplane", "⇧⌘N") { [unowned self] in beginShare() }
         if single { add("quicklook", "q", "Quick Look", "eye", "⌘Y") { [unowned self] in endMode(); onQuickLook() } }
         add("snippet", "f", "新しい定型文", "text.badge.star", "⌘N") { [unowned self] in beginSnippet() }
@@ -585,7 +585,7 @@ final class PanelModel: ObservableObject {
 
     // MARK: - 送る（F-16）
 
-    static let noShareTargets = "送り先のアプリがありません。kobito シリーズについては kobito-workspace を参照してください"
+    static let noShareTargets = "送り先のアプリがありません。kobito シリーズについては https://github.com/kobito-tools を参照してください"
 
     /// ⇧⌘N：送り先の一覧を出す（1〜9 で選ぶ）。
     func beginShare() {

@@ -29,7 +29,7 @@ assert db.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
 print(f"ok - DBの更新 {len(applied)}件・整合性OK・WAL")
 PY
 
-# workspace に残したクリップのDBと、カード（約束③）の形
+# カードに残したクリップのDBと、カード（約束③）の形
 python3 - "$work/harness.log" <<'PY'
 import json, re, sqlite3, sys, os
 values = dict(line.strip().split("=", 1) for line in open(sys.argv[1]) if line.startswith(("KEPT_DB=", "CARDS=")))
@@ -48,10 +48,10 @@ for line in open(values["CARDS"], encoding="utf-8"):
     assert re.match(r"^\d{4}-\d{2}-\d{2}$", card["date"]) and len(card.get("text", "")) <= 2000, card
     assert card["id"] not in ids
     ids.add(card["id"])
-print(f"ok - workspace に残す：DBの更新・移し替えの記録・カード {len(ids)}枚が約束③の形")
+print(f"ok - カードに残す：DBの更新・移し替えの記録・カード {len(ids)}枚が約束③の形")
 PY
 
-# 目印（kobito-app.json。kobito シリーズの決まり：kobito-workspace の docs/APP_PACKAGE.md）の形
+# 目印（kobito-app.json。kobito シリーズの決まり：docs/kobito-spec/APP_PACKAGE.md）の形
 python3 - kobito-app.json <<'PY'
 import json, os, re, sys
 path = sys.argv[1]

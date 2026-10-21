@@ -35,7 +35,7 @@ struct ClipQuery: Equatable {
     var pinnedOnly = false
     var after: Date?
     var before: Date?
-    /// その日（このMacの日付）に workspace に残した物（kept:YYYY-MM-DD。日ごとのカードから開くとき）。exported: は以前の書き方。
+    /// その日（このMacの日付）にカードに残した物（kept:YYYY-MM-DD。日ごとのカードから開くとき）。exported: は以前の書き方。
     var exportedDay: Date?
     /// この ID の項目だけ（id:123。kobito://corkclip/open/123 から開くとき）。
     var ids: [Int] = []
@@ -325,7 +325,7 @@ extension ClipStore {
         try locked { (try database.first("SELECT latex FROM clips WHERE id = ?", id)?["latex"] as? String).flatMap(LatexSource.init(json:)) }
     }
 
-    // MARK: - workspace に残す（F-17）
+    // MARK: - カードに残す（F-17）
 
     func markExported(_ ids: [Int], at date: Date = Date()) throws {
         try locked {
