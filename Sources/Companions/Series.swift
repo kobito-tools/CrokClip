@@ -109,17 +109,28 @@ enum Series {
         ["id": "settings", "label": "設定を開く", "label_en": "Settings", "url": "kobito://\(appID)/settings", "role": "settings"],
     ]
 
-    /// 自分の起動情報を書く。起動のたびに呼ぶ（入れ替えてバンドルIDや場所が変わっても追いつくように）。
-    /// embed・receive は持たない（workspace の中には表示せず、受け渡しも受け付けない）。
+    /// 自分の名乗り（起動情報④の1件）。embed・receive は持たない（workspace の中には表示せず、受け渡しも受け付けない）。
     /// アイコン画像が無ければ（ハーネスなど）、代わりの1文字だけを書く。
-    static func writeLaunchInfo(bundleID: String, iconFile: URL? = Bundle.main.resourceURL?.appendingPathComponent(iconResource)) throws {
+    static func launchRecord(bundleID: String, iconFile: URL? = Bundle.main.resourceURL?.appendingPathComponent(iconResource)) -> [String: Any] {
         var icon: [String: Any] = ["glyph": glyph]
         if let iconFile, FileManager.default.fileExists(atPath: iconFile.path) { icon["file"] = iconFile.standardizedFileURL.path }
-        let record: [String: Any] = [
+        return [
             "app": appID, "name": appName, "command": ["/usr/bin/open", "-b", bundleID],
             "name_en": appNameEnglish, "icon": icon, "color": color, "kinds": kinds, "actions": actions,
         ]
-        try writeJSON(record, to: appsDirectory.appendingPathComponent("\(appID).json"))
+    }
+
+    /// 自分の起動情報を書く。起動のたびに呼ぶ（入れ替えてバンドルIDや場所が変わっても追いつくように）。
+    static func writeLaunchInfo(bundleID: String, iconFile: URL? = Bundle.main.resourceURL?.appendingPathComponent(iconResource)) throws {
+        try writeJSON(launchRecord(bundleID: bundleID, iconFile: iconFile), to: appsDirectory.appendingPathComponent("\(appID).json"))
+    }
+
+    /// 名乗り（起動情報と同じ形の JSON）の文字列。--metadata が標準出力に出す。何も書かない（シリーズの決まり：APP_PACKAGE.md）。
+    static func metadataJSON(bundleID: String, iconFile: URL? = Bundle.main.resourceURL?.appendingPathComponent(iconResource)) throws -> Data {
+        var data = try JSONSerialization.data(withJSONObject: launchRecord(bundleID: bundleID, iconFile: iconFile),
+                                              options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        data.append(0x0a)
+        return data
     }
 
     /// 起動情報を確かめる。必須の項目が欠けていれば nil。形の合わない口だけを捨てる。

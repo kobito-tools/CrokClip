@@ -1,0 +1,15 @@
+{
+  "format": "kobito-app",
+  "v": 1,
+  "app": "corkclip",
+  "name": "CorkClip",
+  "name_en": "CorkClip",
+  "description": "コピーした物をピンで留めるように取っておく、クリップボード履歴",
+  "description_en": "Clipboard history that pins what you copy, like a corkboard",
+  "kind": "native",
+  "setup": "setup.sh",
+  "contracts": 1,
+  "bundle_id": "io.github.kobito-tools.corkclip",
+  "repository": "kobito-tools/CorkClip",
+  "platforms": ["macos"]
+}

@@ -260,4 +260,4 @@ CorkClip は外部と通信しません。履歴はこの Mac の `~/Library/App
 
 本ソフトウェアの開発には、ChatGPT（OpenAI）および Claude（Anthropic）を使用しています。本プロジェクトは個人によるものであり、OpenAI および Anthropic とは関係ありません。
 
-ビルド方法とソースコードの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を参照してください。README のデモ（`docs/images/demo.gif`）は `scripts/demo.sh` で作り直せます。不具合の報告や要望は [Issues](../../issues) で受け付けています。
+ビルド方法とソースコードの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を参照してください。README のデモ（`docs/images/demo.gif`）は `scripts/demo.sh` で作り直せます。リポジトリの直下の `kobito-app.json` は、kobito シリーズのアプリであることを示す目印です（`.app` で配るので `"kind": "native"`）。不具合の報告や要望は [Issues](../../issues) で受け付けています。

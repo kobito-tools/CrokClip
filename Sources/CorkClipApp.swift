@@ -14,6 +14,11 @@ struct CorkClipApplication {
             do { try Series.writeLaunchInfo(bundleID: Bundle.main.bundleIdentifier ?? Series.defaultBundleID); exit(0) }
             catch { FileHandle.standardError.write(Data("\(error)\n".utf8)); exit(1) }
         }
+        // 名乗り（起動情報と同じ形）を標準出力に出すだけで終わる。何も書かず、何も起動しない（シリーズの決まり：APP_PACKAGE.md）。
+        if CommandLine.arguments.contains("--metadata") {
+            do { FileHandle.standardOutput.write(try Series.metadataJSON(bundleID: Bundle.main.bundleIdentifier ?? Series.defaultBundleID)); exit(0) }
+            catch { FileHandle.standardError.write(Data("\(error)\n".utf8)); exit(1) }
+        }
         let application = NSApplication.shared
         let delegate = AppDelegate()
         application.delegate = delegate
