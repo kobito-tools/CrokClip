@@ -44,10 +44,10 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 | `Sources/Panel/` | パネル（フォーカスを奪わない NSPanel。コルクボードの見た目は `Corkboard.swift`・`Theme.swift`）、一覧、プレビュー、作業の画面（タグ・編集・変換・まとめる・数式・定型文）、キー操作、Quick Look、ドラッグ |
 | `Sources/Transforms/` | 改行を消す処理、貼る前の変換・パス・まとめる区切り・定型文の差し込み（F-07, F-09, F-11, F-12） |
 | `Sources/Latex/` | 数式の元の式と描き方、KaTeX での描画と PDF・PNG・TIFF の作成（F-06） |
-| `Sources/Companions/` | 基準パス（`.kobito-tools/`）の扱いと使用中の印・共有タグ（`Dataset.swift`・`TagStore.swift`）、シリーズの約束（`Series.swift`：起動情報・基準パスの履歴・受け付ける URL）、送る（`Share.swift`）、workspace に残す（`WorkspaceCards.swift`）（F-04, F-16〜F-18） |
+| `Sources/Companions/` | 基準パス（`.kobito-tools/`）の扱いと使用中の印・共有タグ（`Dataset.swift`・`TagStore.swift`）、シリーズの約束（`Series.swift`：起動情報・基準パスの履歴・受け付ける URL）、送る（`Share.swift`）、カードに残す（`KeptCards.swift`）（F-04, F-16〜F-18） |
 | `Resources/katex/` | 同梱の KaTeX（MIT）と描画ページ `render.html` |
 | `schema/` | 履歴のDBの作成と更新（ファイル名順に、まだの物だけ適用） |
-| `schema/kept/` | 基準パスの、workspace に残したクリップのDBの作成と更新 |
+| `schema/kept/` | 基準パスの、カードに残したクリップのDBの作成と更新 |
 | `kobito-app.json` | kobito シリーズの目印（下の「約束の確かめ」） |
 | `tests/` | `run.sh` とハーネス（`harness/main.swift`）、見た目を書き出す `preview.sh`（`preview/main.swift`） |
 
@@ -70,7 +70,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 
 ## シリーズとのつながり
 
-ほかのアプリとは、kobito-workspace の `docs/CONTRACTS.md` の約束（データの形）だけでつながります。ほかのアプリの名前は、コード・画面・文書のどこにも書きません（「名指ししない規則」）。シリーズの全体は kobito-workspace を参照してください。
+ほかのアプリとは、`docs/kobito-spec/CONTRACTS.md` の約束（データの形）だけでつながります。ほかのアプリの名前は、コード・画面・文書のどこにも書きません（「名指ししない規則」）。
 
 ```text
 ~/Library/Application Support/kobito-tools/   （KOBITO_CONFIG_DIR で変えられる）
@@ -81,7 +81,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 <基準パス>/.kobito-tools/
 ├── dataset.json                    ⓪-1 読むだけ（無ければ ID を尋ねて作る）
 ├── Tags/tags.json                  ⓪-2 共有タグ。このMacの履歴DBの tags・tag_categories はその写し
-└── CorkClip/                    workspace に残す（⌘S・自動で残すタグ）
+└── CorkClip/                    カードに残す（⌘S・自動で残すタグ）
     ├── lock.json                   書く間だけ置く使用中の印
     ├── database/kept.sqlite3       残したクリップの写し（schema/kept/・DELETE モード）
     ├── uploads/                    残した画像（PNG）
@@ -94,6 +94,6 @@ $TMPDIR/kobito-share/<UUID>.json    ⑦ 送る中身（KOBITO_SHARE_DIR で変�
 - **見せ方と操作**：`Series.swift` の `color`・`glyph`・`kinds`・`actions` に書きます。アイコン画像は `build.sh` が `.app` の `Resources/icon-256.png` に作り、起動情報にはその絶対パスを書きます（無ければ `glyph` だけ）。操作を足すときは、その URL を `Series.route` でも受け付け、テストの id の一覧も直します。
 - **URL**：`kobito://corkclip/day/<日付>`・`kobito://corkclip/open/<ID>`（ほかに `panel`・`snippet`・`latex`・`settings`）は「URL を開く」Apple Event（`kAEGetURL`）で届きます。`applicationWillFinishLaunching` で受け口を作るので、未起動から開かれても届きます。`kobito` スキームは Info.plist に登録しません。
 - **送る**：送り先は起動情報の `receive` から実行時に作ります。口が受け取れる種類（`accepts`）だけを入れて受け渡しファイルを書き、口の `url` の `{file}` を置き換えて、送り先の起動情報の `command` で開きます。
-- **workspace に残す**：残した物は基準パスの `kept.sqlite3` に写し（複数のMacで同じ基準パスを使えるように、このMacの履歴ではなく基準パスに置く）、そのたびに `cards.jsonl` を全件書き直します。以前の書き出し先（`database/corkclip.sqlite3` の日ごとのメモ）は、初めて開いたときに一度だけ写します（元のファイルは消しません）。
-- **約束の確かめ**：`CorkClip.app/Contents/MacOS/CorkClip --write-launch-info` は起動情報だけを書いて終わります。`KOBITO_CONFIG_DIR` を一時フォルダに向けて実行し、kobito-workspace の `uv run scripts/check_contracts.py --apps`（カードは `--base <基準パス>`）で確かめられます。
-- **目印と名乗り**：リポジトリの直下の `kobito-app.json` は、シリーズの決まり（kobito-workspace の `docs/APP_PACKAGE.md`）の目印です。`.app` で配るので `"kind": "native"` と書き、`launch.py` は持ちません（登録は今までどおり `setup.sh` と `--write-launch-info`）。アプリID・表示名・バンドルIDは `Series.swift`・`build.sh` とそろえます（`tests/run.sh` が確かめます）。`CorkClip --metadata` は、起動情報と同じ JSON を標準出力に出すだけで、何も書かず、何も起動しません。
+- **カードに残す**：残した物は基準パスの `kept.sqlite3` に写し（複数のMacで同じ基準パスを使えるように、このMacの履歴ではなく基準パスに置く）、そのたびに `cards.jsonl` を全件書き直します。以前の書き出し先（`database/corkclip.sqlite3` の日ごとのメモ）は、初めて開いたときに一度だけ写します（元のファイルは消しません）。
+- **約束の確かめ**：`CorkClip.app/Contents/MacOS/CorkClip --write-launch-info` は起動情報だけを書いて終わります。`KOBITO_CONFIG_DIR` を一時フォルダに向けて実行し、書き出した JSON を `docs/kobito-spec/CONTRACTS.md` の④の形と見比べて確かめられます（起動情報とカードの形は `tests/run.sh` も確かめます）。
+- **目印と名乗り**：リポジトリの直下の `kobito-app.json` は、シリーズの決まり（`docs/kobito-spec/APP_PACKAGE.md`）の目印です。`.app` で配るので `"kind": "native"` と書き、`launch.py` は持ちません（登録は今までどおり `setup.sh` と `--write-launch-info`）。アプリID・表示名・バンドルIDは `Series.swift`・`build.sh` とそろえます（`tests/run.sh` が確かめます）。`CorkClip --metadata` は、起動情報と同じ JSON を標準出力に出すだけで、何も書かず、何も起動しません。
