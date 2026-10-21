@@ -1,6 +1,6 @@
 import Foundation
 
-/// kobito シリーズの約束（kobito-workspace の docs/CONTRACTS.md）のうち、PC 固有領域に置くもの。
+/// kobito シリーズの約束（docs/kobito-spec/CONTRACTS.md）のうち、PC 固有領域に置くもの。
 ///
 ///   ~/Library/Application Support/kobito-tools/
 ///     apps/<アプリID>.json   ④ 起動情報（自分の分を起動のたびに書き、ほかの分は「送る」の送り先を作るのに読む）
@@ -95,9 +95,9 @@ enum Series {
     /// .app の Resources に build.sh が入れる、256px のアイコン画像（256 KB まで）。
     static let iconResource = "icon-256.png"
 
-    /// workspace に残したクリップのカードの見せ方。日付は「残した日」なので記録として扱う。
+    /// カードに残したクリップのカードの見せ方。日付は「残した日」なので記録として扱う。
     static let kinds: [[String: Any]] = [
-        ["kind": WorkspaceCards.kind, "label_en": "Clip", "glyph": glyph, "dates": "record"],
+        ["kind": KeptCards.kind, "label_en": "Clip", "glyph": glyph, "dates": "record"],
     ]
 
     /// 外から呼んでよい操作。宛先は自分（kobito://corkclip/…）だけで、id は変えない。
@@ -109,7 +109,7 @@ enum Series {
         ["id": "settings", "label": "設定を開く", "label_en": "Settings", "url": "kobito://\(appID)/settings", "role": "settings"],
     ]
 
-    /// 自分の名乗り（起動情報④の1件）。embed・receive は持たない（workspace の中には表示せず、受け渡しも受け付けない）。
+    /// 自分の名乗り（起動情報④の1件）。embed・receive は持たない（ほかのアプリの中には表示せず、受け渡しも受け付けない）。
     /// アイコン画像が無ければ（ハーネスなど）、代わりの1文字だけを書く。
     static func launchRecord(bundleID: String, iconFile: URL? = Bundle.main.resourceURL?.appendingPathComponent(iconResource)) -> [String: Any] {
         var icon: [String: Any] = ["glyph": glyph]

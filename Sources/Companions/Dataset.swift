@@ -11,12 +11,12 @@ struct StoreError: Error, CustomStringConvertible {
     var description: String { message }
 }
 
-/// kobito シリーズ共通の保存フォルダ（約束 ⓪-1。kobito-workspace の docs/CONTRACTS.md）で基準パスを扱う。
-/// CorkClip の履歴はこのMacの中に置き、基準パスには共有タグと「workspace に残す」の分だけを置く。
+/// kobito シリーズ共通の保存フォルダ（約束 ⓪-1。docs/kobito-spec/CONTRACTS.md）で基準パスを扱う。
+/// CorkClip の履歴はこのMacの中に置き、基準パスには共有タグと「カードに残す」の分だけを置く。
 ///
 ///   <基準パス>/.kobito-tools/
 ///     dataset.json   format: "kobito-tools-dataset"・ID（シリーズ共通）
-///     CorkClip/   lock.json・database/kept.sqlite3・uploads/・cards.jsonl（CorkClip だけが書き込む。WorkspaceCards.swift）
+///     CorkClip/   lock.json・database/kept.sqlite3・uploads/・cards.jsonl（CorkClip だけが書き込む。KeptCards.swift）
 ///     Tags/tags.json シリーズで共有するタグ（TagStore.swift）
 struct DatasetInfo {
     let basePath: String
@@ -57,10 +57,10 @@ enum Dataset {
 
     static func tagsFile(_ basePath: String) -> URL { root(basePath).appendingPathComponent("Tags", isDirectory: true).appendingPathComponent("tags.json") }
 
-    /// workspace に残したクリップ（WorkspaceCards）。
+    /// カードに残したクリップ（KeptCards）。
     static func keptDatabasePath(_ basePath: String) -> String { directory(basePath).appendingPathComponent("database").appendingPathComponent("kept.sqlite3").path }
 
-    /// 以前の書き出し先の DB。初めて kept.sqlite3 を開いたときに中身を移す（WorkspaceCards.importLegacy）。
+    /// 以前の書き出し先の DB。初めて kept.sqlite3 を開いたときに中身を移す（KeptCards.importLegacy）。
     static func legacyDatabasePath(_ basePath: String) -> String { directory(basePath).appendingPathComponent("database").appendingPathComponent("corkclip.sqlite3").path }
 
     private static func datasetFile(_ basePath: String) -> URL { root(basePath).appendingPathComponent("dataset.json") }

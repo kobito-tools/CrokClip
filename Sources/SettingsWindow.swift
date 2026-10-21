@@ -331,7 +331,7 @@ struct SettingsView: View {
     private var companions: some View {
         Form {
             Section {
-                ExplainBox(title: "連携でできること", text: "CorkClip は単独で使えます。kobito シリーズのほかのアプリも使っているなら、次のことができるようになります。\n・タグをシリーズのアプリと共有する\n・⌘S で残したクリップを、kobito-workspace に日ごとのカードとして並べる\n・⇧⌘N で選んだクリップを、受け取れるアプリへ送る（送り先は、入っているアプリから自動で並びます）")
+                ExplainBox(title: "連携でできること", text: "CorkClip は単独で使えます。kobito シリーズのほかのアプリも使っているなら、次のことができるようになります。\n・タグをシリーズのアプリと共有する\n・⌘S で残したクリップを、日ごとのカードとして、カードを読めるシリーズのアプリに並べる\n・⇧⌘N で選んだクリップを、受け取れるアプリへ送る（送り先は、入っているアプリから自動で並びます）")
                 VStack(alignment: .leading, spacing: 4) {
                     Text("はじめかた").font(.system(size: 12, weight: .semibold))
                     Text("1. 下の「基準パス」で、シリーズのアプリと共有するフォルダを選びます（シリーズのアプリで使っているフォルダがあれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。\n3. 送り先は設定いりません。受け取れるアプリを一度起動しておけば、⇧⌘N の一覧に並びます。")
@@ -365,24 +365,24 @@ struct SettingsView: View {
             } header: {
                 Text("基準パス（シリーズで共有するフォルダ）")
             } footer: {
-                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や「workspace に残す」に使います。CorkClip の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
+                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や「カードに残す」に使います。CorkClip の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
-                Toggle("「workspace に残す」を使う（⌘S）", isOn: $model.settings.workspaceKeep)
-                if model.settings.workspaceKeep {
+                Toggle("「カードに残す」を使う（⌘S）", isOn: $model.settings.keepCards)
+                if model.settings.keepCards {
                     Text("自動で残すタグ").font(.system(size: 12, weight: .medium))
                     TagChips(tags: $model.settings.autoExportTags, available: model.availableTags)
                 }
             } header: {
-                Text("workspace に残す")
+                Text("カードに残す")
             } footer: {
-                Text("⌘S で残したクリップは、日ごとに「10月15日のクリップ」という1枚のカードになり、kobito-workspace の HOME・カレンダー・検索に並びます。カードを押すと、その日に残したクリップでパネルが開きます。「自動で残すタグ」を選んでおくと、そのタグを付けるだけで残ります（例：#論文）。基準パスを選んでいるときだけ働きます。workspace を使わないなら、オフにすると操作の一覧からも消えます。")
+                Text("⌘S で残したクリップは、日ごとに「10月15日のクリップ」という1枚のカード（シリーズの約束③）になり、カードを読めるシリーズのアプリに並びます。カードを押すと、その日に残したクリップでパネルが開きます。「自動で残すタグ」を選んでおくと、そのタグを付けるだけで残ります（例：#論文）。基準パスを選んでいるときだけ働きます。カードを使わないなら、オフにすると操作の一覧からも消えます。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
-                Link(destination: URL(string: "https://github.com/kobito-tools/kobito-workspace#readme")!) {
-                    Label("kobito シリーズについて（kobito-workspace の README を開く）", systemImage: "arrow.up.right.square")
+                Link(destination: URL(string: "https://github.com/kobito-tools")!) {
+                    Label("kobito シリーズについて（GitHub の kobito-tools を開く）", systemImage: "arrow.up.right.square")
                 }
                 .font(.system(size: 12))
             }

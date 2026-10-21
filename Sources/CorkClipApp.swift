@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var panel: PanelController!
     private var stack: PasteStack!
     private var settingsWindow: SettingsWindowController!
-    /// workspace に残したクリップの DB の形（schema/kept/）。
+    /// カードに残したクリップの DB の形（schema/kept/）。
     private var keptSchema: URL!
     private var openHotKey: HotKey?
     private var stackHotKey: HotKey?
@@ -215,8 +215,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func tagsChanged(_ ids: [Int]) {
         syncTags()
-        // 自動で残すタグが付いた物は、まだなら workspace に残す。
-        guard settings.workspaceKeep, !settings.autoExportTags.isEmpty, settings.basePath != nil else { return }
+        // 自動で残すタグが付いた物は、まだならカードに残す。
+        guard settings.keepCards, !settings.autoExportTags.isEmpty, settings.basePath != nil else { return }
         let wanted = Set(settings.autoExportTags.map { $0.lowercased() })
         let targets = ids.filter { id in
             (try? store.exportedAt(id)) == nil && ((try? store.tags(of: id)) ?? []).contains { wanted.contains($0.name.lowercased()) }
@@ -224,10 +224,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !targets.isEmpty { keep(targets, automatic: true) }
     }
 
-    // MARK: - workspace に残す（F-17）
+    // MARK: - カードに残す（F-17）
 
     private func keep(_ ids: [Int], automatic: Bool) {
-        guard settings.workspaceKeep else { if !automatic { NSSound.beep() }; return }
+        guard settings.keepCards else { if !automatic { NSSound.beep() }; return }
         guard let basePath = settings.basePath else {
             if !automatic {
                 panel.model.show("先に設定の「連携」で基準パスを選んでください")
@@ -239,43 +239,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard (try? Dataset.read(basePath)) != nil || (!automatic && createDataset(basePath)) else { return }
         let store = store!, schema = keptSchema!
         let pending = ids.filter { (try? store.exportedAt($0)) == nil }
-        guard !pending.isEmpty else { panel.model.show("選んだ項目はもう workspace に残してあります"); return }
+        guard !pending.isEmpty else { panel.model.show("選んだ項目はもうカードに残してあります"); return }
         storeQueue.async { [weak self] in
             let now = Date()
             let result: Result<Void, Error> = Result {
                 // 共有タグを先にそろえて、カードには tags.json のタグIDを入れる。
                 try? store.syncTags(basePath: basePath)
-                try WorkspaceCards.keep(pending.compactMap { Self.keptEntry($0, store: store) }, basePath: basePath, schemaDirectory: schema, now: now)
+                try KeptCards.keep(pending.compactMap { Self.keptEntry($0, store: store) }, basePath: basePath, schemaDirectory: schema, now: now)
                 try store.markExported(pending, at: now)
             }
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    self?.panel.model.show("workspace に残しました（\(WorkspaceCards.title(day: Series.day(now)))・\(pending.count)件）")
+                    self?.panel.model.show("カードに残しました（\(KeptCards.title(day: Series.day(now)))・\(pending.count)件）")
                     self?.panel.refreshIfVisible()
                 case .failure(let error):
                     let message = (error as? StoreError)?.message ?? "\(error)"
-                    if automatic { NSLog("CorkClip: workspace に残せませんでした: \(message)") }
-                    else { self?.alert("workspace に残せませんでした", message) }
+                    if automatic { NSLog("CorkClip: カードに残せませんでした: \(message)") }
+                    else { self?.alert("カードに残せませんでした", message) }
                 }
             }
         }
     }
 
-    private nonisolated static func keptEntry(_ id: Int, store: ClipStore) -> WorkspaceCards.Entry? {
+    private nonisolated static func keptEntry(_ id: Int, store: ClipStore) -> KeptCards.Entry? {
         guard let detail = try? store.detail(id, maxTextLength: ClipStore.maxStoredTextLength) else { return nil }
         let tags = (try? store.tags(of: id)) ?? []
-        return WorkspaceCards.Entry(clipID: id, copiedAt: detail.summary.copiedAt, appName: detail.summary.isSnippet ? "定型文" : detail.summary.sourceAppName,
+        return KeptCards.Entry(clipID: id, copiedAt: detail.summary.copiedAt, appName: detail.summary.isSnippet ? "定型文" : detail.summary.sourceAppName,
                                     tagNames: tags.map(\.name), tagIDs: tags.map(\.id), text: detail.text, latex: detail.latex?.source,
                                     filePaths: detail.filePaths, ocrText: detail.ocrText, image: detail.imageData.flatMap(png))
     }
 
     /// 起動時と基準パスを変えたときに、カードを書き直す（以前の書き出し先からの移し替えも、ここで一度だけ行う）。
     private func refreshCards() {
-        guard settings.workspaceKeep, let basePath = settings.basePath, (try? Dataset.read(basePath)) != nil else { return }
+        guard settings.keepCards, let basePath = settings.basePath, (try? Dataset.read(basePath)) != nil else { return }
         let schema = keptSchema!
         storeQueue.async {
-            do { try WorkspaceCards.refresh(basePath: basePath, schemaDirectory: schema) } catch { NSLog("CorkClip: カードを書き出せません: \(error)") }
+            do { try KeptCards.refresh(basePath: basePath, schemaDirectory: schema) } catch { NSLog("CorkClip: カードを書き出せません: \(error)") }
         }
     }
 
@@ -363,7 +363,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settings = new
         settings.save(to: settingsURL)
         if old.openPanelHotKey != new.openPanelHotKey || old.stackHotKey != new.stackHotKey { registerHotKeys(alertOnFailure: true) }
-        if old.basePath != new.basePath || old.workspaceKeep != new.workspaceKeep { syncTags(); recordDataset(); refreshCards() }
+        if old.basePath != new.basePath || old.keepCards != new.keepCards { syncTags(); recordDataset(); refreshCards() }
         // パネルの見た目を変えたら、設定の画面の横に実物を出して、すぐに反映する。
         let looks = { (value: Settings) in [value.panelWidth, value.panelEdge == .right ? 1 : 0, value.panelScreen == .mouse ? 1 : 0, value.showPreview ? 1 : 0, value.showKobito ? 1 : 0, Double(RowColorMode.allCases.firstIndex(of: value.rowColorMode) ?? 0)] }
         if looks(old) != looks(new), settingsWindow?.isVisible == true { panel.showForSettings() }
@@ -408,7 +408,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: - URL（F-18）
 
-    /// ④ 起動情報。workspace などが、これを使って CorkClip を起動し、kobito://corkclip/… を渡す。
+    /// ④ 起動情報。シリーズのアプリが、これを使って CorkClip を起動し、kobito://corkclip/… を渡す。
     private func writeLaunchInfo() {
         do { try Series.writeLaunchInfo(bundleID: Bundle.main.bundleIdentifier ?? Series.defaultBundleID) }
         catch { NSLog("CorkClip: 起動情報を書き出せません: \(error)") }

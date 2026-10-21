@@ -1,15 +1,15 @@
 import Foundation
 
-/// workspace に残す（F-17）。⌘S や「自動で残すタグ」で残したクリップを、基準パスの CorkClip 自身の DB に写し、
+/// カードに残す（F-17）。⌘S や「自動で残すタグ」で残したクリップを、基準パスの CorkClip 自身の DB に写し、
 /// 日ごとに1枚のカード（約束③）にして <基準パス>/.kobito-tools/CorkClip/cards.jsonl に書き出す。
-/// workspace はこのカードを HOME・カレンダー・検索に並べ、押すと kobito://corkclip/day/<日付> で CorkClip を開く。
+/// カードを読めるシリーズのアプリがこれを並べ、押すと kobito://corkclip/day/<日付> で CorkClip を開く。
 ///
 ///   <基準パス>/.kobito-tools/CorkClip/
 ///     database/kept.sqlite3   残したクリップ（schema/kept/）
 ///     uploads/<UUID>.png      残した画像（PNG にそろえる。カードには入れない）
 ///     cards.jsonl             日ごとのカード
 ///     lock.json               同じ基準パスへ複数のMacが同時に書かないための印（DatasetLock）
-enum WorkspaceCards {
+enum KeptCards {
     /// 残す1件。
     struct Entry {
         let clipID: Int

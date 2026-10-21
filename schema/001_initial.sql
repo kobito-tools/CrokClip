@@ -20,7 +20,7 @@ CREATE TABLE clips (
   has_thumbnail INTEGER NOT NULL DEFAULT 0 CHECK (has_thumbnail IN (0, 1)),
   pinned INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
   pin_order INTEGER,
-  exported_at REAL                            -- workspace に残した日時（F-17）
+  exported_at REAL                            -- カードに残した日時（F-17）
 );
 CREATE INDEX clips_last_used_idx ON clips(last_used_at DESC);
 CREATE INDEX clips_kind_used_idx ON clips(kind, last_used_at);

@@ -275,7 +275,9 @@ Task { @MainActor in
 while broken == nil, Date() < deadline.addingTimeInterval(10) { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
 if case .failure(let error)? = broken { check(error is LatexError, "書き方の誤りを知らせる（\(error)）") } else { check(false, "書き方の誤りを知らせる") }
 
-// 14. 共有タグと workspace に残す（F-04・F-17）
+// 14. 共有タグとカードに残す（F-04・F-17）
+func decodeSettings(_ json: String) -> Settings? { try? JSONDecoder().decode(Settings.self, from: Data(json.utf8)) }
+check(decodeSettings(#"{"workspaceKeep": false}"#)?.keepCards == false && decodeSettings(#"{"workspaceKeep": false, "keepCards": true}"#)?.keepCards == true && decodeSettings("{}")?.keepCards == true, "「カードに残す」の設定は以前の名前（workspaceKeep）から引き継ぐ")
 let base = work.appendingPathComponent("base").path
 try FileManager.default.createDirectory(atPath: base, withIntermediateDirectories: true)
 _ = try Dataset.create(base, datasetId: "テスト")
@@ -296,18 +298,18 @@ INSERT INTO memo_tags VALUES ('memo-old', 'tag-old');
 let keptSchema = schema.appendingPathComponent("kept")
 let keepTime = Date()
 let today = Series.day(keepTime)
-func entry(_ id: Int, text: String, tags: [Tag], image: Data? = nil) -> WorkspaceCards.Entry {
-    WorkspaceCards.Entry(clipID: id, copiedAt: keepTime, appName: "Safari", tagNames: tags.map(\.name), tagIDs: tags.map(\.id), text: text, latex: nil, filePaths: [], ocrText: nil, image: image)
+func entry(_ id: Int, text: String, tags: [Tag], image: Data? = nil) -> KeptCards.Entry {
+    KeptCards.Entry(clipID: id, copiedAt: keepTime, appName: "Safari", tagNames: tags.map(\.name), tagIDs: tags.map(\.id), text: text, latex: nil, filePaths: [], ocrText: nil, image: image)
 }
-try WorkspaceCards.keep([entry(safariID, text: "https://arxiv.org/abs/1234", tags: [exportTag], image: makePNG(width: 10, height: 10))], basePath: base, schemaDirectory: keptSchema, now: keepTime)
-try WorkspaceCards.keep([entry(wordID, text: "2件目", tags: [exportTag]), entry(safariID, text: "https://arxiv.org/abs/1234 直した", tags: [exportTag])], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(1))
+try KeptCards.keep([entry(safariID, text: "https://arxiv.org/abs/1234", tags: [exportTag], image: makePNG(width: 10, height: 10))], basePath: base, schemaDirectory: keptSchema, now: keepTime)
+try KeptCards.keep([entry(wordID, text: "2件目", tags: [exportTag]), entry(safariID, text: "https://arxiv.org/abs/1234 直した", tags: [exportTag])], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(1))
 try store2.markExported([wordID], at: keepTime)
-let cardLines = (try? String(contentsOf: WorkspaceCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").map(String.init) ?? []
+let cardLines = (try? String(contentsOf: KeptCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").map(String.init) ?? []
 let cardList = cardLines.compactMap { (try? JSONSerialization.jsonObject(with: Data($0.utf8))) as? [String: Any] }
 check(cardList.map { $0["id"] as? String } == ["clips-2026-09-28", "clips-\(today)"], "日ごとに1枚のカードを書く（以前の書き出し先から移した日と、今日。消したメモは移さない）")
 let todayCard = cardList.last ?? [:]
 check(todayCard["v"] as? Int == 1 && todayCard["app"] as? String == "corkclip" && todayCard["kind"] as? String == "クリップ" && todayCard["date"] as? String == today, "カードは約束③の形（v・app・kind・date）")
-check(todayCard["title"] as? String == WorkspaceCards.title(day: today) && WorkspaceCards.title(day: "2026-10-05") == "10月5日のクリップ", "見出しは「10月5日のクリップ」")
+check(todayCard["title"] as? String == KeptCards.title(day: today) && KeptCards.title(day: "2026-10-05") == "10月5日のクリップ", "見出しは「10月5日のクリップ」")
 check(todayCard["url"] as? String == "kobito://corkclip/day/\(today)" && Series.route(URL(string: todayCard["url"] as! String)!) == .day(today), "カードの URL で、その日に残した物を開ける")
 check(todayCard["tags"] as? [String] == [exportTag.id], "タグは tags.json のタグID（重複を除く）")
 check((todayCard["text"] as? String).map { $0.contains("直した") && $0.contains("2件目") && !$0.contains("abs/1234\n") } == true, "同じ項目をもう一度残したら中身を新しくする")
@@ -317,11 +319,11 @@ let uploads = (try? FileManager.default.contentsOfDirectory(atPath: Dataset.uplo
 check(uploads.count == 1 && uploads[0].hasSuffix(".png"), "画像は PNG で uploads/ に保存する（カードには入れない）")
 check(cardLines.allSatisfy { !$0.contains("base64") && !$0.contains("\\/") }, "カードは1行1件の JSON")
 let longText = String(repeating: "あ", count: 2500)
-try WorkspaceCards.keep([entry(snippetID, text: longText, tags: [])], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(2))
-let longCard = ((try? String(contentsOf: WorkspaceCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").last).flatMap { (try? JSONSerialization.jsonObject(with: Data($0.utf8))) as? [String: Any] }
+try KeptCards.keep([entry(snippetID, text: longText, tags: [])], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(2))
+let longCard = ((try? String(contentsOf: KeptCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").last).flatMap { (try? JSONSerialization.jsonObject(with: Data($0.utf8))) as? [String: Any] }
 check((longCard?["text"] as? String)?.unicodeScalars.count == 2000, "本文は2000文字まで")
-try WorkspaceCards.refresh(basePath: base, schemaDirectory: keptSchema)
-check(((try? String(contentsOf: WorkspaceCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").count) == 2, "書き直しても移し替えは一度だけ")
+try KeptCards.refresh(basePath: base, schemaDirectory: keptSchema)
+check(((try? String(contentsOf: KeptCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").count) == 2, "書き直しても移し替えは一度だけ")
 check(try store2.recent(query: "kept:\(today)").map(\.id) == [wordID] && (try store2.recent(query: "exported:\(today)").map(\.id)) == [wordID] && (try store2.recent(query: "kept:2000-01-01")).isEmpty, "kept: でその日に残した物を絞り込む（カードから開くとき）")
 check(!FileManager.default.fileExists(atPath: Dataset.directory(base).appendingPathComponent("lock.json").path), "残し終えたら使用中の印を外す")
 // 以前の名前（Pastephant・InGoodPaste）で書き出したフォルダとDBは、新しい名前へ移す。
@@ -332,7 +334,7 @@ for (oldName, oldDatabase) in [("Pastephant", "pastephant.sqlite3"), ("InGoodPas
     try Data("db".utf8).write(to: oldPath)
     try Data("cards".utf8).write(to: oldPath.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("cards.jsonl"))
     try Dataset.ensureDirectories(oldBase)
-    check((try? Data(contentsOf: URL(fileURLWithPath: Dataset.legacyDatabasePath(oldBase)))) == Data("db".utf8) && FileManager.default.fileExists(atPath: WorkspaceCards.cardsFile(oldBase).path) && !FileManager.default.fileExists(atPath: oldPath.deletingLastPathComponent().deletingLastPathComponent().path), "以前の名前（\(oldName)）の書き出し先を CorkClip/ へ移す")
+    check((try? Data(contentsOf: URL(fileURLWithPath: Dataset.legacyDatabasePath(oldBase)))) == Data("db".utf8) && FileManager.default.fileExists(atPath: KeptCards.cardsFile(oldBase).path) && !FileManager.default.fileExists(atPath: oldPath.deletingLastPathComponent().deletingLastPathComponent().path), "以前の名前（\(oldName)）の書き出し先を CorkClip/ へ移す")
 }
 // 両方あるときは、いま使われている Pastephant のほうを移し、もう片方には触れない。
 let bothBase = work.appendingPathComponent("renamed-base-both").path
@@ -364,7 +366,7 @@ let renamedBase = work.appendingPathComponent("renamed-base-Pastephant").path
 try FileManager.default.createDirectory(atPath: renamedBase + "/.kobito-tools/Pastephant", withIntermediateDirectories: true)
 check(Dataset.basePath(for: URL(fileURLWithPath: renamedBase).appendingPathComponent(".kobito-tools/Pastephant")) == Dataset.basePath(for: URL(fileURLWithPath: renamedBase)), "以前の名前のフォルダを選んでも基準パスに読み替える")
 print("KEPT_DB=\(Dataset.keptDatabasePath(base))")
-print("CARDS=\(WorkspaceCards.cardsFile(base).path)")
+print("CARDS=\(KeptCards.cardsFile(base).path)")
 
 // 15. 貼り方（⇥）：項目の中身に合う物だけを並べる
 func styleIDs(_ kind: ClipKind, _ context: TransformContext?, combos: [TransformCombo] = [], multiple: Bool = false) -> [String] {
@@ -440,7 +442,7 @@ let launchIcon = launchJSON?["icon"] as? [String: Any]
 check(launchJSON?["name_en"] as? String == "CorkClip" && launchJSON?["color"] as? String == "teal", "起動情報に英語名と色（シリーズの配色の名前）を書く")
 check(launchIcon?["glyph"] as? String == "📌" && launchIcon?["file"] == nil, "アイコン画像が無ければ、代わりの1文字だけを書く")
 let launchKinds = launchJSON?["kinds"] as? [[String: Any]] ?? []
-check(launchKinds.count == 1 && launchKinds[0]["kind"] as? String == WorkspaceCards.kind && launchKinds[0]["dates"] as? String == "record", "カードの種類は1つで、日付は記録として扱う")
+check(launchKinds.count == 1 && launchKinds[0]["kind"] as? String == KeptCards.kind && launchKinds[0]["dates"] as? String == "record", "カードの種類は1つで、日付は記録として扱う")
 let launchActions = launchJSON?["actions"] as? [[String: Any]] ?? []
 let actionIDs = launchActions.compactMap { $0["id"] as? String }
 check(actionIDs == ["panel", "today", "snippet", "latex", "settings"] && Set(actionIDs).count == actionIDs.count, "操作の id は決まった名前で重ならない")
