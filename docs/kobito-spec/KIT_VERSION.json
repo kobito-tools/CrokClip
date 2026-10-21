@@ -1,0 +1,14 @@
+{
+  "commit": "d55a300f32b38a3fc2b47e8258dca18c3a0bc720",
+  "copied": "2026-10-21T06:53:27Z",
+  "docs_only": true,
+  "files": {
+    "APP_INTERFACE.md": "e272a46f8c1f6bd9e2dbcf06ecdc6ce95d4b4ce88ccd5ca9978e788cae86c14e",
+    "APP_PACKAGE.md": "5b6b6b6a5645906a2824e07c0cc25bdb9c6fc6f13743f2ae31651c8141d90158",
+    "BRANCHING.md": "afffb749919bde44d0485a1edb2bdd96fce9af66000cdbeee962cd5a39934bfa",
+    "CONTRACTS.md": "a73bf5940b6a2025ef8bb5a6d585aee82ec25a7e6ce5f21be8a4028e8d130244",
+    "KIT.md": "2fc4a7b7e7a19dd7c9b04d17d9e55c3fc52798d28c6b9078e4b542c36100ad8f",
+    "SETUP.md": "03d7caf5754ddd01f0ee26b6325bface7acc27fd6fc403efbfb9c9a41ce4299c"
+  },
+  "kit": "0.4.0"
+}
