@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 // パネル・設定の画面・メニューバーのアイコンを、アプリを起動せずに PNG に書き出す（見た目を確かめる用）。
-// 実行は tests/preview.sh から。第1引数に一時フォルダ、第2引数に schema/、第3引数に書き出す先のフォルダを渡す。
+// 実行は scripts/preview.sh から。第1引数に一時フォルダ、第2引数に schema/、第3引数に書き出す先のフォルダを渡す。
 // 履歴は一時フォルダに作った見本で、実際の履歴と設定には触れない。
 
 let work = URL(fileURLWithPath: CommandLine.arguments[1])

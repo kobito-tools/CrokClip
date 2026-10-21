@@ -25,7 +25,7 @@ mkdir -p "$stage/.background"
 ditto "CorkClip.app" "$stage/CorkClip.app"
 ln -s /Applications "$stage/Applications"
 tiffutil -cathidpicheck assets/dmg/background.png assets/dmg/background@2x.png -out "$stage/.background/background.tiff" >/dev/null
-cp assets/icon/AppIcon.icns "$stage/.VolumeIcon.icns"
+cp CorkClip.app/Contents/Resources/AppIcon.icns "$stage/.VolumeIcon.icns"
 
 hdiutil detach "/Volumes/$volume" -quiet 2>/dev/null || true
 # hdiutil create はときどき「Resource busy」で失敗するので、少し待って試し直す。

@@ -85,7 +85,7 @@
   "receive": [ … ],
 
   "name_en": "Sample",
-  "icon": { "file": "/Users/…/Sample/assets/icon.svg", "glyph": "✎" },
+  "icon": { "file": "/Users/…/Sample/kobito/icon.svg", "glyph": "✎" },
   "color": "orange",
   "kinds": [
     { "kind": "メモ", "label_en": "Memo", "glyph": "✎", "dates": "record" },
@@ -114,7 +114,8 @@
 - どちらも無ければ、今と同じく `name` の1文字目を出します。
 - workspace は画像を `/api/apps/<アプリID>/icon` で配り、`<img>` で表示します（SVG の中のスクリプトは `<img>` では動かないため）。拡張子と大きさが合わなければ使いません。
 - ランチャーも同じ `file` をアイコンに使えます。
-- 画像はアプリのリポジトリの中に置き、そのパスを書きます。起動のたびに書き直すので、フォルダを移しても追いつきます。
+- 画像は、リポジトリの決まった場所 `kobito/icon.svg` に置き、そのパスを書きます（`package.icon_record(<リポジトリ>, <1文字>)`。[APP_PACKAGE.md §0](APP_PACKAGE.md)）。起動のたびに書き直すので、フォルダを移しても追いつきます。
+- 入っていないアプリの紹介（§7）は、④ではなく、目印と `kobito/` から作る紹介のカードで行います（[APP_PACKAGE.md §6](APP_PACKAGE.md)）。
 
 ### 3.4 `color`
 

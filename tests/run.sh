@@ -62,10 +62,13 @@ assert marker["app"] == "corkclip" and re.match(r"^[a-z][a-z0-9-]{0,39}$", marke
 assert marker["kind"] == "native" and "entry" not in marker, marker  # .app で配るので launch.py を持たない
 assert marker.get("setup", "setup.sh") == "setup.sh" and os.path.isfile(marker.get("setup", "setup.sh")), marker
 assert re.match(r"^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$", marker["repository"]), marker
-assert marker["platforms"] == ["macos"], marker
-for key in ("name_en", "description", "description_en", "bundle_id"):
+assert marker["platforms"] == ["macos"] and marker["package"] == 1, marker
+for key in ("name_en", "tagline", "tagline_en", "description", "description_en", "bundle_id"):
     assert isinstance(marker[key], str) and marker[key].strip(), key
+assert all(len(marker[key]) <= 80 and "\n" not in marker[key] for key in ("tagline", "tagline_en")), marker
 build = open("build.sh", encoding="utf-8").read()
 assert f"<key>CFBundleIdentifier</key><string>{marker['bundle_id']}</string>" in build, "bundle_id が build.sh と違う"
-print("ok - 目印（kobito-app.json）の形が決まりどおり（native・launch.py なし・バンドルIDが build.sh と同じ）")
+assert f'VERSION="{marker["version"]}"' in build, "version が build.sh の VERSION と違う"
+assert all(os.path.isfile(name) for name in ("kobito/icon.svg", "kobito/icon-1024.png", "Setup.command")), "kobito/ のアイコンか Setup.command が無い"
+print("ok - 目印（kobito-app.json）の形が決まりどおり（native・launch.py なし・バンドルIDと版が build.sh と同じ）")
 PY

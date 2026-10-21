@@ -276,7 +276,7 @@ kobito シリーズの1つです。ほかのアプリとは `docs/kobito-spec/CO
 |---|---|
 | `name_en` | `CorkClip` |
 | `color` | `teal`（シリーズの配色のうち、まだ使われていない色。コルクに近い `orange` は別のアプリが使っているため） |
-| `icon` | `glyph` は `📌`。`file` は `.app` の中の `Contents/Resources/icon-256.png` の絶対パス（`build.sh` が `assets/icon/icon-1024.png` から 256px で作る。256 KB を超えたらビルドを止める）。画像が無いときは `glyph` だけ |
+| `icon` | `glyph` は `📌`。`file` は `.app` の中の `Contents/Resources/kobito/icon.svg` の絶対パス（`build.sh` がリポジトリの `kobito/icon.svg` をそのまま入れる。256 KB を超えたらビルドを止める）。画像が無いときは `glyph` だけ |
 | `kinds` | `[{"kind": "クリップ", "label_en": "Clip", "glyph": "📌", "dates": "record"}]`（カードの日付は「残した日」なので記録） |
 | `actions` | 下の表。`id` は変えません |
 

@@ -92,8 +92,8 @@ enum Series {
     static let appNameEnglish = "CorkClip"
     static let color = "teal"
     static let glyph = "📌"
-    /// .app の Resources に build.sh が入れる、256px のアイコン画像（256 KB まで）。
-    static let iconResource = "icon-256.png"
+    /// .app の Resources に build.sh が入れる、アイコンの元（リポジトリの kobito/icon.svg と同じ。256 KB まで）。
+    static let iconResource = "kobito/icon.svg"
 
     /// カードに残したクリップのカードの見せ方。日付は「残した日」なので記録として扱う。
     static let kinds: [[String: Any]] = [
