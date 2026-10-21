@@ -1,6 +1,6 @@
 #!/bin/zsh
 # シリーズの紹介画像（1280×640。作りはシリーズ共通）を
-# assets/icon/CorkClip-1280x640.png に書き出す。Google Chrome と Noto Sans JP のフォントファイルが必要。
+# assets/social-preview.png に書き出す。Google Chrome と Noto Sans JP のフォントファイルが必要。
 # 使い方: scripts/social-preview.sh <NotoSansJP.ttf のパス>
 set -euo pipefail
 cd "${0:A:h}/.."
@@ -21,9 +21,9 @@ h1{margin:0;font-weight:700;font-size:84px;letter-spacing:-.01em;line-height:1}
 .ja{margin-top:30px;font-size:30px;white-space:nowrap;font-weight:500;line-height:1.5}
 .en{margin-top:10px;font-size:24px;opacity:.78}
 .org{position:absolute;right:64px;bottom:48px;font-size:22px;letter-spacing:.06em;opacity:.7}
-</style></head><body><img src="file://${PWD}/assets/icon/icon.svg"><div class="text"><h1>CorkClip</h1><div class="ja">コルクボードに留める、<br>クリップボード履歴</div><div class="en">A clipboard history pinned to a corkboard.</div></div><div class="org">kobito-tools</div></body></html>
+</style></head><body><img src="file://${PWD}/kobito/icon.svg"><div class="text"><h1>CorkClip</h1><div class="ja">コルクボードに留める、<br>クリップボード履歴</div><div class="en">A clipboard history pinned to a corkboard.</div></div><div class="org">kobito-tools</div></body></html>
 HTML
 "$chrome" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1280,640 \
   --screenshot="$work/og.png" "file://$work/og.html" >/dev/null 2>&1
-cp "$work/og.png" assets/icon/CorkClip-1280x640.png
-echo assets/icon/CorkClip-1280x640.png
+cp "$work/og.png" assets/social-preview.png
+echo assets/social-preview.png

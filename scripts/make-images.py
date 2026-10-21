@@ -1,8 +1,14 @@
-# CorkClip のアイコン（assets/icon/icon.svg）を、コルクボードと画びょう、kobito-tools シリーズの小人で描く。
+# CorkClip の絵を描き直す。Xcode Command Line Tools が必要。使い方: python3 scripts/make-images.py
+#   kobito/icon.svg・icon-1024.png        アイコン（コルクボードと画びょう、kobito-tools シリーズの小人）
+#   assets/kobito-cling.svg → Resources/kobito-cling.png   パネルの縁にしがみつく小人
+#   assets/dmg/background.svg → background.png・@2x       dmg を開いたときの背景
+# .app のアイコン（AppIcon.icns）は build.sh が kobito/icon-1024.png から作る。
 # 小人の描き方はシリーズ共通（元の座標系 viewBox 0 0 49 44 を translate + scale で置く）。
-# 使い方: scripts/make-icon.sh から呼ぶ（SVG → PNG・icns への変換もそちらで行う）。
 import random
-import sys
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
 
 INK = "#3B4441"
 BODY = "#E6E3D9"
@@ -133,9 +139,17 @@ def dmg_background():
 '''
 
 
+def render(svg, png, width, height=None):
+    # macOS の SVG 描画で PNG にする（scripts/render-svg.swift）。
+    size = [str(width)] + ([str(height)] if height else [])
+    subprocess.run(["xcrun", "swift", str(ROOT / "scripts/render-svg.swift"), str(ROOT / svg), str(ROOT / png), *size], check=True)
+    print(png)
+
+
 if __name__ == "__main__":
-    open(sys.argv[1], "w").write(corkclip())
-    if len(sys.argv) > 2:
-        open(sys.argv[2], "w").write(cling())
-    if len(sys.argv) > 3:
-        open(sys.argv[3], "w").write(dmg_background())
+    for path, draw in (("kobito/icon.svg", corkclip), ("assets/kobito-cling.svg", cling), ("assets/dmg/background.svg", dmg_background)):
+        (ROOT / path).write_text(draw())
+    render("kobito/icon.svg", "kobito/icon-1024.png", 1024)
+    render("assets/kobito-cling.svg", "Resources/kobito-cling.png", 192)  # 64pt を 3倍で
+    render("assets/dmg/background.svg", "assets/dmg/background.png", 600, 400)
+    render("assets/dmg/background.svg", "assets/dmg/background@2x.png", 1200, 800)
