@@ -1,6 +1,6 @@
 # CorkClip
 
-<img src="assets/icon/icon-1024.png" width="96" align="right" alt="">
+<img src="kobito/icon-1024.png" width="96" align="right" alt="">
 
 CorkClip は、コピーした物をコルクボードにピンで留めるように取っておける、macOS 用クリップボード履歴アプリです。
 
@@ -47,7 +47,7 @@ CorkClip は以前 Pastephant という名前でした。初めて起動する�
 - ログイン時に開く設定も、CorkClip の設定でオンにし直してください。
 - URL は `pastephant://` から `corkclip://` に変わりました。ランチャーなどに登録している場合は登録し直してください。
 
-ソースから作る場合は、このリポジトリをクローンして `./setup.sh` を実行します（Finder からは `CorkClip-Setup.command` をダブルクリック）。ビルドして、アプリケーションフォルダへ移すかを尋ね（既定は移さない。同じ名前のアプリがすでにあるときは、置き換えてよいかも尋ねる）、起動のしかたを表示します。何度動かしても大丈夫で、履歴と設定には触れません。`./setup.sh --dry-run` で何をするかだけを確かめられ、`--yes` を付けると尋ねずに既定の答えを選びます。Xcode Command Line Tools が必要で、無いときは入れ方（`xcode-select --install`）を表示して止まります。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+ソースから作る場合は、このリポジトリをクローンして `./setup.sh` を実行します（Finder からは `Setup.command` をダブルクリック）。ビルドして、アプリケーションフォルダへ移すかを尋ね（既定は移さない。同じ名前のアプリがすでにあるときは、置き換えてよいかも尋ねる）、起動のしかたを表示します。何度動かしても大丈夫で、履歴と設定には触れません。`./setup.sh --dry-run` で何をするかだけを確かめられ、`--yes` を付けると尋ねずに既定の答えを選びます。Xcode Command Line Tools が必要で、無いときは入れ方（`xcode-select --install`）を表示して止まります。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
 #### アクセシビリティの許可
 
@@ -260,4 +260,4 @@ CorkClip は外部と通信しません。履歴はこの Mac の `~/Library/App
 
 本ソフトウェアの開発には、ChatGPT（OpenAI）および Claude（Anthropic）を使用しています。本プロジェクトは個人によるものであり、OpenAI および Anthropic とは関係ありません。
 
-ビルド方法とソースコードの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を参照してください。README のデモ（`docs/images/demo.gif`）は `scripts/demo.sh` で作り直せます。リポジトリの直下の `kobito-app.json` は、kobito シリーズのアプリであることを示す目印です（`.app` で配るので `"kind": "native"`）。不具合の報告や要望は [Issues](../../issues) で受け付けています。
+ビルド方法とソースコードの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を参照してください。README のデモ（`docs/images/demo.gif`）は `scripts/demo.sh` で作り直せます。リポジトリの直下の `kobito-app.json` は、kobito シリーズのアプリであることを示す目印で、`kobito/` にアイコン（`icon.svg`・`icon-1024.png`）を置いています（`.app` で配るので `"kind": "native"`。決まりは `docs/kobito-spec/APP_PACKAGE.md`）。不具合の報告や要望は [Issues](../../issues) で受け付けています。
