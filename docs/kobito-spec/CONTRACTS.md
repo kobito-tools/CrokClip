@@ -3,7 +3,7 @@
 kobito シリーズのアプリどうしは、**お互いのコードを呼びません**。つながりはこの文書で決めたファイルとURLだけです。ここに書いた形は、アプリの種類が増えても、各アプリの中身が変わっても、変更しません。
 
 > **v1 確定（2026-10-15）**：次の確認を経て、この形を確定しました。以後は「変更の規則」に従い、任意の項目・種類を足すことだけができます。
-> - 検証用の試作（`spikes/`）：iframe 埋め込みと ⑤、`.app` への ② の受け渡し、常駐プロセスからの小さなウインドウ（いずれも macOS）
+> - 検証用の試作（今は kobito-workspace から外し、kobito-tools の `_backup/spikes/` に保管）：iframe 埋め込みと ⑤、`.app` への ② の受け渡し、常駐プロセスからの小さなウインドウ（いずれも macOS）
 > - Python のアプリ2つを共通部品の写しに載せ替え、kobito-workspace に埋め込んで、③ カード・④ 起動情報・⑤ 埋め込みメッセージ（`navigate` を含む）・⑥ 基準パスの履歴・⑦ 受け渡しの口が動くこと
 > - Windows での動作は未確認です。Windows で問題が見つかっても、約束の形ではなく各アプリと共通部品の実装で対応します。
 
@@ -174,7 +174,7 @@ Python のアプリの `command` は、リポジトリの直下の `launch.py` �
 
 ```json
 "name_en": "Sample",
-"icon": { "file": "/Users/…/Sample/assets/icon.svg", "glyph": "✎" },
+"icon": { "file": "/Users/…/Sample/kobito/icon.svg", "glyph": "✎" },
 "color": "orange",
 "kinds": [
   { "kind": "メモ", "label_en": "Memo", "glyph": "✎", "dates": "record" }

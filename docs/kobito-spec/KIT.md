@@ -41,8 +41,11 @@ uv run scripts/vendor_kit.py --check --docs-only ../SampleNative/docs/kobito-spe
 | `kit.contracts.history` | `record`・`candidates` | ⑥ 基準パスの履歴 |
 | `kit.contracts.share` | `make`・`send`・`read`・`kinds_of` | ⑦ 受け渡しファイル |
 | `kit.embed` | `parse_args`・`announce_ready`・`exit_when_parent_closes` | workspace の中での起動 |
-| `kit.cli` | `run`・`launch_command`・`write_launch_info`・`EMBED` | 入口 `launch.py` の引数（`--metadata`・`--write-launch-info`・`--embedded …`）を読み、アプリが渡した「名乗りを作る」「画面を開く」「埋め込む」を呼び分ける（[APP_PACKAGE.md](APP_PACKAGE.md)） |
-| `kit.manifest` | `read`・`normalize`・`find`・`file_in`・`conflicts`・`conflict_message`・`FILE` | 目印 `kobito-app.json` を読んで確かめる。フォルダの直下から目印のあるアプリを探す。アプリIDのかぶりを見つける（[CONTRACTS.md「ID がかぶったとき」](CONTRACTS.md#id-がかぶったとき)）。読むだけで、何も実行しない |
+| `kit.cli` | `run`・`launch_command`・`write_launch_info`・`EMBED`・`DevOptions` | 入口 `launch.py` の引数（`--metadata`・`--write-launch-info`・`--embedded …`・`--dev`）を読み、アプリが渡した「名乗りを作る」「画面を開く」「埋め込む」「開発用に動かす」を呼び分ける（[APP_PACKAGE.md](APP_PACKAGE.md)） |
+| `kit.package` | `AppPackage`・`icon_record`・`ICON`・`ICON_PNG`・`SCREENSHOT` | リポジトリの形（[APP_PACKAGE.md §0](APP_PACKAGE.md)）。`AppPackage(<フォルダ>, <目印>)`・`AppPackage.read(<フォルダ>)`・`AppPackage.find([<フォルダ>…])` で読み、`.icon`・`.screenshot`・`.card()`（紹介のカード）を返す。`icon_record(<リポジトリ>, <1文字>)` は ④ の `icon`（`kobito/icon.svg`）。読むだけで、何も実行しない |
+| `kit.testing` | `IsolatedTestCase` | テストの土台。`KOBITO_CONFIG_DIR`・`KOBITO_SHARE_DIR`・`HOME` を一時フォルダに向ける（[APP_PACKAGE.md §10](APP_PACKAGE.md)） |
+| `setup.zsh` | `kobito_setup`・`kobito_python_app`・`kobito_ask`・`kobito_run`・`kobito_finish` など | `setup.sh` が読み込む共通の手順（zsh。[SETUP.md §3](SETUP.md)） |
+| `kit.manifest` | `read`・`normalize`・`find`・`file_in`・`conflicts`・`conflict_message`・`FILE` | 目印 `kobito-app.json` を読んで確かめる（紹介のカードの `tagline`・`tagline_en`、`version`・`package` も）。フォルダの直下から目印のあるアプリを探す。アプリIDのかぶりを見つける（[CONTRACTS.md「ID がかぶったとき」](CONTRACTS.md#id-がかぶったとき)）。読むだけで、何も実行しない |
 | `kit.server` | `PageServer`・`Request`・`Response` | ローカル HTTP サーバーの土台、共通の API、SSE。Server ヘッダーはアプリID（`kobito-<アプリID>`）なので、表示名は日本語でもよい |
 | `kit.web/kobito-bridge.js` | `window.kobito` | 画面用。単体起動と埋め込みの違いを吸収し、⑤ を送受信する |
 | `kit.llm` | `chat_json`・`load_config`・`save_config`・`LlmError` | ローカルLLM（OpenAI 互換 API、このPCのものだけ） |
@@ -74,7 +77,7 @@ if __name__ == "__main__":
 import threading
 from pathlib import Path
 
-from .kobito_kit import cli, dataset, embed, paths
+from .kobito_kit import cli, dataset, embed, package, paths
 from .kobito_kit.contracts import history
 from .kobito_kit.server import PageServer
 
@@ -87,7 +90,7 @@ def metadata():
     """名乗り（起動情報④と同じ形）。--metadata はこれを出すだけ、--write-launch-info はこれを書くだけ。
     見せ方と操作（icon・color・kinds・actions）は任意。"""
     return {"app": APP.id, "name": APP.name, "command": cli.launch_command(REPOSITORY), "embed": cli.EMBED,
-            "icon": {"file": str(HERE / "web" / "icon.svg"), "glyph": "S"}, "color": "teal",
+            "icon": package.icon_record(REPOSITORY, "S"), "color": "teal",  # <リポジトリ>/kobito/icon.svg
             "kinds": [{"kind": "メモ", "dates": "record"}],
             "actions": [{"id": "new", "label": "新しいメモ", "url": "kobito://sample/new", "role": "new"}]}
 
@@ -119,9 +122,16 @@ def run_embedded(options, rest):
     stop.wait()
 
 
+def serve_dev(options, rest):
+    # 開発用（launch.py --dev）。options は cli.DevOptions（dataset・port）。ウインドウを開かずにサーバーを動かして返す。
+    # cli.run() が URL を出し、Ctrl-C で止める。片付けが要るときは (サーバー, 片付ける関数) を返す。起動情報は書かない。
+    server = start_server(embed.EmbedOptions(dataset=options.dataset))
+    return server
+
+
 def main(argv):
     # 画面を開く・埋め込む前に、cli.run() が起動情報④を書き直す（起動のたびに）。
-    return cli.run(argv, metadata=metadata, window=open_window, embedded=run_embedded)
+    return cli.run(argv, metadata=metadata, window=open_window, embedded=run_embedded, dev=serve_dev)
 ```
 
 | `cli.run()` に渡すもの | 呼ばれるとき |
@@ -129,6 +139,7 @@ def main(argv):
 | `metadata()` | `--metadata`（出すだけ）、`--write-launch-info`（書くだけ）、画面を開く・埋め込む前（書き直す）。形が④と合わなければ、`--metadata` と `--write-launch-info` は終了コード 1 |
 | `window(options, rest)` | 引数なし、またはアプリ独自の引数・URL だけのとき |
 | `embedded(options, rest)` | `--embedded --dataset … --parent-origin …`。渡さなければ、埋め込めないアプリとして `--embedded` を断る（終了コード 2） |
+| `dev(options, rest)` | `--dev [--dataset …] [--port …]`。開発中にブラウザで画面を確かめる。渡さなければ `--dev` を断る（終了コード 2）。アプリごとの `scripts/dev_server.py` の代わり |
 
 目印 `kobito-app.json` の `app`・`name` と、`metadata()` の `app`・`name` はそろえます。テストで `manifest.read(<リポジトリ>)` と `metadata()` を比べておくと、ずれに気づけます。
 
@@ -152,7 +163,7 @@ kobito.listen("changed", (payload) => reload(payload));
 | 決まり | 内容 |
 |---|---|
 | 形が違えば書かない | `write()`・`write_record()` は、約束と合わない項目があれば `ValueError` を出し、ファイルを書きません。どの項目かはメッセージに出ます |
-| アイコン | 画像（`.svg` か `.png`、256 KB まで）はアプリのリポジトリに置き、絶対パスを渡します。起動のたびに書き直すので、フォルダを移しても追いつきます |
+| アイコン | 画像はリポジトリの `kobito/icon.svg`（256 KB まで）に置き、`package.icon_record(<リポジトリ>, <1文字>)` を渡します。起動のたびに書き直すので、フォルダを移しても追いつきます |
 | 操作の URL | 自分のアプリID宛てだけ。置き換えは `{today}` だけ。アプリがすでに受け付けている URL を書きます |
 | ユーティリティ | 常駐・ユーティリティのアプリは `embed` を渡しません。workspace では起動ボタンだけになり、操作は `command` に URL を足して起動する形で開きます |
 | 読む側 | `launch.actions(record)` は `{today}` を置き換えた操作の一覧、`find_action(record, id)` は覚えた `id` から操作を探します。`dates_of(record, kind)` は日付の扱い（無ければ `"event"`） |
@@ -171,16 +182,17 @@ kobito.listen("changed", (payload) => reload(payload));
 
 ## テスト
 
-共通部品のテストは kobito-workspace で実行します。
+共通部品のテストは kobito-workspace で実行します。どのアプリも、リポジトリの直下で同じ1行で全部のテストを動かします（[APP_PACKAGE.md §10](APP_PACKAGE.md)）。
 
 ```bash
 uv run python -m unittest discover -s tests -t tests
 ```
 
-アプリが書き出したカードと起動情報が約束どおりかは、アプリを動かしたあとに確かめます。
+テストは `tests/test_*.py` に置き、`kit.testing.IsolatedTestCase` を土台にします。PC 固有領域・受け渡しフォルダ・`HOME` を一時フォルダに向けるので、実際の設定に触れません。
+
+アプリが書き出したカードと起動情報が約束どおりかは、アプリを動かしたあとに確かめます。リポジトリの形を守っているかは `check_package.py` で確かめます。
 
 ```bash
 uv run scripts/check_contracts.py --base <基準パス> --apps
+uv run scripts/check_package.py <リポジトリ>
 ```
-
-テストは、環境変数 `KOBITO_CONFIG_DIR`・`KOBITO_SHARE_DIR` で PC 固有領域と受け渡しフォルダを一時フォルダに向けて動かします。各アプリのテストも同じようにしてください。
