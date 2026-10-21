@@ -429,6 +429,12 @@ let launchJSON = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Serie
 check(launchJSON?["app"] as? String == "corkclip" && launchJSON?["name"] as? String == "CorkClip" && launchJSON?["command"] as? [String] == ["/usr/bin/open", "-b", "io.github.kobito-tools.corkclip"], "起動情報を書き出す（open -b <バンドルID>）")
 check(launchJSON?["embed"] == nil && launchJSON?["receive"] == nil, "起動情報に embed・receive は持たない")
 check(Series.launchInfos().map(\.app) == ["corkclip"], "書いた起動情報を約束どおりに読める")
+// --metadata（シリーズの決まり：APP_PACKAGE.md）は、起動情報と同じものを出すだけで、何も書かない。
+let metadataJSON = (try? JSONSerialization.jsonObject(with: Series.metadataJSON(bundleID: "io.github.kobito-tools.corkclip"))) as? NSDictionary
+check(metadataJSON != nil && metadataJSON == launchJSON.map { $0 as NSDictionary }, "--metadata の名乗りは、書き出す起動情報と同じ")
+let marker = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: "kobito-app.json")))) as? [String: Any]
+check(marker?["app"] as? String == Series.appID && marker?["name"] as? String == Series.appName && marker?["bundle_id"] as? String == Series.defaultBundleID,
+      "目印（kobito-app.json）のアプリID・表示名・バンドルIDが、名乗りとそろっている")
 // 見せ方と操作（④）。
 let launchIcon = launchJSON?["icon"] as? [String: Any]
 check(launchJSON?["name_en"] as? String == "CorkClip" && launchJSON?["color"] as? String == "teal", "起動情報に英語名と色（シリーズの配色の名前）を書く")

@@ -48,6 +48,7 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 | `Resources/katex/` | 同梱の KaTeX（MIT）と描画ページ `render.html` |
 | `schema/` | 履歴のDBの作成と更新（ファイル名順に、まだの物だけ適用） |
 | `schema/kept/` | 基準パスの、workspace に残したクリップのDBの作成と更新 |
+| `kobito-app.json` | kobito シリーズの目印（下の「約束の確かめ」） |
 | `tests/` | `run.sh` とハーネス（`harness/main.swift`）、見た目を書き出す `preview.sh`（`preview/main.swift`） |
 
 ## 保存の仕組み
@@ -95,3 +96,4 @@ $TMPDIR/kobito-share/<UUID>.json    ⑦ 送る中身（KOBITO_SHARE_DIR で変�
 - **送る**：送り先は起動情報の `receive` から実行時に作ります。口が受け取れる種類（`accepts`）だけを入れて受け渡しファイルを書き、口の `url` の `{file}` を置き換えて、送り先の起動情報の `command` で開きます。
 - **workspace に残す**：残した物は基準パスの `kept.sqlite3` に写し（複数のMacで同じ基準パスを使えるように、このMacの履歴ではなく基準パスに置く）、そのたびに `cards.jsonl` を全件書き直します。以前の書き出し先（`database/corkclip.sqlite3` の日ごとのメモ）は、初めて開いたときに一度だけ写します（元のファイルは消しません）。
 - **約束の確かめ**：`CorkClip.app/Contents/MacOS/CorkClip --write-launch-info` は起動情報だけを書いて終わります。`KOBITO_CONFIG_DIR` を一時フォルダに向けて実行し、kobito-workspace の `uv run scripts/check_contracts.py --apps`（カードは `--base <基準パス>`）で確かめられます。
+- **目印と名乗り**：リポジトリの直下の `kobito-app.json` は、シリーズの決まり（kobito-workspace の `docs/APP_PACKAGE.md`）の目印です。`.app` で配るので `"kind": "native"` と書き、`launch.py` は持ちません（登録は今までどおり `setup.sh` と `--write-launch-info`）。アプリID・表示名・バンドルIDは `Series.swift`・`build.sh` とそろえます（`tests/run.sh` が確かめます）。`CorkClip --metadata` は、起動情報と同じ JSON を標準出力に出すだけで、何も書かず、何も起動しません。

@@ -50,3 +50,22 @@ for line in open(values["CARDS"], encoding="utf-8"):
     ids.add(card["id"])
 print(f"ok - workspace に残す：DBの更新・移し替えの記録・カード {len(ids)}枚が約束③の形")
 PY
+
+# 目印（kobito-app.json。kobito シリーズの決まり：kobito-workspace の docs/APP_PACKAGE.md）の形
+python3 - kobito-app.json <<'PY'
+import json, os, re, sys
+path = sys.argv[1]
+assert os.path.getsize(path) <= 64 * 1024
+marker = json.load(open(path, encoding="utf-8"))
+assert marker["format"] == "kobito-app" and marker["v"] == 1 and marker["contracts"] == 1, marker
+assert marker["app"] == "corkclip" and re.match(r"^[a-z][a-z0-9-]{0,39}$", marker["app"]) and marker["name"] == "CorkClip", marker
+assert marker["kind"] == "native" and "entry" not in marker, marker  # .app で配るので launch.py を持たない
+assert marker.get("setup", "setup.sh") == "setup.sh" and os.path.isfile(marker.get("setup", "setup.sh")), marker
+assert re.match(r"^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$", marker["repository"]), marker
+assert marker["platforms"] == ["macos"], marker
+for key in ("name_en", "description", "description_en", "bundle_id"):
+    assert isinstance(marker[key], str) and marker[key].strip(), key
+build = open("build.sh", encoding="utf-8").read()
+assert f"<key>CFBundleIdentifier</key><string>{marker['bundle_id']}</string>" in build, "bundle_id が build.sh と違う"
+print("ok - 目印（kobito-app.json）の形が決まりどおり（native・launch.py なし・バンドルIDが build.sh と同じ）")
+PY
