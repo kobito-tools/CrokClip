@@ -56,7 +56,7 @@ struct ClipDetail {
     let latex: LatexSource?
 }
 
-/// このMacの履歴（~/Library/Application Support/Pastephant/）の読み書きと整理（F-01, F-15）。
+/// このMacの履歴（~/Library/Application Support/CorkClip/）の読み書きと整理（F-01, F-15）。
 ///
 ///   database/history.sqlite3   項目・型の一覧・タグの写し・全文検索
 ///   blobs/ab/<sha256>.bin      生データ（中身のハッシュ名。同じデータは1つだけ）
@@ -79,8 +79,23 @@ final class ClipStore: @unchecked Sendable {
 
     struct CleanupReport { var removedClips = 0; var removedBlobs = 0 }
 
-    static var defaultDirectory: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Pastephant", isDirectory: true)
+    /// 以前の名前（Pastephant・InGoodPaste）の履歴と設定があれば、初めて使うときにこの名前のフォルダへ移す。
+    static let defaultDirectory: URL = {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let directory = support.appendingPathComponent("CorkClip", isDirectory: true)
+        moveRenamedDirectory(in: support, to: directory)
+        return directory
+    }()
+
+    /// 以前の名前のフォルダ。先にあるほうを移す（Pastephant が、いま使われている版）。
+    static let renamedDirectoryNames = ["Pastephant", "InGoodPaste"]
+
+    /// support の中の以前の名前のフォルダを directory へ移す。directory がすでにあれば何もしない。
+    static func moveRenamedDirectory(in support: URL, to directory: URL) {
+        let manager = FileManager.default
+        guard !manager.fileExists(atPath: directory.path),
+              let legacy = renamedDirectoryNames.map({ support.appendingPathComponent($0, isDirectory: true) }).first(where: { manager.fileExists(atPath: $0.path) }) else { return }
+        do { try manager.moveItem(at: legacy, to: directory) } catch { NSLog("CorkClip: 以前の履歴（\(legacy.lastPathComponent)）を移せませんでした: \(error)") }
     }
 
     init(directory: URL, schemaDirectory: URL) throws {

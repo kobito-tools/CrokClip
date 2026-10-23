@@ -1,19 +1,18 @@
-# Pastephant
+# CorkClip
 
-<img src="assets/icon/icon-1024.png" width="96" align="right" alt="">
+<img src="kobito/icon-1024.png" width="96" align="right" alt="">
 
-Pastephant は、コピーした物を忘れない象の、macOS 用クリップボード履歴アプリです。
+CorkClip は、コピーした物をコルクボードにピンで留めるように取っておける、macOS 用クリップボード履歴アプリです。
 
 `⌘C` でコピーした文字・画像・表・ファイル・パワポの図形などを元の形のまま覚えておき、`⌥⌘V` で画面の端から呼び出して貼れます。貼る前に「改行を消す」「表 → LaTeX」などの貼り方を選んで、貼られる内容を先に確かめられます。タグ、定型文、数式画像、画像の文字認識、順番に貼るペーストスタックもそろっています。
 
-[OpenSesame!](https://github.com/kobito-tools/OpenSesame) に登録すると1キーで開けます。共有タグで [Tomelet](https://github.com/kobito-tools/Tomelet)・[PopNote!](https://github.com/kobito-tools/PopNote) とつながり、選んだ項目をそのままメモに送れます。
+kobito シリーズの1つです。ほかのアプリとは、約束（`docs/kobito-spec/CONTRACTS.md`）のデータの形だけでつながります。シリーズについては [kobito-tools](https://github.com/kobito-tools) を参照してください。
 
 ![デモ](docs/images/demo.gif)
 
 ## 動作環境
 
 - macOS 13 以降（Apple Silicon / Intel）
-- Tomelet・PopNote! は任意です（連携する場合だけ使います）
 
 ## ダウンロード
 
@@ -21,15 +20,15 @@ Pastephant は、コピーした物を忘れない象の、macOS 用クリップ
 
 | 形式 | ファイル |
 |---|---|
-| dmg（おすすめ） | `Pastephant_x.y.z.dmg` |
-| zip | `Pastephant_x.y.z_universal.zip` |
+| dmg（おすすめ） | `CorkClip_x.y.z.dmg` |
+| zip | `CorkClip_x.y.z_universal.zip` |
 
 `x.y.z` にはバージョン番号が入ります。
 
 ## インストール
 
-1. ダウンロードした `.dmg` ファイルを開き、表示された `Pastephant` を右の `Applications` フォルダにドラッグします（zip の場合は、展開された `Pastephant.app` を Applications フォルダに移動します）。
-2. アプリケーションフォルダから Pastephant を起動します。Dock には出ず、メニューバーにクリップボードのアイコンが出ます。
+1. ダウンロードした `.dmg` ファイルを開き、表示された `CorkClip` を右の `Applications` フォルダにドラッグします（zip の場合は、展開された `CorkClip.app` を Applications フォルダに移動します）。
+2. アプリケーションフォルダから CorkClip を起動します。Dock には出ず、メニューバーにコルクボードのアイコンが出ます。
 3. dmg は Finder のサイドバーの「⏏」で取り出して、ゴミ箱に入れて構いません。
 
 本アプリは Apple の公証を受けていないため、初回起動時に「開発元を確認できません」などの警告が表示されます。その場合は警告を閉じ、「システム設定」→「プライバシーとセキュリティ」を開いて、画面下部の「このまま開く」をクリックしてください。2 回目以降は通常どおり起動できます。
@@ -37,14 +36,22 @@ Pastephant は、コピーした物を忘れない象の、macOS 用クリップ
 「壊れているため開けません」と表示される場合は、ターミナルで次のコマンドを実行してから、再度起動してください。
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Pastephant.app"
+xattr -dr com.apple.quarantine "/Applications/CorkClip.app"
 ```
 
-ソースから作る場合は、このリポジトリをクローンして `Pastephant-Setup.command` を実行します（Xcode Command Line Tools が必要です。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)）。
+#### Pastephant から乗り換える場合
+
+CorkClip は以前 Pastephant という名前でした。初めて起動すると、Pastephant の履歴と設定（`~/Library/Application Support/Pastephant/`）を `CorkClip/` へ移して、そのまま使えます。基準パスに残したクリップ（`.kobito-tools/Pastephant/`）も、次に開くときに `.kobito-tools/CorkClip/` へ移します。
+
+- Pastephant を終了してから `Pastephant.app` をゴミ箱に入れ、アクセシビリティ・入力監視の一覧からも「－」で削除してください。CorkClip には改めて許可が必要です。
+- ログイン時に開く設定も、CorkClip の設定でオンにし直してください。
+- URL は `pastephant://` から `corkclip://` に変わりました。ランチャーなどに登録している場合は登録し直してください。
+
+ソースから作る場合は、このリポジトリをクローンして `./setup.sh` を実行します（Finder からは `Setup.command` をダブルクリック）。ビルドして、アプリケーションフォルダへ移すかを尋ね（既定は移さない。同じ名前のアプリがすでにあるときは、置き換えてよいかも尋ねる）、起動のしかたを表示します。何度動かしても大丈夫で、履歴と設定には触れません。`./setup.sh --dry-run` で何をするかだけを確かめられ、`--yes` を付けると尋ねずに既定の答えを選びます。Xcode Command Line Tools が必要で、無いときは入れ方（`xcode-select --install`）を表示して止まります。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
 #### アクセシビリティの許可
 
-選んだ項目を前のアプリに貼り込むために、アクセシビリティの許可を使います。初めて貼るときに求められるので、「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で Pastephant をオンにしてください。許可が無い間は、選んだ項目をクリップボードに戻すだけになります（自分で `⌘V` を押せば貼れます）。
+選んだ項目を前のアプリに貼り込むために、アクセシビリティの許可を使います。初めて貼るときに求められるので、「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で CorkClip をオンにしてください。許可が無い間は、選んだ項目をクリップボードに戻すだけになります（自分で `⌘V` を押せば貼れます）。
 
 #### 入力監視の許可
 
@@ -56,7 +63,7 @@ xattr -dr com.apple.quarantine "/Applications/Pastephant.app"
 
 コピーすると自動で履歴に入ります。`⌥⌘V` を押すと、画面の右端（設定で左端にも変えられます）からパネルが出てきます。貼り先のアプリのフォーカスはそのままなので、選んで `⏎` を押すだけで貼れます。
 
-パネルは上から、検索欄、「プレビュー」の枠（選んでいる項目の中身と、その下に貼り方）、履歴のカード、いま使えるキーの案内です。カードの左の色の帯はコピー元のアプリごとの色（PopNote! のタグと同じ決め方）で、設定で種類ごと・タグごとにも変えられます。パネルの縁には、象の耳の小人がしがみついています（設定で隠せます）。
+パネルは、木の枠のコルクボードです。上から、検索欄、画びょうで留めた「プレビュー」の紙（選んでいる項目の中身と、その下に貼り方）、履歴のカード、いま使えるキーの案内が並びます。履歴の1件ずつが画びょうで留めたメモ用紙で、選んでいる紙は少し持ち上がります。画びょうの色は、ピン留めした物が赤、定型文が緑、ほかは真鍮色です。カードの左の色の帯はコピー元のアプリごとの色（シリーズ共通のタグの色と同じ決め方）で、設定で種類ごと・タグごとにも変えられます。明るい画面と暗い画面のどちらでも読めます。パネルの縁には、小人がしがみついています（設定で隠せます）。
 
 ### 基本操作
 
@@ -99,8 +106,8 @@ xattr -dr com.apple.quarantine "/Applications/Pastephant.app"
 | `R` | 変換を選ぶ（つなげる・保存する） | |
 | `L` | 数式画像を作る | `⌘L` |
 | `K` | ペーストスタックに積む | |
-| `S` | Tomelet に残す | `⌘S` |
-| `N` / `A` | PopNote! の新しいメモにする / 開いているメモに足す | `⇧⌘N` / `⌥⇧⌘N` |
+| `S` | カードに残す | `⌘S` |
+| `N` | 送る…（送り先を選ぶ。最後に使った送り先へは `⌥⇧⌘N`） | `⇧⌘N` |
 | `Q` | Quick Look | `⌘Y` |
 | `D` | 履歴から削除 | `⌘⌫` |
 
@@ -131,13 +138,14 @@ xattr -dr com.apple.quarantine "/Applications/Pastephant.app"
 | `app:Word` | コピー元のアプリ |
 | `is:pinned` | ピン留めした物 |
 | `after:2026-09-01`・`before:2026-09-30` | コピーした日 |
-| `exported:2026-09-28` | その日に Tomelet に残した物 |
+| `kept:2026-09-28` | その日にカードに残した物 |
+| `id:123` | その項目だけ |
 
 ### タグ
 
 `⌘T` で付けます。候補を `↑↓` で選んで `⏎`、候補が無ければ `⏎` で新しいタグを作ります。`⌫` で最後のタグを外します。
 
-- 設定の「連携」で基準パス（Tomelet と同じフォルダ）を選ぶと、タグは Tomelet・PopNote! と共有されます（`.kobito-tools/Tags/tags.json`）。
+- 設定の「連携」で基準パス（kobito シリーズで共有するフォルダ）を選ぶと、タグはシリーズのアプリと共有されます（`.kobito-tools/Tags/tags.json`）。
 - 設定の「取得とタグ」で、コピー元のアプリ（例：TeXShop → `#latex`）やリンクのドメイン（例：arxiv.org → `#論文`）で自動でタグを付ける規則も作れます。
 
 ### 変換
@@ -174,23 +182,31 @@ LaTeX の式を書くと、その場でプレビューが出ます。`⏎` で�
 
 始めてから順にコピーすると、画面の上に「スタック N 件」と出て積まれます。あとは `⌘V` を押すたびに、積んだ順に1つずつ貼られます。パネルで選んで `→` の `K` でも積めます。最後まで貼るか、もう一度 `⌃⌘C` を押すと終わります（設定で新しい物から順にもできます）。
 
-### Tomelet・PopNote! とつなげる
+### カードに残す・送る
 
-- `⌘S` で選んだ項目を Tomelet に残します。その日の分は「09月28日のクリップ」という1つのメモにまとまり、Tomelet のカレンダーや検索に出ます（Tomelet で表示するかを一度尋ねられます）。設定で「このタグが付いたら自動で残す」こともできます。
-- `⇧⌘N` で選んだ項目（文字と画像）を PopNote! の新しいメモにします。`⌥⇧⌘N` なら開いているメモの末尾に足します。
+- `⌘S` で選んだ項目を、基準パスに残します。その日の分は「9月28日のクリップ」という1枚のカード（約束③）になり、カードを読めるシリーズのアプリに並びます。設定で「このタグが付いたら自動で残す」こともでき、使わなければ設定で隠せます。
+- `⇧⌘N` で、選んだ項目（文字・画像・ファイル）を受け取れるアプリの一覧が出ます。送り先は、このMacで起動したことのあるアプリから自動で並びます。
 
 ### ランチャーから開く
 
-OpenSesame! などのランチャーには `Pastephant.app` を登録します。URL にも対応しています。
+ランチャーには `CorkClip.app` を登録します。URL にも対応しています。
 
 | URL | 動作 |
 |---|---|
-| `pastephant://open` | 履歴を開く（`?tag=論文`・`?query=…` で絞り込んで開く） |
-| `pastephant://latex` | 数式画像の画面を開く |
-| `pastephant://snippet` | 新しい定型文 |
-| `pastephant://stack/toggle`（`start`・`stop`） | ペーストスタックを始める・終える |
-| `pastephant://pause`（`?minutes=15`）・`pastephant://resume` | 取得を一時停止・再開 |
-| `pastephant://settings` | 設定を開く |
+| `corkclip://open` | 履歴を開く（`?tag=論文`・`?query=…` で絞り込んで開く） |
+| `corkclip://latex` | 数式画像の画面を開く |
+| `corkclip://snippet` | 新しい定型文 |
+| `corkclip://stack/toggle`（`start`・`stop`） | ペーストスタックを始める・終える |
+| `corkclip://pause`（`?minutes=15`）・`corkclip://resume` | 取得を一時停止・再開 |
+| `corkclip://settings` | 設定を開く |
+| `kobito://corkclip/day/2026-09-28` | その日に残した項目で履歴を開く（カードから） |
+| `kobito://corkclip/open/123` | その項目を選んで履歴を開く |
+| `kobito://corkclip/panel` | 履歴を開く |
+| `kobito://corkclip/snippet`・`latex`・`settings` | 新しい定型文・数式画像の画面・設定を開く |
+
+`kobito://` の URL は、`open -b io.github.kobito-tools.corkclip "kobito://corkclip/…"` のようにアプリを指定して渡します。
+
+CorkClip は、ほかのアプリの中には表示されず、起動情報（約束④）で起動するアプリとして名乗ります。名乗りには 📌 のアイコンとティール（teal）の色が付き、「履歴を開く」「今日残したクリップを見る」「定型文を作る」「数式画像を作る」「設定を開く」の操作を呼べます。
 
 ### 保存しない物と消える期限
 
@@ -200,17 +216,17 @@ OpenSesame! などのランチャーには `Pastephant.app` を登録します�
 
 ### 終了する
 
-メニューバーのクリップボードのアイコンをクリックし、「Pastephant を終了」を選択します。
+メニューバーのコルクボードのアイコンをクリックし、「CorkClip を終了」を選択します。
 
 ## トラブルシューティング
 
 ### `⏎` を押しても貼られない
 
-アクセシビリティの許可が無いと、選んだ項目をクリップボードに戻すだけになります。「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で Pastephant がオンになっているか確認してください。アプリを更新した後に動作しなくなった場合は、一覧から Pastephant を「－」で削除し、再度追加してください。
+アクセシビリティの許可が無いと、選んだ項目をクリップボードに戻すだけになります。「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で CorkClip がオンになっているか確認してください。アプリを更新した後に動作しなくなった場合は、一覧から CorkClip を「－」で削除し、再度追加してください。
 
 ### ペーストスタックで `⌘V` を押しても次の項目にならない
 
-「システム設定」→「プライバシーとセキュリティ」→「入力監視」で Pastephant がオンになっているか確認してください。
+「システム設定」→「プライバシーとセキュリティ」→「入力監視」で CorkClip がオンになっているか確認してください。
 
 ### コピーした物が履歴に入らない
 
@@ -219,20 +235,20 @@ OpenSesame! などのランチャーには `Pastephant.app` を登録します�
 
 ### `⌥⌘V` を押してもパネルが出ない
 
-ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、OpenSesame! などのランチャーから `pastephant://open` で開いてください。
+ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、ランチャーなどから `corkclip://open` で開いてください。
 
 ## アンインストール
 
-1. メニューバーのアイコンから Pastephant を終了し、アプリケーションフォルダの `Pastephant.app` をゴミ箱へ移動します。
-2. 「システム設定」→「プライバシーとセキュリティ」の「アクセシビリティ」「入力監視」の一覧から Pastephant を選択し、「－」で削除します。
+1. メニューバーのアイコンから CorkClip を終了し、アプリケーションフォルダの `CorkClip.app` をゴミ箱へ移動します。
+2. 「システム設定」→「プライバシーとセキュリティ」の「アクセシビリティ」「入力監視」の一覧から CorkClip を選択し、「－」で削除します。
 
 ### 履歴の削除
 
-履歴も消す場合は、`~/Library/Application Support/Pastephant/` を削除してください。Tomelet に残したメモは、基準パスの `.kobito-tools/Pastephant/` にあります。
+履歴も消す場合は、`~/Library/Application Support/CorkClip/` を削除してください。カードに残した物は、基準パスの `.kobito-tools/CorkClip/` にあります。
 
 ## プライバシー
 
-Pastephant は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/Pastephant/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などで Tomelet に残した物だけです。
+CorkClip は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/CorkClip/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などでカードに残した物だけです。
 
 ## ライセンス
 
@@ -244,4 +260,4 @@ Pastephant は外部と通信しません。履歴はこの Mac の `~/Library/A
 
 本ソフトウェアの開発には、ChatGPT（OpenAI）および Claude（Anthropic）を使用しています。本プロジェクトは個人によるものであり、OpenAI および Anthropic とは関係ありません。
 
-ビルド方法とソースコードの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を参照してください。README のデモ（`docs/images/demo.gif`）は `scripts/demo.sh` で作り直せます。不具合の報告や要望は [Issues](../../issues) で受け付けています。
+ビルド方法とソースコードの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を参照してください。README のデモ（`docs/images/demo.gif`）は `scripts/demo.sh` で作り直せます。リポジトリの直下の `kobito-app.json` は、kobito シリーズのアプリであることを示す目印で、`kobito/` にアイコン（`icon.svg`・`icon-1024.png`）を置いています（`.app` で配るので `"kind": "native"`。決まりは `docs/kobito-spec/APP_PACKAGE.md`）。不具合の報告や要望は [Issues](../../issues) で受け付けています。

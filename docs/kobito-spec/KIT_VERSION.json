@@ -1,0 +1,15 @@
+{
+  "commit": "301d0b2d97236241e465801173604f05620da676",
+  "copied": "2026-10-21T12:56:11Z",
+  "docs_only": true,
+  "files": {
+    "APP_INTERFACE.md": "6035560ba94a3a3e27b48efbf79811ea7b5f8b0230065890677822a1f734b8c8",
+    "APP_PACKAGE.md": "768fe0fdd21764368d446b0452c062671c07b08a73d339093371df2e33070bbc",
+    "BRANCHING.md": "afffb749919bde44d0485a1edb2bdd96fce9af66000cdbeee962cd5a39934bfa",
+    "CONTRACTS.md": "b0773799025ff2d0405bdd81f65da6f0debc7542d53a3b97c98748c4146255d0",
+    "KIT.md": "84839bb8fc8c48ca45b47b481d038d70464c22cea49f11e192098b8524f24767",
+    "SETUP.md": "aeba2d63228b8ae97f29146d1bd0c6433fddc50e88d3753f824a104bcb6f382c",
+    "setup.zsh": "a16059bbca948fde390111c9c48564dc597335850eaf384c587a1e085d6c816d"
+  },
+  "kit": "0.5.0"
+}

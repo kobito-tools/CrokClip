@@ -6,7 +6,7 @@ ALTER TABLE clips ADD COLUMN is_snippet INTEGER NOT NULL DEFAULT 0 CHECK (is_sni
 -- 画像から読み取った文字。ocr_state は 0 まだ・1 済み・2 読み取れる文字なし／対象外。
 ALTER TABLE clips ADD COLUMN ocr_text TEXT;
 ALTER TABLE clips ADD COLUMN ocr_state INTEGER NOT NULL DEFAULT 0 CHECK (ocr_state IN (0, 1, 2));
--- 数式の元の式と描き方（JSON。io.github.kobito-tools.pastephant.latex と同じ中身）。
+-- 数式の元の式と描き方（JSON。io.github.kobito-tools.corkclip.latex と同じ中身）。
 ALTER TABLE clips ADD COLUMN latex TEXT;
 
 CREATE INDEX clips_pinned_idx ON clips(pinned, pin_order);

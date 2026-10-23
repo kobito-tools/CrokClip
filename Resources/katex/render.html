@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<!-- Pastephant の数式画像（F-06）を描くためのページ。LatexRenderer.swift が render() を呼ぶ。 -->
+<!-- CorkClip の数式画像（F-06）を描くためのページ。LatexRenderer.swift が render() を呼ぶ。 -->
 <link rel="stylesheet" href="katex.min.css">
 <script src="katex.min.js"></script>
 <style>
@@ -28,6 +28,11 @@
       element.textContent = "";
       return { error: String(error.message || error) };
     }
+    // 組んだ直後は、まだフォントの読み込みが始まっていないことがあり、document.fonts.ready だけでは待てない。
+    // 式で使っているフォントを読み込んでから測る（最初の 1 回で ∫ や斜体の文字が抜けないように）。
+    element.getBoundingClientRect();
+    const families = new Set([...element.querySelectorAll("*")].map(node => getComputedStyle(node).fontFamily));
+    await Promise.all([...document.fonts].filter(face => [...families].some(family => family.includes(face.family.replace(/"/g, "")))).map(face => face.load().catch(() => null)));
     await document.fonts.ready;
     const rect = element.getBoundingClientRect();
     return { x: rect.left, y: rect.top, width: Math.ceil(rect.width), height: Math.ceil(rect.height) };

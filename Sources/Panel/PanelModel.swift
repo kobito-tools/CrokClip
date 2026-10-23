@@ -13,8 +13,10 @@ enum PanelCommand {
     case copyOnly(Int)
     case pasteText(String, copyOnly: Bool)
     case pasteLatex(LatexImage, copyOnly: Bool)
-    case exportToTomelet([Int])
-    case sendToPopNote([Int], append: Bool)
+    /// カードに残す（F-17）。
+    case keep([Int])
+    /// 送る（F-16）。送り先は Share.targets から選んだもの。
+    case share([Int], Share.Target)
     case pushToStack([Int])
     case tagsChanged([Int])
     case openSettings
@@ -42,9 +44,18 @@ final class PanelModel: ObservableObject {
     /// 複数選択（選んだ順）。空なら selection の1件だけが対象。
     @Published var multi: [Int] = [] { didSet { if multi != oldValue, multi.count > 1 || oldValue.count > 1 { updateStyles() } } }
     /// カーソルを当てている行。当てている間はこちらをプレビューする。
-    @Published var hovered: Int? { didSet { if hovered != oldValue { updatePreview() } } }
-    @Published private(set) var preview: ClipDetail?
-    @Published private(set) var previewImage: NSImage?
+    /// カーソルを当てている行。一覧の描き直しはいらないので、変わっても知らせない（プレビューだけ読み直す）。
+    var hovered: Int? { didSet { if hovered != oldValue { updatePreview() } } }
+    /// プレビューと貼り方。これだけが変わったときは、プレビューの枠だけを描き直す（一覧は描き直さない）。
+    let previewState = PreviewState()
+    var preview: ClipDetail? {
+        get { previewState.preview }
+        set { previewState.preview = newValue }
+    }
+    var previewImage: CGImage? {
+        get { previewState.image }
+        set { previewState.image = newValue }
+    }
     @Published var focus: Field? = .search
     /// 変えると、focus の欄にフォーカスを移す。
     @Published private(set) var focusRequest = 0
@@ -53,15 +64,32 @@ final class PanelModel: ObservableObject {
     @Published var rowColorMode: RowColorMode = .app
 
     // 貼り方（⇥ で切り替え、⏎ でこの貼り方で貼る）
-    @Published private(set) var styles: [PasteStyle] = []
-    @Published var styleIndex = 0 { didSet { if styleIndex != oldValue { updateStyleResult() } } }
+    var styles: [PasteStyle] {
+        get { previewState.styles }
+        set { previewState.styles = newValue }
+    }
+    var styleIndex: Int {
+        get { previewState.styleIndex }
+        set {
+            let old = previewState.styleIndex
+            previewState.styleIndex = newValue
+            if newValue != old { updateStyleResult() }
+        }
+    }
     /// いまの貼り方で貼られる文字（元の形のときは nil。プレビューに出す）。
-    @Published private(set) var styleResult: String?
+    var styleResult: String? {
+        get { previewState.styleResult }
+        set { previewState.styleResult = newValue }
+    }
     /// 選んだ貼り方。ほかの項目に移っても、その項目に同じ貼り方があれば続けて使う。
     private var preferredStyleID = "original"
 
     // 操作の一覧（→・⌘K・右クリック）
     @Published private(set) var actions: [PanelAction] = []
+    /// 操作の一覧の見出し（nil ならふつうの「この項目にできること」）。
+    @Published private(set) var actionsTitle: String?
+    /// 選んだ項目を受け取れる送り先（本体が起動情報から作る）。
+    var shareTargets: ([Int]) -> [Share.Target] = { _ in [] }
     @Published var actionIndex = 0
 
     // タグ（F-04）
@@ -115,7 +143,7 @@ final class PanelModel: ObservableObject {
     private var applyingStyles = false
     /// styles・styleResult がどの項目（と複数選択）のものか。⏎ のときに、いまの選択と合っているかを確かめる。
     private var stylesTarget: [Int] = []
-    private static let loader = DispatchQueue(label: "io.github.kobito-tools.pastephant.preview", qos: .userInitiated, attributes: .concurrent)
+    private static let loader = DispatchQueue(label: "io.github.kobito-tools.corkclip.preview", qos: .userInitiated, attributes: .concurrent)
     /// 矢印キーを押し続けている間は読まない（最後に止まった項目だけ読む）。
     private static let settle: TimeInterval = 0.05
 
@@ -274,12 +302,14 @@ final class PanelModel: ObservableObject {
         guard force || preview?.summary.id != id else { return }
         previewGeneration += 1
         let generation = previewGeneration, store = store, latest = latest
+        // 表示する画面の色空間。画像をこの形に描いておくと、画面に出すときにメインスレッドで色を変換しない。
+        let displaySpace = NSScreen.main?.colorSpace?.cgColorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
         latest.preview = generation
         Self.loader.asyncAfter(deadline: .now() + Self.settle) {
             guard latest.preview == generation else { return }  // もう別の項目に移った
             let detail = try? store.detail(id)
             guard latest.preview == generation else { return }
-            let image = detail?.imageData.flatMap { Self.downsample($0, maxPixels: 1400) }
+            let image = detail?.imageData.flatMap { Self.downsample($0, maxPixels: 900, colorSpace: displaySpace) }
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.previewGeneration == generation else { return }
                 self.preview = detail
@@ -292,13 +322,29 @@ final class PanelModel: ObservableObject {
     private func reloadPreview() { updatePreview(force: true) }
 
     /// 画面に出す大きさに縮めて読む（大きな画像をそのまま開かない）。PDF はそのまま。
-    nonisolated static func downsample(_ data: Data, maxPixels: Int) -> NSImage? {
-        if data.starts(with: Array("%PDF".utf8)) { return NSImage(data: data) }
-        guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary) else { return nil }
-        let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxPixels,
-                                        kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceShouldCacheImmediately: true]
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+    /// 画面に出す大きさに縮め、画面の色空間の 8bit・アルファ前乗算のビットマップに描いておく（すべて裏のスレッドで）。
+    /// こうしておかないと、画面に出すときに Core Animation がメインスレッドで色の変換をして、一覧が止まる。
+    nonisolated static func downsample(_ data: Data, maxPixels: Int, colorSpace: CGColorSpace) -> CGImage? {
+        let image: CGImage?
+        if data.starts(with: Array("%PDF".utf8)) {
+            image = Capture(items: [[Representation(type: "com.adobe.pdf", data: data)]]).makeThumbnailImage(maxPixels: maxPixels)
+        } else if let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary) {
+            let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxPixels,
+                                            kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceShouldCacheImmediately: true]
+            image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        } else {
+            image = nil
+        }
+        guard let image else { return nil }
+        return prepareForDisplay(image, colorSpace: colorSpace)
+    }
+
+    nonisolated static func prepareForDisplay(_ image: CGImage, colorSpace: CGColorSpace) -> CGImage? {
+        guard let context = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue) else { return image }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return context.makeImage() ?? image
     }
 
     func thumbnail(for clip: ClipSummary) -> NSImage? {
@@ -484,6 +530,7 @@ final class PanelModel: ObservableObject {
     func beginActions() {
         guard !targets.isEmpty else { NSSound.beep(); return }
         actions = actionItems(for: targets)
+        actionsTitle = nil
         actionIndex = 0
         mode = .actions
         requestFocus(nil)
@@ -527,14 +574,41 @@ final class PanelModel: ObservableObject {
         if single { add("transform", "r", "変換を選ぶ（つなげる・保存する）", "wand.and.stars", nil) { [unowned self] in beginTransform() } }
         if single { add("latex", "l", clip?.kind == .formula ? "数式を開き直す" : "数式画像を作る", "function", "⌘L") { [unowned self] in beginLatex() } }
         add("stack", "k", "ペーストスタックに積む", "square.stack", nil) { [unowned self] in onCommand(.pushToStack(ids)) }
-        add("tomelet", "s", "Tomelet に残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.exportToTomelet(ids)) }
-        add("popnote", "n", "PopNote! の新しいメモにする", "note.text", "⇧⌘N") { [unowned self] in onCommand(.sendToPopNote(ids, append: false)) }
-        add("popnoteAppend", "a", "PopNote! の開いているメモに足す", "note.text.badge.plus", "⌥⇧⌘N") { [unowned self] in onCommand(.sendToPopNote(ids, append: true)) }
+        if settings().keepCards { add("keep", "s", "カードに残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.keep(ids)) } }
+        add("share", "n", "送る…", "paperplane", "⇧⌘N") { [unowned self] in beginShare() }
         if single { add("quicklook", "q", "Quick Look", "eye", "⌘Y") { [unowned self] in endMode(); onQuickLook() } }
         add("snippet", "f", "新しい定型文", "text.badge.star", "⌘N") { [unowned self] in beginSnippet() }
         add("delete", "d", ids.count > 1 ? "\(ids.count)件を履歴から削除" : "履歴から削除", "trash", "⌘⌫") { [unowned self] in endMode(); delete(ids) }
         add("help", "?", "キーの一覧", "keyboard", "⌘/") { [unowned self] in mode = .help; requestFocus(nil) }
         return items
+    }
+
+    // MARK: - 送る（F-16）
+
+    static let noShareTargets = "送り先のアプリがありません。kobito シリーズについては https://github.com/kobito-tools を参照してください"
+
+    /// ⇧⌘N：送り先の一覧を出す（1〜9 で選ぶ）。
+    func beginShare() {
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        let found = shareTargets(ids)
+        guard !found.isEmpty else { endMode(); show(Self.noShareTargets); return }
+        actions = found.enumerated().map { index, target in
+            PanelAction(id: "share-\(target.key)", key: index < 9 ? Character("\(index + 1)") : "·", label: target.title, symbol: "paperplane",
+                        shortcut: target.key == settings().lastShareTarget ? "⌥⇧⌘N" : nil) { [weak self] in self?.onCommand(.share(ids, target)) }
+        }
+        actionsTitle = ids.count > 1 ? "\(ids.count)件をどこへ送るか" : "どこへ送るか"
+        actionIndex = max(found.firstIndex { $0.key == settings().lastShareTarget } ?? 0, 0)
+        mode = .actions
+        requestFocus(nil)
+    }
+
+    /// ⌥⇧⌘N：最後に使った送り先へ、一覧を出さずに送る。まだ無い・今は使えないなら一覧を出す。
+    func shareToLast() {
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        if let last = settings().lastShareTarget, let target = shareTargets(ids).first(where: { $0.key == last }) { onCommand(.share(ids, target)) }
+        else { beginShare() }
     }
 
     // MARK: - タグ（F-04）
@@ -608,7 +682,7 @@ final class PanelModel: ObservableObject {
     /// 編集した物を新しい項目として保存し、貼る（copyOnly なら載せるだけ）。
     func commitEdit(copyOnly: Bool) {
         guard !editText.isEmpty else { NSSound.beep(); return }
-        _ = try? store.saveText(editText, sourceName: "Pastephant（編集）")
+        _ = try? store.saveText(editText, sourceName: "CorkClip（編集）")
         onCommand(.pasteText(editText, copyOnly: copyOnly))
     }
 
@@ -722,7 +796,7 @@ final class PanelModel: ObservableObject {
     /// 貼る。saveAsNew なら新しい項目として保存し、クリップボードに載せるだけにする。
     func commitMerge(saveAsNew: Bool) {
         guard !mergePreview.isEmpty else { NSSound.beep(); return }
-        if saveAsNew { _ = try? store.saveText(mergePreview, sourceName: "Pastephant（まとめ）") }
+        if saveAsNew { _ = try? store.saveText(mergePreview, sourceName: "CorkClip（まとめ）") }
         onCommand(.pasteText(mergePreview, copyOnly: saveAsNew))
     }
 
@@ -842,4 +916,15 @@ final class LatestRequests: @unchecked Sendable {
         get { lock.lock(); defer { lock.unlock() }; return values.style }
         set { lock.lock(); values.style = newValue; lock.unlock() }
     }
+}
+
+/// プレビューの枠と貼り方の帯が見る状態。PanelModel から分けて、ここが変わっても一覧を描き直さないようにする。
+@MainActor
+final class PreviewState: ObservableObject {
+    @Published var preview: ClipDetail?
+    /// SwiftUI には CGImage のまま渡す（NSImage にすると、描くたびにメインスレッドで縮め直す）。
+    @Published var image: CGImage?
+    @Published var styles: [PasteStyle] = []
+    @Published var styleIndex = 0
+    @Published var styleResult: String?
 }

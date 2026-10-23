@@ -1,4 +1,4 @@
--- このMacの履歴（~/Library/Application Support/Pastephant/database/history.sqlite3）。
+-- このMacの履歴（~/Library/Application Support/CorkClip/database/history.sqlite3）。
 -- 生データは blobs/ に中身のハッシュ名で置き、ここには型と名前だけを記録する。
 
 CREATE TABLE clips (
@@ -20,7 +20,7 @@ CREATE TABLE clips (
   has_thumbnail INTEGER NOT NULL DEFAULT 0 CHECK (has_thumbnail IN (0, 1)),
   pinned INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
   pin_order INTEGER,
-  exported_at REAL                            -- Tomelet に書き出した日時（F-17）
+  exported_at REAL                            -- カードに残した日時（F-17）
 );
 CREATE INDEX clips_last_used_idx ON clips(last_used_at DESC);
 CREATE INDEX clips_kind_used_idx ON clips(kind, last_used_at);
@@ -37,7 +37,7 @@ CREATE TABLE clip_representations (
 );
 CREATE INDEX clip_representations_blob_idx ON clip_representations(blob_hash);
 
--- 共有タグ（.kobito-tools/Tags/tags.json）の写し。Tomelet・PopNote! と同じ形。
+-- 共有タグ（.kobito-tools/Tags/tags.json）の写し。シリーズ共通の形。
 CREATE TABLE tag_categories (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,

@@ -2,7 +2,7 @@
 <!-- README のデモ（docs/images/demo.gif）の元になる絵。render(秒) でその時刻の画面を描く。scripts/demo.sh がコマ撮りする。 -->
 <html lang="ja"><head><meta charset="utf-8">
 <style>
-:root{--accent:#5F7A90;--paper:#F3F0E8;--card:#FFFFFF;--cardBorder:#E0DBCF;--well:#FBFAF6;--wellBorder:#D3CCBC;--ink:#3B4441;--subtle:#7A817D;--keycap:#E8E3D7}
+:root{--accent:#4F6C84;--paper:#F7F1E3;--card:#FFFDF7;--cardBorder:#E3D7BF;--well:#FCF9F1;--wellBorder:#DCCFB5;--ink:#3B4441;--subtle:#76716A;--keycap:#EDE5D3;--cork:#C9A06F;--frame:#8B5E3A;--shade:rgba(91,62,34,.28)}
 *{box-sizing:border-box}
 html,body{margin:0;width:960px;height:600px;overflow:hidden}
 body{font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;color:var(--ink);position:relative;
@@ -25,12 +25,21 @@ body{font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-
 .gl{height:9px;border-radius:4px;background:#E6E4DF;margin:12px 0}
 .sel{background:#B4D5FE}.inactive .sel{background:#DCDCDC}
 /* パネル */
-.panel{position:absolute;top:32px;width:380px;height:560px;border-radius:16px;background:rgba(243,240,232,.97);border:1px solid rgba(211,204,188,.8);
-  box-shadow:0 20px 50px rgba(20,30,40,.3);padding:10px;display:flex;flex-direction:column;gap:10px;z-index:30}
-.search{display:flex;align-items:center;gap:8px;color:var(--subtle)}
+/* コルクボード：コルクの地（粒の模様）と木の枠。 */
+.panel{position:absolute;top:32px;width:380px;height:560px;border-radius:16px;border:6px solid var(--frame);
+  background:radial-gradient(circle at 30% 40%,rgba(135,96,58,.55) 0 1.2px,transparent 1.6px) 0 0/11px 13px,
+    radial-gradient(circle at 70% 20%,rgba(232,200,153,.7) 0 1px,transparent 1.4px) 0 0/9px 7px,
+    radial-gradient(circle at 50% 50%,rgba(158,114,67,.5) 0 1.6px,transparent 2px) 3px 5px/17px 15px,var(--cork);
+  box-shadow:0 20px 50px rgba(20,30,40,.3),inset 0 0 0 1px rgba(0,0,0,.22),inset 0 0 40px rgba(0,0,0,.12);padding:6px 7px;display:flex;flex-direction:column;gap:10px;z-index:30}
+.search{display:flex;align-items:center;gap:8px;color:var(--subtle);background:var(--paper);border-radius:6px;padding:5px 10px 5px 5px;box-shadow:.5px 1.5px 0 var(--shade)}
 .field{flex:1;display:flex;align-items:center;gap:6px;background:var(--card);border:1.5px solid var(--accent);border-radius:10px;padding:6px 10px;font-size:14px;height:34px}
 .field .ph{color:#B5B8B3}.field .q{color:var(--ink)}
-.box{background:var(--well);border:1px solid var(--wellBorder);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;display:flex;flex-direction:column;flex:none}
+.box{position:relative;background:var(--well);border:1px solid var(--wellBorder);border-radius:6px;box-shadow:1px 2.5px 0 var(--shade);display:flex;flex-direction:column;flex:none}
+/* 画びょう（ピン留めは赤、定型文は緑、ほかは真鍮）。 */
+.box::before,.box::after,.clip::after{content:"";position:absolute;top:-4px;width:11px;height:11px;border-radius:50%;z-index:2;
+  background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.8) 0 1.4px,transparent 2px),linear-gradient(135deg,rgba(255,255,255,.45),transparent 50%,rgba(0,0,0,.25)),var(--pin,#C9A24D);
+  box-shadow:inset 0 0 0 .6px rgba(0,0,0,.28),1.3px 1.8px 0 rgba(0,0,0,.28)}
+.box::before{left:9px}.box::after{right:9px}
 .box .title{font-size:10.5px;font-weight:600;color:var(--subtle);padding:7px 12px 0}
 .pvhead{display:flex;align-items:center;gap:6px;padding:6px 12px 4px;font-size:12px;font-weight:600}
 .pvhead .tags{font-weight:400;font-size:11px;color:var(--accent)}
@@ -43,12 +52,13 @@ body{font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-
 .chip{font-size:12px;padding:4px 9px;border-radius:99px;background:var(--card);border:1px solid var(--cardBorder);color:var(--ink)}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .list{flex:1;overflow:hidden;position:relative}
-.inner{display:flex;flex-direction:column;gap:6px;padding:0 2px 4px}
-.section{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--subtle);padding:2px 4px 0}
+.inner{display:flex;flex-direction:column;gap:9px;padding:2px 3px 8px}
+.section{align-self:flex-start;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--subtle);padding:3px 5px 3px 8px;margin-top:2px;background:var(--paper);border-radius:4px;box-shadow:.5px 1.5px 0 var(--shade)}
 .count{font-size:10px;font-weight:500;background:var(--keycap);border-radius:99px;padding:1px 5px}
-.clip{position:relative;display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--cardBorder);border-radius:10px;padding:8px 9px 8px 12px;overflow:hidden;box-shadow:0 1px 1.5px rgba(0,0,0,.05);flex:none}
-.clip::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tint)}
-.clip.on{border:2px solid var(--accent);padding:7px 8px 7px 11px;background:linear-gradient(rgba(95,122,144,.16),rgba(95,122,144,.16)),var(--card);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.clip{position:relative;display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--cardBorder);border-radius:5px;padding:10px 9px 8px 12px;box-shadow:1px 1.5px 0 var(--shade);flex:none}
+.clip::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tint);border-radius:4px 0 0 4px}
+.clip::after{left:50%;margin-left:-5px;width:10px;height:10px}
+.clip.on{border:2px solid var(--accent);padding:9px 8px 7px 11px;background:linear-gradient(rgba(79,108,132,.16),rgba(79,108,132,.16)),var(--card);box-shadow:1px 3px 0 var(--shade),0 3px 10px rgba(0,0,0,.22);transform:translateY(-1.5px)}
 .lead{width:42px;height:42px;border-radius:8px;flex:none;display:grid;place-items:center;overflow:hidden;color:var(--tint);background:color-mix(in srgb,var(--tint) 14%,transparent)}
 .cmain{flex:1;min-width:0}
 .ctext{font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -57,7 +67,7 @@ body{font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-
 .num{font-size:10px;font-weight:500;color:rgba(122,129,125,.8);background:rgba(232,227,215,.7);border-radius:4px;padding:1px 4px;flex:none}
 .appi{width:13px;height:13px;border-radius:3.5px;display:inline-grid;place-items:center;color:#fff;font-size:8px;font-weight:700;flex:none}
 .pvhead .appi{width:16px;height:16px;border-radius:4px;font-size:10px}
-.hints{overflow:hidden;display:flex;gap:10px;align-items:center;font-size:11px;color:var(--subtle);padding:0 4px;white-space:nowrap}
+.hints{overflow:hidden;display:flex;gap:10px;align-items:center;font-size:11px;color:var(--subtle);padding:5px 8px;white-space:nowrap;background:var(--paper);border-radius:6px;box-shadow:.5px 1.5px 0 var(--shade);flex:none}
 .hints kbd,.acts kbd{font:600 10.5px -apple-system,sans-serif;color:var(--ink);background:var(--keycap);border:1px solid var(--cardBorder);border-radius:5px;padding:2px 6px;margin-right:4px}
 .toast{background:var(--accent);color:#fff;border-radius:9px;padding:7px 12px;font-size:12px;font-weight:500;display:flex;gap:6px;align-items:center}
 .acts{padding:12px;display:flex;flex-direction:column;gap:6px;height:100%}.acts .rows{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:1px}
@@ -80,7 +90,7 @@ table.tb td{border:1px solid #D9D6CE;padding:3px 10px;background:#fff}
 table.tb tr:first-child td{background:#EEF2EA;font-weight:600}
 </style></head><body>
 <div class="menubar"><div class="dot"></div><b id="appname">プレビュー</b><span>ファイル</span><span>編集</span><span>表示</span>
-  <div class="right"><div class="mbicon" id="mbicon"><svg width="14" height="15" viewBox="0 0 14 15" fill="none" stroke="#3B4441" stroke-width="1.4"><rect x="1.5" y="2.5" width="11" height="11.5" rx="2"/><rect x="4.5" y="1" width="5" height="3" rx="1" fill="#F6F4EE"/></svg></div><span>9月30日(水) 10:24</span></div></div>
+  <div class="right"><div class="mbicon" id="mbicon"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="1.75" y="3.25" width="14.5" height="11.5" rx="2.2" fill="none" stroke="#3B4441" stroke-width="1.5"/><g fill="#3B4441"><circle cx="12.6" cy="7" r=".6"/><circle cx="13.2" cy="11.6" r=".6"/><circle cx="10.9" cy="12.4" r=".6"/><rect x="4.4" y="7.2" width="6" height="5.4" transform="rotate(-7 7.4 9.6)"/></g><circle cx="7.3" cy="7" r="2.4" fill="#F6F4EE"/><circle cx="7.3" cy="7" r="1.65" fill="#3B4441"/></svg></div><span>9月30日(水) 10:24</span></div></div>
 
 <div class="win" id="docwin" style="left:40px;top:62px;width:500px;height:430px">
   <div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span>ゼミの準備.txt</span></div>
@@ -94,7 +104,7 @@ table.tb tr:first-child td{background:#EEF2EA;font-weight:600}
 </div>
 
 <div class="panel" id="panel"></div>
-<img class="kobito" id="kobito" src="../../assets/icon/kobito-cling.svg">
+<img class="kobito" id="kobito" src="../../assets/kobito-cling.svg">
 <div class="cap" id="cap"></div>
 <div class="fly" id="fly">📋</div>
 
@@ -120,7 +130,7 @@ const CHART = w => `<svg width="${w}" height="${w * .62}" viewBox="0 0 100 62"><
 const APPS = {
   "com.apple.Preview": ["プレビュー", "#3E8EE8", "P"], "com.apple.screencaptureui": ["スクリーンショット", "#6B7479", "S"],
   "com.microsoft.Excel": ["Microsoft Excel", "#1F7A45", "X"], "com.apple.finder": ["Finder", "#3C9BF0", "F"],
-  "io.github.kobito-tools.pastephant": ["Pastephant", "#5F7A90", "P"], "com.apple.Safari": ["Safari", "#2F86E8", "S"],
+  "io.github.kobito-tools.corkclip": ["CorkClip", "#8B5E3A", "C"], "com.apple.Safari": ["Safari", "#2F86E8", "S"],
 };
 const appIcon = b => `<span class="appi" style="background:${APPS[b][1]}">${APPS[b][2]}</span>`;
 
@@ -140,7 +150,7 @@ const CLIPS = [
     styles: ["ファイル", "パス", "~ のパス", "基準パスから", "ファイル名", "file://"],
     body: () => `<div style="display:flex;gap:8px;align-items:flex-start;white-space:normal"><span style="color:#5C668F">${ICON.file.replace(/20/g, "28")}</span><div><div>実験データ.csv</div><div style="font-size:11px;color:#8A8F8B">/Users/taku/研究/2026</div></div></div>`,
     foot: "2026/09/30 09:20・コピー1回・貼り付け0回・1 KB" },
-  { id: "formula", kind: "formula", kindLabel: "数式", bundle: "io.github.kobito-tools.pastephant", time: "昨日", tags: ["論文"], display: "\\int_0^1 f(x)\\,dx = F(1) - F(0)",
+  { id: "formula", kind: "formula", kindLabel: "数式", bundle: "io.github.kobito-tools.corkclip", time: "昨日", tags: ["論文"], display: "\\int_0^1 f(x)\\,dx = F(1) - F(0)",
     styles: ["数式画像", "LaTeX の式", "ほかの変換…"],
     body: () => `<div class="mathimg">∫<sub style="font-size:15px">0</sub><sup style="font-size:15px">1</sup> f(x) dx = F(1) − F(0)</div><div style="font:11px Menlo,monospace;color:#8A8F8B">\\int_0^1 f(x)\\,dx = F(1) - F(0)</div>`,
     foot: "2026/09/29 17:05・コピー1回・貼り付け3回・38 KB" },
@@ -149,8 +159,8 @@ const CLIPS = [
     body: () => "https://arxiv.org/abs/2609.01234", foot: "2026/09/29 16:40・コピー1回・貼り付け0回・32 バイト・32文字" },
 ];
 const ACTIONS = [["C", "コピーだけ（貼らない）", "⌘⏎"], ["T", "タグを付ける・外す", "⌘T"], ["P", "ピン留めする", "⌘P"], ["E", "編集してから貼る", "⌘E"],
-  ["R", "変換を選ぶ（つなげる・保存する）", ""], ["L", "数式画像を作る", "⌘L"], ["K", "ペーストスタックに積む", ""], ["S", "Tomelet に残す", "⌘S"],
-  ["N", "PopNote! の新しいメモにする", "⇧⌘N"], ["A", "PopNote! の開いているメモに足す", "⌥⇧⌘N"]];
+  ["R", "変換を選ぶ（つなげる・保存する）", ""], ["L", "数式画像を作る", "⌘L"], ["K", "ペーストスタックに積む", ""], ["S", "カードに残す", "⌘S"],
+  ["N", "送る…", "⇧⌘N"]];
 
 function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -166,7 +176,7 @@ const CAPTIONS = [
   [10.8, 12.3, ["⏎"], "そのまま貼り付け", 11.0],
   [12.4, 14.9, ["#論文"], "タグ・type:画像・app:Word で絞り込み", 13.2],
   [15.0, 16.5, ["→"], "できることは1文字で", 15.3],
-  [16.6, 18.4, ["N"], "PopNote! のメモにも、Tomelet にも", 16.8],
+  [16.6, 18.4, ["N"], "カードに残す・ほかのアプリへ送る", 16.8],
 ];
 const DOWNS = [5.4, 6.0, 6.6], UPS = [7.3, 7.55, 7.8];
 
@@ -242,7 +252,7 @@ function panelHTML(t) {
   const styleIndex = !second && t >= 8.9 ? 1 : 0;
   const mode = second && t >= 15.3 && t < 17.0 ? "actions" : "list";
   const actIndex = t >= 16.8 ? 8 : 0;
-  const toast = second && t >= 17.0 ? "PopNote! の新しいメモにしました" : null;
+  const toast = second && t >= 17.0 ? "送りました" : null;
 
   let h = `<div class="search"><div class="field"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#7A817D" stroke-width="1.6"><circle cx="6" cy="6" r="4.5"/><path d="M9.5 9.5 13 13"/></svg>`
     + (typed ? `<span class="q">${typed}</span><span class="caret" style="height:15px;visibility:${Math.floor(t * 2) % 2 ? "hidden" : "visible"}"></span>` : `<span class="ph">検索（#タグ type:画像 app:Word …）</span>`)

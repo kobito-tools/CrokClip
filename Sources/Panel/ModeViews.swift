@@ -32,7 +32,7 @@ struct ModeView: View {
 
     private var actionsList: some View {
         VStack(alignment: .leading, spacing: 6) {
-            title(model.targets.count > 1 ? "\(model.targets.count)件にできること" : "この項目にできること", "bolt")
+            title(model.actionsTitle ?? (model.targets.count > 1 ? "\(model.targets.count)件にできること" : "この項目にできること"), model.actionsTitle == nil ? "bolt" : "paperplane")
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 1) {
@@ -129,8 +129,10 @@ struct ModeView: View {
                                     .background(RoundedRectangle(cornerRadius: 5).fill(index == model.transformIndex ? Theme.accent.opacity(0.25) : Color.clear))
                                     .contentShape(Rectangle())
                                     .id(entry.id)
-                                    .onTapGesture { model.transformIndex = index }
-                                    .onTapGesture(count: 2) { model.transformIndex = index; model.commitTransform(copyOnly: false) }
+                                    .onTapGesture {
+                                        model.transformIndex = index
+                                        if clickCount >= 2 { model.commitTransform(copyOnly: false) }
+                                    }
                             }
                         }
                     }
@@ -241,10 +243,11 @@ struct ModeView: View {
                 }
             }
             ZStack {
-                Checkerboard().clipShape(RoundedRectangle(cornerRadius: 6))
-                if let image = model.latexPreviewImage {
+                LatexTile(options: model.latexOptions)
+                // 画像は 4 倍の細かさで作り、解像度を書き込んであるので、latexImage.size が実際に貼られる大きさ（pt）になる。
+                if let image = model.latexPreviewImage, let size = model.latexImage?.size {
                     Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: min(image.size.width / LatexRenderer.rasterScale, 1000), maxHeight: image.size.height / LatexRenderer.rasterScale)
+                        .frame(maxWidth: min(size.width, 1000), maxHeight: size.height)
                         .padding(6)
                 } else if model.latexSource.isEmpty {
                     Text("例：\\int_0^1 f(x)\\,dx").font(.system(size: 12)).foregroundStyle(.secondary)
@@ -298,7 +301,7 @@ struct ModeView: View {
         ("", "── 覚えると速いキー ──"),
         ("⇧⏎ ⌥⏎", "プレーンで貼る・改行を消して貼る"), ("⌃1〜9", "保存した変換の組み合わせで貼る"),
         ("⌘T ⌘E ⌘P", "タグ・編集してから貼る・ピン留め"), ("⌘L ⌘M ⌘N", "数式画像・まとめる・新しい定型文"),
-        ("⌘S ⇧⌘N", "Tomelet に残す・PopNote! に送る"), ("⌥⌘↑↓", "ピンの並べ替え"), ("⌘Y ⌘⌫", "Quick Look・削除"),
+        ("⌘S ⇧⌘N", "カードに残す・送る"), ("⌥⌘↑↓", "ピンの並べ替え"), ("⌘Y ⌘⌫", "Quick Look・削除"),
         ("⌘, esc", "設定・戻る"), ("ドラッグ", "ほかのアプリへ取り出す"),
     ]
 }

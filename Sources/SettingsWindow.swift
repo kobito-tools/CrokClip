@@ -21,16 +21,8 @@ final class SettingsModel: ObservableObject {
 
     init(settings: Settings) { self.settings = settings }
 
-    /// Tomelet がこのMacで開いている基準パス（~/Library/Application Support/TickTockTome/config/setting.json。古い版は DailyLog/）。
-    static var tomeletBasePath: String? {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        for name in ["TickTockTome", "DailyLog"] {
-            let url = support.appendingPathComponent(name).appendingPathComponent("config/setting.json")
-            if let data = try? Data(contentsOf: url), let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let path = object["basePath"] as? String, FileManager.default.fileExists(atPath: path) { return path }
-        }
-        return nil
-    }
+    /// kobito シリーズのアプリがこのMacで開いた基準パス（⑥ 基準パスの履歴）。設定を開くたびに読み直す。
+    @Published var datasetCandidates: [Series.DatasetEntry] = []
 }
 
 @MainActor
@@ -48,9 +40,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         model.usage = model.refreshUsage()
         model.availableTags = model.loadTags()
         model.datasetID = model.settings.basePath.flatMap { try? Dataset.read($0)?.datasetId }
+        model.datasetCandidates = Series.datasetCandidates()
         if window == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 640), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-            window.title = "Pastephant の設定"
+            window.title = "CorkClip の設定"
             window.contentView = NSHostingView(rootView: SettingsView(model: model))
             window.isReleasedWhenClosed = false
             window.center()
@@ -63,19 +56,38 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 }
 
 struct SettingsView: View {
+    enum Tab: Hashable, CaseIterable { case general, capture, storage, transforms, latex, companions }
+
     @ObservedObject var model: SettingsModel
+    @State private var tab: Tab
+
+    /// tab は最初に開くタブ（見た目を書き出すときに使う）。
+    init(model: SettingsModel, tab: Tab = .general) {
+        self.model = model
+        _tab = State(initialValue: tab)
+    }
 
     var body: some View {
-        TabView {
-            general.tabItem { Label("一般", systemImage: "gearshape") }
-            capture.tabItem { Label("取得とタグ", systemImage: "tray.and.arrow.down") }
-            storage.tabItem { Label("保存", systemImage: "externaldrive") }
-            transforms.tabItem { Label("変換", systemImage: "wand.and.stars") }
-            latex.tabItem { Label("数式", systemImage: "function") }
-            companions.tabItem { Label("連携", systemImage: "link") }
+        TabView(selection: $tab) {
+            general.tabItem { Label("一般", systemImage: "gearshape") }.tag(Tab.general)
+            capture.tabItem { Label("取得とタグ", systemImage: "tray.and.arrow.down") }.tag(Tab.capture)
+            storage.tabItem { Label("保存", systemImage: "externaldrive") }.tag(Tab.storage)
+            transforms.tabItem { Label("変換", systemImage: "wand.and.stars") }.tag(Tab.transforms)
+            latex.tabItem { Label("数式", systemImage: "function") }.tag(Tab.latex)
+            companions.tabItem { Label("連携", systemImage: "link") }.tag(Tab.companions)
         }
         .padding(16)
         .frame(minWidth: 640, minHeight: 540)
+        // パネルに合わせて、紙の色の地にコルクの帯を敷き、アクセントもパネルと同じ色にする。
+        .tint(Theme.accent)
+        .background(alignment: .top) {
+            ZStack(alignment: .bottom) {
+                CorkBackground()
+                Rectangle().fill(Theme.frame).frame(height: 3)
+            }
+            .frame(height: 36)
+        }
+        .background(Theme.paper)
     }
 
     // MARK: - 一般
@@ -96,7 +108,7 @@ struct SettingsView: View {
             } header: {
                 Text("許可")
             } footer: {
-                Text("ビルドし直したあとは許可が外れることがあります。その場合は、システム設定の一覧で Pastephant を一度削除（−）してから、もう一度オンにしてください。")
+                Text("ビルドし直したあとは許可が外れることがあります。その場合は、システム設定の一覧で CorkClip を一度削除（−）してから、もう一度オンにしてください。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("ショートカット") {
@@ -137,6 +149,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 取得とタグ
@@ -144,7 +157,7 @@ struct SettingsView: View {
     private var capture: some View {
         Form {
             Section {
-                ExplainBox(title: "どのコピーを取っておくか", text: "Pastephant は ⌘C でコピーした物を、自動で履歴に取っておきます。ここでは、取っておかないアプリと、コピーしたときに自動で付けるタグを決めます。")
+                ExplainBox(title: "どのコピーを取っておくか", text: "CorkClip は ⌘C でコピーした物を、自動で履歴に取っておきます。ここでは、取っておかないアプリと、コピーしたときに自動で付けるタグを決めます。")
             }
             Section {
                 ForEach(model.settings.excludedBundleIDs, id: \.self) { bundleID in
@@ -198,6 +211,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 保存
@@ -233,10 +247,11 @@ struct SettingsView: View {
                     Button("今すぐ整理") { model.onCleanup() }
                     Button("Finder で表示") { NSWorkspace.shared.activateFileViewerSelecting([ClipStore.defaultDirectory]) }
                 }
-                Text("履歴はこのMacの ~/Library/Application Support/Pastephant/ にだけ保存します。").font(.caption).foregroundStyle(.secondary)
+                Text("履歴はこのMacの ~/Library/Application Support/CorkClip/ にだけ保存します。").font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 変換
@@ -262,6 +277,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 数式
@@ -307,6 +323,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - 連携
@@ -314,10 +331,10 @@ struct SettingsView: View {
     private var companions: some View {
         Form {
             Section {
-                ExplainBox(title: "連携でできること", text: "Pastephant は単独で使えます。同じシリーズ（kobito-tools）のアプリも使っているなら、次のことができるようになります。\n・タグを Tomelet・PopNote! と共有する\n・⌘S で残したクリップを、Tomelet のカレンダーに日ごとのメモとして並べる\n・⇧⌘N で選んだクリップを PopNote! のメモにする\n・OpenSesame! から1キーで Pastephant を開く")
+                ExplainBox(title: "連携でできること", text: "CorkClip は単独で使えます。kobito シリーズのほかのアプリも使っているなら、次のことができるようになります。\n・タグをシリーズのアプリと共有する\n・⌘S で残したクリップを、日ごとのカードとして、カードを読めるシリーズのアプリに並べる\n・⇧⌘N で選んだクリップを、受け取れるアプリへ送る（送り先は、入っているアプリから自動で並びます）")
                 VStack(alignment: .leading, spacing: 4) {
                     Text("はじめかた").font(.system(size: 12, weight: .semibold))
-                    Text("1. 下の「基準パス」で、Tomelet・PopNote! と同じフォルダを選びます（Tomelet の基準パスが見つかれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。\n3. PopNote! と OpenSesame! は、入っていればそのまま使えます（設定はいりません）。")
+                    Text("1. 下の「基準パス」で、シリーズのアプリと共有するフォルダを選びます（シリーズのアプリで使っているフォルダがあれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。\n3. 送り先は設定いりません。受け取れるアプリを一度起動しておけば、⇧⌘N の一覧に並びます。")
                         .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -334,42 +351,40 @@ struct SettingsView: View {
                     Button(model.settings.basePath == nil ? "フォルダを選ぶ…" : "変える…") { model.onChooseBasePath() }
                     if model.settings.basePath != nil { Button("やめる") { model.settings.basePath = nil; model.datasetID = nil } }
                 }
-                if let candidate = SettingsModel.tomeletBasePath, candidate != model.settings.basePath {
+                ForEach(model.datasetCandidates.filter { $0.path != model.settings.basePath }, id: \.path) { candidate in
                     HStack {
                         Image(systemName: "lightbulb").foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Tomelet が使っているフォルダが見つかりました").font(.system(size: 12, weight: .medium))
-                            Text(candidate).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                            Text("kobito シリーズで使っているフォルダ「\(candidate.id)」").font(.system(size: 12, weight: .medium))
+                            Text(candidate.path).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                         }
                         Spacer()
-                        Button("これを使う") { model.settings.basePath = candidate; model.datasetID = try? Dataset.read(candidate)?.datasetId }
+                        Button("これを使う") { model.settings.basePath = candidate.path; model.datasetID = try? Dataset.read(candidate.path)?.datasetId }
                     }
                 }
             } header: {
                 Text("基準パス（シリーズで共有するフォルダ）")
             } footer: {
-                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や Tomelet への受け渡しに使います。Pastephant の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
+                Text("基準パスは、kobito-tools のアプリが一緒に使うフォルダです（例：Google ドライブのマイドライブ）。中に .kobito-tools という隠しフォルダを作り、タグの共有や「カードに残す」に使います。CorkClip の履歴そのものはこのMacにだけ保存し、基準パスには置きません。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {
-                TagChips(tags: $model.settings.autoExportTags, available: model.availableTags)
-            } header: {
-                Text("自動で Tomelet に残すタグ")
-            } footer: {
-                Text("ここで選んだタグをクリップに付けると、⌘S を押さなくても、その日の「○月○日のクリップ」のメモに自動で加わります。例：#論文 を選んでおくと、論文のリンクにタグを付けるだけで Tomelet の日々の記録に残ります。基準パスを選んでいるときだけ働きます。")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Section {
-                ForEach(SeriesApp.all) { app in SeriesAppRow(app: app) }
-                HStack(spacing: 10) {
-                    SeriesIcon(name: "kobito-tools").frame(width: 32, height: 32)
-                    Text("kobito-tools は、同じ小人が毎日の作業を少しずつ手伝う、macOS 向けの小さなアプリのシリーズです。")
-                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    Spacer()
-                    Link("GitHub", destination: URL(string: "https://github.com/kobito-tools")!).font(.system(size: 12))
+                Toggle("「カードに残す」を使う（⌘S）", isOn: $model.settings.keepCards)
+                if model.settings.keepCards {
+                    Text("自動で残すタグ").font(.system(size: 12, weight: .medium))
+                    TagChips(tags: $model.settings.autoExportTags, available: model.availableTags)
                 }
             } header: {
-                Text("シリーズのアプリ")
+                Text("カードに残す")
+            } footer: {
+                Text("⌘S で残したクリップは、日ごとに「10月15日のクリップ」という1枚のカード（シリーズの約束③）になり、カードを読めるシリーズのアプリに並びます。カードを押すと、その日に残したクリップでパネルが開きます。「自動で残すタグ」を選んでおくと、そのタグを付けるだけで残ります（例：#論文）。基準パスを選んでいるときだけ働きます。カードを使わないなら、オフにすると操作の一覧からも消えます。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section {
+                Link(destination: URL(string: "https://github.com/kobito-tools")!) {
+                    Label("kobito シリーズについて（GitHub の kobito-tools を開く）", systemImage: "arrow.up.right.square")
+                }
+                .font(.system(size: 12))
             }
             Section {
                 Toggle("新しくコピーした物から順に貼る", isOn: $model.settings.reverseStack)
@@ -381,76 +396,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-    }
-}
-
-/// シリーズのアプリの紹介。
-struct SeriesApp: Identifiable {
-    let id: String
-    let name: String
-    let bundleID: String
-    let tagline: String
-    let english: String
-    /// Pastephant と一緒に使うと何ができるか。
-    let together: String
-    let url: URL
-
-    static let all = [
-        SeriesApp(id: "tomelet", name: "Tomelet", bundleID: "local.ticktocktome.desktop",
-                  tagline: "日記・時間割・Todo・関連ファイルを一括管理", english: "Journal, timetable, todos and files in one place.",
-                  together: "⌘S で残したクリップが、その日の「09月28日のクリップ」というメモになって、Tomelet のカレンダーや検索に並びます。タグも共有します。",
-                  url: URL(string: "https://github.com/kobito-tools/Tomelet")!),
-        SeriesApp(id: "popnote", name: "PopNote!", bundleID: "io.github.kobito-tools.popnote",
-                  tagline: "押したらポンッと出てくる、クイックメモ。", english: "A memo that pops up when you need it.",
-                  together: "⇧⌘N で選んだクリップ（文字と画像）を新しいメモに、⌥⇧⌘N で開いているメモに足せます。タグも共有します。",
-                  url: URL(string: "https://github.com/kobito-tools/PopNote")!),
-        SeriesApp(id: "opensesame", name: "OpenSesame!", bundleID: "io.github.kobito-tools.opensesame",
-                  tagline: "アプリ・フォルダ・画面分割のショートカットランチャー", english: "A shortcut launcher for apps, folders and window layouts.",
-                  together: "pastephant://open・pastephant://latex・pastephant://stack/toggle などを登録すると、1キーで履歴や数式の画面を開けます。",
-                  url: URL(string: "https://github.com/kobito-tools/OpenSesame")!),
-    ]
-
-    var isInstalled: Bool { NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) != nil }
-}
-
-private struct SeriesIcon: View {
-    let name: String
-
-    var body: some View {
-        if let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: "series"), let image = NSImage(contentsOf: url) {
-            Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
-        } else {
-            Image(systemName: "app").resizable().aspectRatio(contentMode: .fit).foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct SeriesAppRow: View {
-    let app: SeriesApp
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            SeriesIcon(name: app.id).frame(width: 44, height: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Text(app.name).font(.system(size: 14, weight: .semibold))
-                    Text(app.isInstalled ? "インストール済み" : "未インストール")
-                        .font(.system(size: 10, weight: .medium))
-                        .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(Capsule().fill(app.isInstalled ? Color.green.opacity(0.18) : Color.secondary.opacity(0.15)))
-                        .foregroundStyle(app.isInstalled ? Color.green : Color.secondary)
-                }
-                Text(app.tagline).font(.system(size: 12))
-                Text(app.english).font(.system(size: 11)).foregroundStyle(.secondary)
-                Text("Pastephant と一緒に：\(app.together)")
-                    .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 2)
-            }
-            Spacer(minLength: 8)
-            Link(destination: app.url) { Label("GitHub", systemImage: "arrow.up.right.square") }
-                .font(.system(size: 12))
-        }
-        .padding(.vertical, 4)
+        .scrollContentBackground(.hidden)
     }
 }
 

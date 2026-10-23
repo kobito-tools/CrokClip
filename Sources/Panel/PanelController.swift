@@ -67,7 +67,7 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     func toggle() { isVisible ? hide() : show() }
 
-    /// 開く。query を渡すと、その検索で開く（pastephant://open?tag=… など）。mode を渡すと、その画面で開く。
+    /// 開く。query を渡すと、その検索で開く（corkclip://open?tag=… など）。mode を渡すと、その画面で開く。
     func show(query: String = "", mode: PanelMode = .list) {
         let frontmost = NSWorkspace.shared.frontmostApplication
         if !isVisible || isSettingsPreview { targetApplication = frontmost?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : frontmost }
@@ -200,9 +200,9 @@ final class PanelController: NSObject, NSWindowDelegate {
     private func perform(_ command: PanelCommand) {
         let target = targetApplication
         switch command {
-        case .paste, .copyOnly, .pasteText, .pasteLatex, .sendToPopNote, .openSettings, .pushToStack:
+        case .paste, .copyOnly, .pasteText, .pasteLatex, .share, .openSettings, .pushToStack:
             hide(animated: false)
-        case .exportToTomelet, .tagsChanged:
+        case .keep, .tagsChanged:
             break
         }
         onCommand(command, target)
@@ -301,7 +301,7 @@ final class PanelController: NSObject, NSWindowDelegate {
                 case "l": model.beginLatex()
                 case "m": model.beginMerge()
                 case "k": model.beginActions()
-                case "s": perform(.exportToTomelet(model.targets))
+                case "s": perform(.keep(model.targets))
                 case "y": quickLook()
                 case "/": model.toggleHelp()
                 default:
@@ -311,8 +311,8 @@ final class PanelController: NSObject, NSWindowDelegate {
                 }
                 return true
             }
-            if flags == [.command, .shift], character == "n" { perform(.sendToPopNote(model.targets, append: false)); return true }
-            if flags == [.command, .shift, .option], character == "n" { perform(.sendToPopNote(model.targets, append: true)); return true }
+            if flags == [.command, .shift], character == "n" { model.beginShare(); return true }
+            if flags == [.command, .shift, .option], character == "n" { model.shareToLast(); return true }
             if flags == [.control], let number = Int(character), (1...9).contains(number) { model.applyCombo(number); return true }
             return false
         }
@@ -331,7 +331,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     /// 選んだ項目を一時ファイルに書き出して Quick Look で開く。
     private func quickLook() {
         guard let id = model.selection, let detail = try? model.store.detail(id, maxTextLength: ClipStore.maxStoredTextLength) else { NSSound.beep(); return }
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("Pastephant-QuickLook", isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("CorkClip-QuickLook", isDirectory: true)
         try? FileManager.default.removeItem(at: directory)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var urls: [URL] = detail.filePaths.map { URL(fileURLWithPath: $0) }.filter { FileManager.default.fileExists(atPath: $0.path) }

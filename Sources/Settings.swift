@@ -39,7 +39,7 @@ struct AutoTagRule: Codable, Equatable, Identifiable {
     var tag: String
 }
 
-/// このMacの設定（~/Library/Application Support/Pastephant/settings.json）。
+/// このMacの設定（~/Library/Application Support/CorkClip/settings.json）。
 /// 項目が足りない古いファイルでも読めるよう、無い項目は初期値にする。
 struct Settings: Codable, Equatable {
     enum Edge: String, Codable { case right, left }
@@ -79,10 +79,14 @@ struct Settings: Codable, Equatable {
     var latexMacros = ""
     /// ペーストスタックを積んだ逆の順（新しい物から）に貼るか（F-14）。
     var reverseStack = false
-    /// 共有タグと Tomelet への書き出しに使う基準パス（任意）。
+    /// 共有タグと「カードに残す」に使う基準パス（任意）。
     var basePath: String?
-    /// このタグが付いたら、Tomelet へ自動で書き出す（F-17）。
+    /// 「カードに残す」（⌘S・自動で残すタグ）を使うか（F-17）。使わない人は設定で隠せる。
+    var keepCards = true
+    /// このタグが付いたら、カードに自動で残す（F-17）。
     var autoExportTags: [String] = []
+    /// 最後に使った送り先（「アプリID/口のID」。F-16）。⌥⇧⌘N で一覧を出さずにここへ送る。
+    var lastShareTarget: String?
 
     static let defaultExcludedBundleIDs = [
         "com.apple.keychainaccess", "com.apple.Passwords",
@@ -103,10 +107,15 @@ struct Settings: Codable, Equatable {
         read(.retentionDays, &s.retentionDays); read(.maxItems, &s.maxItems); read(.maxTotalBytes, &s.maxTotalBytes); read(.maxItemBytes, &s.maxItemBytes)
         read(.expireTagged, &s.expireTagged); read(.transformCombos, &s.transformCombos)
         read(.latexPresets, &s.latexPresets); read(.latexOptions, &s.latexOptions); read(.latexMacros, &s.latexMacros)
-        read(.reverseStack, &s.reverseStack); read(.autoExportTags, &s.autoExportTags)
+        read(.reverseStack, &s.reverseStack); read(.keepCards, &s.keepCards); read(.autoExportTags, &s.autoExportTags)
+        if !c.contains(.keepCards), let legacy = try? decoder.container(keyedBy: LegacyCodingKeys.self).decode(Bool.self, forKey: .workspaceKeep) { s.keepCards = legacy }
         s.basePath = try? c.decode(String.self, forKey: .basePath)
+        s.lastShareTarget = try? c.decode(String.self, forKey: .lastShareTarget)
         self = s
     }
+
+    /// 以前の名前。keepCards が無いときだけ読む。
+    private enum LegacyCodingKeys: String, CodingKey { case workspaceKeep }
 
     static func load(from url: URL) -> Settings {
         guard let data = try? Data(contentsOf: url), let settings = try? JSONDecoder().decode(Settings.self, from: data) else { return Settings() }

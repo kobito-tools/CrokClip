@@ -1,0 +1,7 @@
+# ビルド成果物
+CorkClip.app/
+.build/
+dist/
+
+# OS
+.DS_Store

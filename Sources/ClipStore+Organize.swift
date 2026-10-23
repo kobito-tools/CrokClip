@@ -35,8 +35,10 @@ struct ClipQuery: Equatable {
     var pinnedOnly = false
     var after: Date?
     var before: Date?
-    /// その日（このMacの日付）に Tomelet へ残した物（Tomelet の日ごとのメモから開くとき）。
+    /// その日（このMacの日付）にカードに残した物（kept:YYYY-MM-DD。日ごとのカードから開くとき）。exported: は以前の書き方。
     var exportedDay: Date?
+    /// この ID の項目だけ（id:123。kobito://corkclip/open/123 から開くとき）。
+    var ids: [Int] = []
 
     static let kindAliases: [String: ClipKind] = [
         "text": .text, "テキスト": .text, "rich": .richText, "richtext": .richText, "書式": .richText, "書式付き": .richText,
@@ -62,7 +64,9 @@ struct ClipQuery: Equatable {
             else if lower == "is:pinned" || lower == "is:pin" || token == "ピン" { pinnedOnly = true }
             else if lower.hasPrefix("after:"), let date = formatter.date(from: String(token.dropFirst(6))) { after = date }
             else if lower.hasPrefix("before:"), let date = formatter.date(from: String(token.dropFirst(7))) { before = date.addingTimeInterval(86_400) }
+            else if lower.hasPrefix("kept:"), let date = formatter.date(from: String(token.dropFirst(5))) { exportedDay = date }
             else if lower.hasPrefix("exported:"), let date = formatter.date(from: String(token.dropFirst(9))) { exportedDay = date }
+            else if lower.hasPrefix("id:"), let id = Int(token.dropFirst(3)) { ids.append(id) }
             else { terms.append(token) }
         }
     }
@@ -70,7 +74,7 @@ struct ClipQuery: Equatable {
     var isEmpty: Bool { self == ClipQuery("") }
 }
 
-/// 共有タグ（Tomelet・PopNote! と同じ tags 表）の1件。
+/// 共有タグ（.kobito-tools/Tags/tags.json の写し）の1件。
 struct Tag: Identifiable, Equatable, Hashable {
     let id: String
     let name: String
@@ -118,6 +122,10 @@ extension ClipStore {
         if let day = parsed.exportedDay {
             conditions.append("exported_at >= ? AND exported_at < ?")
             parameters += [day.timeIntervalSince1970, Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: day)!.timeIntervalSince1970]
+        }
+        if !parsed.ids.isEmpty {
+            conditions.append("id IN (\(parsed.ids.map { _ in "?" }.joined(separator: ", ")))")
+            parameters += parsed.ids
         }
         let whereClause = conditions.isEmpty ? "" : "WHERE " + conditions.joined(separator: " AND ")
         parameters.append(limit)
@@ -171,7 +179,7 @@ extension ClipStore {
         }
     }
 
-    /// 名前の同じタグがあればそれを、無ければ「その他」の分類に新しく作る（PopNote! の findOrCreateTag と同じ）。アーカイブ済みなら戻す。
+    /// 名前の同じタグがあればそれを、無ければ「その他」の分類に新しく作る（シリーズ共通の規則）。アーカイブ済みなら戻す。
     func findOrCreateTag(_ name: String) throws -> Tag {
         let value = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(200))
         guard !value.isEmpty else { throw DatabaseError(message: "タグの名前を入力してください。") }
@@ -317,7 +325,7 @@ extension ClipStore {
         try locked { (try database.first("SELECT latex FROM clips WHERE id = ?", id)?["latex"] as? String).flatMap(LatexSource.init(json:)) }
     }
 
-    // MARK: - Tomelet への書き出し（F-17）
+    // MARK: - カードに残す（F-17）
 
     func markExported(_ ids: [Int], at date: Date = Date()) throws {
         try locked {

@@ -91,7 +91,7 @@ final class PasteStack {
             CGRequestListenEventAccess()
             let alert = NSAlert()
             alert.messageText = "ペーストスタックには「入力監視」の許可が必要です"
-            alert.informativeText = "「システム設定」→「プライバシーとセキュリティ」→「入力監視」で Pastephant をオンにしてから、もう一度お試しください。⌘V が押されたことだけを見て、次の項目に入れ替えます。"
+            alert.informativeText = "「システム設定」→「プライバシーとセキュリティ」→「入力監視」で CorkClip をオンにしてから、もう一度お試しください。⌘V が押されたことだけを見て、次の項目に入れ替えます。"
             NSApplication.shared.activate(ignoringOtherApps: true)
             alert.runModal()
             return false

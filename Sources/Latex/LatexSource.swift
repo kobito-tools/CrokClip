@@ -45,7 +45,9 @@ struct LatexSource: Codable, Equatable {
     var options: LatexOptions
 
     /// PNG の説明や PDF のキーワードに入れるときの目印。
-    static let marker = "pastephant-latex:"
+    static let marker = "corkclip-latex:"
+    /// 以前の名前（Pastephant・InGoodPaste）で描いた画像の目印。読むときだけ使う。
+    static let renamedMarkers = ["pastephant-latex:", "ingoodpaste-latex:"]
 
     var json: String { String(data: (try? JSONEncoder().encode(self)) ?? Data(), encoding: .utf8) ?? "{}" }
 
@@ -63,7 +65,7 @@ struct LatexSource: Codable, Equatable {
     var embedded: String { Self.marker + Data(json.utf8).base64EncodedString() }
 
     init?(embedded: String) {
-        guard let range = embedded.range(of: Self.marker) else { return nil }
+        guard let range = ([Self.marker] + Self.renamedMarkers).lazy.compactMap({ embedded.range(of: $0) }).first else { return nil }
         let encoded = embedded[range.upperBound...].prefix { !$0.isWhitespace }
         guard let data = Data(base64Encoded: String(encoded)), let json = String(data: data, encoding: .utf8) else { return nil }
         self.init(json: json)

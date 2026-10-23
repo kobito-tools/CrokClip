@@ -7,7 +7,7 @@ import QuartzCore
 final class KobitoWindow: NSPanel {
     static let size: CGFloat = 64
     /// 画像の中の手の位置（左上を原点とした pt）。
-    static let grip = CGPoint(x: 53, y: 21)
+    static let grip = CGPoint(x: 53, y: 29)
 
     private let imageLayer = CALayer()
     private var mirrored = false
