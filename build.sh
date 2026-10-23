@@ -6,7 +6,7 @@ cd "${0:A:h}"
 APP_NAME="CorkClip"
 # 実行ファイルの名前。
 EXEC_NAME="CorkClip"
-VERSION="0.1.0"
+VERSION="0.2.0"
 BUILD_DIR=".build"
 STAGE="$BUILD_DIR/$APP_NAME.app"
 CONTENTS="$STAGE/Contents"
