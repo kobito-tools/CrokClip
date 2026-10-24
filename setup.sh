@@ -7,14 +7,15 @@ source "${0:A:h}/docs/kobito-spec/setup.zsh" || exit 1
 
 APP_NAME="CorkClip"
 EXEC_NAME="CorkClip"
-# 試すときは別のフォルダを指せる（実際のアプリケーションフォルダに触れないため）。
+# 試すときは KOBITO_APPLICATIONS_DIR で別のフォルダを指せる（実際のアプリケーションフォルダに触れないため）。
 APPLICATIONS_DIR="${KOBITO_APPLICATIONS_DIR:-/Applications}"
 
 kobito_steps=(
   "Xcode Command Line Tools があるかを確かめる（無ければ入れ方を表示して止まる）"
   "$APP_NAME.app をビルドする"
-  "アプリケーションフォルダへ移すかを尋ねる（--yes では移さない）"
+  "アプリケーションフォルダの kobito-tools フォルダへ移すかを尋ねる（--yes では移さない）"
   "起動情報を、置いた場所の .app で書き出す"
+  "このリポジトリの場所を PC 固有領域の repos/ に記す（シンボリックリンク）"
   "許可（アクセシビリティ・入力監視）の案内を表示する"
 )
 kobito_setup "$APP_NAME" "$@"
@@ -32,10 +33,12 @@ kobito_run zsh ./build.sh || kobito_fail "ビルドできませんでした。"
 (( kobito_dry_run )) || kobito_info "作り直したので、前に許可していた「アクセシビリティ」「入力監視」は、もう一度許可が要ることがあります。"
 
 # 起動情報は .app の場所を含むので、移すかどうかを決めてから書き出す。
+# 置き先は直下ではなく kobito-tools フォルダの下（docs/kobito-spec/SETUP.md §1）。
 kobito_step "$APP_NAME.app をアプリケーションフォルダへ移すかを決めます"
-target="$APPLICATIONS_DIR/$APP_NAME.app"
 placed="$built"
-if kobito_ask "$APP_NAME.app を $APPLICATIONS_DIR へ移しますか？" n; then
+if kobito_ask "$APP_NAME.app を $APPLICATIONS_DIR/kobito-tools へ移しますか？" n; then
+  kobito_applications_folder
+  target="$kobito_applications/$APP_NAME.app"
   move=1
   if [[ -e $target ]]; then
     kobito_info "$target がすでにあります。"
@@ -58,9 +61,15 @@ if kobito_ask "$APP_NAME.app を $APPLICATIONS_DIR へ移しますか？" n; the
 else
   kobito_info "移しません。$built を使います。"
 fi
+# 直下の古い .app は消さない（利用者が片付ける）。
+if [[ -e "$APPLICATIONS_DIR/$APP_NAME.app" ]]; then
+  kobito_info "前の置き場所の $APPLICATIONS_DIR/$APP_NAME.app が残っています。使わないなら、終了してからゴミ箱へ移してください。"
+fi
 
 kobito_step "起動情報を書き出します"
 kobito_run "$placed/Contents/MacOS/$EXEC_NAME" --write-launch-info || kobito_fail "起動情報を書き出せませんでした。"
+
+kobito_link_repository
 
 kobito_step "許可について"
 kobito_info "貼り付けには「アクセシビリティ」の許可が要ります。初めて貼るときに案内が出るので、"
