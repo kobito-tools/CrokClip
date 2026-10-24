@@ -250,11 +250,16 @@ final class PanelController: NSObject, NSWindowDelegate {
             if isReturn, flags == [.command, .shift] { model.commitEdit(copyOnly: true); return true }
             return false
         case .transform:
-            if key == 125 { model.moveTransform(1) }
-            else if key == 126 { model.moveTransform(-1) }
-            else if isReturn { model.commitTransform(copyOnly: flags == [.command]) }
-            else if key == 49 { model.toggleChain() }
+            // 上がほかの変換、下がこの項目にできること。↑↓・⏎ は ⇥ で選んだ方に効き、できることは1文字でも選べる。
+            let onActions = model.moreFocus == .actions
+            if key == 48 { model.toggleMoreFocus() }  // ⇥ ⇧⇥
+            else if key == 125 { onActions ? model.moveAction(1) : model.moveTransform(1) }
+            else if key == 126 { onActions ? model.moveAction(-1) : model.moveTransform(-1) }
+            else if isReturn { onActions ? model.runSelectedAction() : model.commitTransform(copyOnly: flags == [.command]) }
+            else if key == 123 { model.endMode() }  // ← で戻る
+            else if key == 49 { if onActions { NSSound.beep() } else { model.toggleChain() } }
             else if flags == [.command], character == "s" { model.saveCombo() }
+            else if flags.subtracting(.shift).isEmpty, let typed = event.characters?.lowercased().first, model.runAction(key: typed) { }
             else if flags.contains(.command) { return false }
             return true
         case .merge:
@@ -287,7 +292,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         case (126, [.command, .option]): model.movePin(-1)
         case (48, []): model.cycleStyle(1)  // ⇥ 貼り方
         case (48, [.shift]): model.cycleStyle(-1)
-        case (124, []) where searchCaretAtEnd: model.beginActions()  // → できること
+        case (124, []) where searchCaretAtEnd: model.beginActions()  // → ほかの変換とできること
         case (51, [.command]): model.delete(model.targets)  // ⌘⌫
         case _ where isReturn:
             let ids = model.targets

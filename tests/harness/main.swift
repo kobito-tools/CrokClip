@@ -470,6 +470,21 @@ MainActor.assumeIsolated {
     var savedSettings = Settings()
     savedSettings.lastPasteMethod = .transform([.joinLines, .quote])
     check((try? JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(savedSettings)))?.lastPasteMethod == .transform([.joinLines, .quote]), "前回の貼り方は設定のファイルに残る")
+    // →：上にほかの変換、下にこの項目にできること。
+    model.beginActions()
+    check(model.mode == .transform && !model.transformEntries.isEmpty && model.moreFocus == .transforms, "→ で、ほかの変換の一覧を開き、↑↓ は変換に効く")
+    let actionIDs = Set(model.actions.map(\.id))
+    check(!actionIDs.isEmpty && actionIDs.isDisjoint(with: ["copy", "transform", "share", "quicklook", "snippet", "help"]), "できることには、コピーだけ・変換を選ぶ・送る・Quick Look・新しい定型文・キーの一覧を並べない")
+    check(actionIDs.isSuperset(of: ["tags", "pin", "edit", "latex", "stack", "delete"]), "できることには、タグ・ピン・編集・数式・スタック・削除を並べる")
+    model.toggleMoreFocus()
+    check(model.moreFocus == .actions, "⇥ で、できることの一覧に移る")
+    model.endMode()
+    model.multi = [textID, heavyID]
+    model.selection = textID
+    model.beginActions()
+    check(model.mode == .transform && model.transformEntries.isEmpty && model.moreFocus == .actions && model.actions.contains { $0.id == "merge" }, "複数選んで → を押すと、変換は出さず、できることに効く")
+    model.endMode()
+    model.multi = []
 }
 
 // 18. kobito シリーズの約束：④ 起動情報と、受け付ける URL

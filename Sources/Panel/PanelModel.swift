@@ -24,6 +24,9 @@ enum PanelCommand {
     case openAccessibilitySettings
 }
 
+/// → で開く画面で、↑↓・⏎ がどちらの一覧に効くか（⇥ で切り替える）。
+enum MoreFocus { case transforms, actions }
+
 /// 変換メニューの1行（保存した組み合わせか、1つの変換）。
 struct TransformEntry: Identifiable, Equatable {
     let id: String
@@ -99,6 +102,8 @@ final class PanelModel: ObservableObject {
     /// 選んだ項目を受け取れる送り先（本体が起動情報から作る）。
     var shareTargets: ([Int]) -> [Share.Target] = { _ in [] }
     @Published var actionIndex = 0
+    /// → で開く画面で、いま動かしている一覧。
+    @Published var moreFocus: MoreFocus = .transforms
 
     // タグ（F-04）
     @Published var tagInput = "" { didSet { updateTagSuggestions() } }
@@ -539,7 +544,7 @@ final class PanelModel: ObservableObject {
         case .latexImage:
             beginLatex(text: transformContext?.text)
         case .moreTransforms:
-            beginTransform()
+            beginActions()
         }
     }
 
@@ -575,14 +580,28 @@ final class PanelModel: ObservableObject {
 
     // MARK: - 操作の一覧
 
-    /// → か ⌘K で開く。
+    /// → か ⌘K（と貼り方の「ほかの変換…」）で開く。上にほかの変換、下にこの項目にできることを並べる。
+    /// ↑↓・⏎ は変換に効き（⇥ でできることに移る）、できることは1文字で選べる。
     func beginActions() {
-        guard !targets.isEmpty else { NSSound.beep(); return }
-        actions = actionItems(for: targets)
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        actions = actionItems(for: ids)
         actionsTitle = nil
         actionIndex = 0
-        mode = .actions
+        // 変換は1件だけ選んでいるときに使う。
+        transformEntries = ids.count == 1 ? availableTransforms() : []
+        chain = []
+        mode = .transform
+        transformIndex = 0
+        moreFocus = transformEntries.isEmpty ? .actions : .transforms
+        updateTransformPreview()
         requestFocus(nil)
+    }
+
+    /// ⇥：→ の画面で、変換とできることの一覧を行き来する。
+    func toggleMoreFocus() {
+        guard !transformEntries.isEmpty else { NSSound.beep(); return }
+        moreFocus = moreFocus == .transforms ? .actions : .transforms
     }
 
     func moveAction(_ delta: Int) {
@@ -603,6 +622,7 @@ final class PanelModel: ObservableObject {
     }
 
     /// 項目にできること。右クリックのメニューにも同じ物を出す（そのときは、その行を選んでから行う）。
+    /// コピーだけ・送る・Quick Look・新しい定型文・キーの一覧は、並べずにショートカット（⌘⏎・⇧⌘N・⌘Y・⌘N・⌘/）で使う。
     func actionItems(for ids: [Int]) -> [PanelAction] {
         guard let first = ids.first else { return [] }
         let clip = (pins + clips).first { $0.id == first }
@@ -615,20 +635,14 @@ final class PanelModel: ObservableObject {
                 run()
             })
         }
-        add("copy", "c", "コピーだけ（貼らない）", "doc.on.clipboard", "⌘⏎") { [unowned self] in pasteSelected(copyOnly: true) }
         add("tags", "t", "タグを付ける・外す", "tag", "⌘T") { [unowned self] in beginTags() }
         add("pin", "p", clip?.pinned == true ? "ピン留めを外す" : "ピン留めする", "pin", "⌘P") { [unowned self] in endMode(); togglePin() }
         if single { add("edit", "e", clip?.isSnippet == true ? "定型文を直す" : "編集してから貼る", "pencil", "⌘E") { [unowned self] in beginEdit() } }
         if ids.count >= 2 { add("merge", "m", "\(ids.count)件を1つにまとめる", "square.stack.3d.up", "⌘M") { [unowned self] in beginMerge() } }
-        if single { add("transform", "r", "変換を選ぶ（つなげる・保存する）", "wand.and.stars", nil) { [unowned self] in beginTransform() } }
         if single { add("latex", "l", clip?.kind == .formula ? "数式を開き直す" : "数式画像を作る", "function", "⌘L") { [unowned self] in beginLatex() } }
         add("stack", "k", "ペーストスタックに積む", "square.stack", nil) { [unowned self] in onCommand(.pushToStack(ids)) }
         if settings().keepCards { add("keep", "s", "カードに残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.keep(ids)) } }
-        add("share", "n", "送る…", "paperplane", "⇧⌘N") { [unowned self] in beginShare() }
-        if single { add("quicklook", "q", "Quick Look", "eye", "⌘Y") { [unowned self] in endMode(); onQuickLook() } }
-        add("snippet", "f", "新しい定型文", "text.badge.star", "⌘N") { [unowned self] in beginSnippet() }
         add("delete", "d", ids.count > 1 ? "\(ids.count)件を履歴から削除" : "履歴から削除", "trash", "⌘⌫") { [unowned self] in endMode(); delete(ids) }
-        add("help", "?", "キーの一覧", "keyboard", "⌘/") { [unowned self] in mode = .help; requestFocus(nil) }
         return items
     }
 
@@ -745,8 +759,9 @@ final class PanelModel: ObservableObject {
         return context
     }
 
-    func beginTransform() {
-        guard let context = transformContext else { NSSound.beep(); return }
+    /// 選んでいる項目にかけられる変換（保存した組み合わせが先）。
+    private func availableTransforms() -> [TransformEntry] {
+        guard let context = transformContext else { return [] }
         var entries = settings().transformCombos.map { TransformEntry(id: "combo-\($0.id)", label: "★ \($0.name)", steps: $0.steps, isCombo: true) }
         for kind in TransformKind.allCases {
             let available: Bool
@@ -757,13 +772,7 @@ final class PanelModel: ObservableObject {
             }
             if available { entries.append(TransformEntry(id: kind.rawValue, label: kind.label, steps: [kind], isCombo: false)) }
         }
-        guard !entries.isEmpty else { show("この項目にかけられる変換がありません"); return }
-        transformEntries = entries
-        chain = []
-        mode = .transform
-        transformIndex = 0
-        updateTransformPreview()
-        requestFocus(nil)
+        return entries
     }
 
     func moveTransform(_ delta: Int) {
