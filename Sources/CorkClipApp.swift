@@ -88,6 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.model.onSortChange = { [unowned self] sort in updateSettings { $0.sortOrder = sort } }
         panel.model.onLatexOptionsChange = { [unowned self] options in if settings.latexOptions != options { updateSettings { $0.latexOptions = options } } }
         panel.model.onSaveCombo = { [unowned self] combo in updateSettings { $0.transformCombos.append(combo) } }
+        panel.model.onPasteMethodChange = { [unowned self] method in updateSettings { $0.lastPasteMethod = method } }
         panel.model.shareTargets = { [unowned self] ids in shareTargets(ids) }
 
         let settingsModel = SettingsModel(settings: settings)

@@ -293,8 +293,9 @@ final class PanelController: NSObject, NSWindowDelegate {
             let ids = model.targets
             guard !ids.isEmpty else { NSSound.beep(); return true }
             if flags == [.command] { model.pasteSelected(copyOnly: true) }
-            else if flags == [.shift] { perform(.paste(ids, .plainText)) }
-            else if flags == [.option] { perform(.paste(ids, .joinLines)) }
+            else if flags == [.shift] { model.paste(.plainText) }
+            else if flags == [.option] { model.paste(.joinLines) }
+            else if flags == [.control] { model.pasteWithLastMethod() }
             else { model.pasteSelected() }
         case (49, []) where model.query.isEmpty && model.focus == .search:  // 検索が空のときの space は Quick Look
             quickLook()

@@ -89,6 +89,8 @@ final class PanelModel: ObservableObject {
     }
     /// 選んだ貼り方。ほかの項目に移っても、その項目に同じ貼り方があれば続けて使う。
     private var preferredStyleID = "original"
+    /// 最後に使った「そのまま」以外の貼り方（⌃⏎）。開くたびに設定から読み、貼るたびに覚え直す。
+    @Published private(set) var lastPasteMethod: PasteMethod?
 
     // 操作の一覧（→・⌘K・右クリック）
     @Published private(set) var actions: [PanelAction] = []
@@ -158,6 +160,7 @@ final class PanelModel: ObservableObject {
     var onSortChange: (SortOrder) -> Void = { _ in }
     var onLatexOptionsChange: (LatexOptions) -> Void = { _ in }
     var onSaveCombo: (TransformCombo) -> Void = { _ in }
+    var onPasteMethodChange: (PasteMethod) -> Void = { _ in }
     var onQuickLook: () -> Void = {}
 
     init(store: ClipStore) { self.store = store }
@@ -195,6 +198,7 @@ final class PanelModel: ObservableObject {
         showPreview = settings().showPreview
         rowColorMode = settings().rowColorMode
         sort = settings().sortOrder
+        lastPasteMethod = settings().lastPasteMethod
         query = initialQuery
         thumbnails.removeAll()
         refreshAccessibility()
@@ -521,7 +525,9 @@ final class PanelModel: ObservableObject {
             styleResult = Self.result(of: style, context: context, merged: ids.count > 1 ? mergedText(ids) : nil, keepParagraphs: settings().keepParagraphBreaks)
             resultPending = false
         }
-        switch currentStyle?.action ?? .mode(.original) {
+        let action = currentStyle?.action ?? .mode(.original)
+        if !copyOnly, let method = PasteMethod(action) { remember(method) }
+        switch action {
         case .mode(.original):
             if copyOnly { ids.count == 1 ? onCommand(.copyOnly(ids[0])) : onCommand(.pasteText(mergedText(ids), copyOnly: true)) }
             else { onCommand(.paste(ids, .original)) }
@@ -535,6 +541,36 @@ final class PanelModel: ObservableObject {
         case .moreTransforms:
             beginTransform()
         }
+    }
+
+    /// ⇧⏎・⌥⏎：貼り方の帯を切り替えずに、書式なし・改行を消して貼る。
+    func paste(_ mode: Paster.Mode) {
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        if let method = PasteMethod(.mode(mode)) { remember(method) }
+        onCommand(.paste(ids, mode))
+    }
+
+    /// ⌃⏎：最後に使った貼り方で貼る。まだ無いときと、この項目に使えないときは知らせるだけ。
+    func pasteWithLastMethod() {
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        guard let method = lastPasteMethod else { NSSound.beep(); show("まだ前回の貼り方がありません。⇥ や → で貼り方を選んで貼ると覚えます"); return }
+        switch method {
+        case .plainText: onCommand(.paste(ids, .plainText))
+        case .joinLines: onCommand(.paste(ids, .joinLines))
+        case .transform(let steps):
+            // 複数選んでいるときは、つないだ文字にかける。
+            let context = ids.count > 1 ? TransformContext(text: mergedText(ids), keepParagraphs: settings().keepParagraphBreaks) : transformContext
+            guard let context, let result = TextTransforms.apply(steps, to: context) else { NSSound.beep(); show("前回の貼り方「\(method.label)」は、この項目には使えません"); return }
+            onCommand(.pasteText(result, copyOnly: false))
+        }
+    }
+
+    private func remember(_ method: PasteMethod) {
+        guard method != lastPasteMethod else { return }
+        lastPasteMethod = method
+        onPasteMethodChange(method)
     }
 
     // MARK: - 操作の一覧
@@ -768,6 +804,7 @@ final class PanelModel: ObservableObject {
             return
         }
         guard let result = transformPreview, let context = transformContext, TextTransforms.apply(currentSteps, to: context) != nil else { NSSound.beep(); return }
+        if !copyOnly, let method = PasteMethod(steps: currentSteps) { remember(method) }
         onCommand(.pasteText(result, copyOnly: copyOnly))
     }
 
@@ -782,6 +819,7 @@ final class PanelModel: ObservableObject {
     func applyCombo(_ number: Int) {
         let combos = settings().transformCombos
         guard combos.indices.contains(number - 1), let context = transformContext, let result = TextTransforms.apply(combos[number - 1].steps, to: context) else { NSSound.beep(); return }
+        if let method = PasteMethod(steps: combos[number - 1].steps) { remember(method) }
         onCommand(.pasteText(result, copyOnly: false))
     }
 

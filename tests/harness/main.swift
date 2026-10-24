@@ -435,6 +435,41 @@ MainActor.assumeIsolated {
     granted = true
     model.prepareForShow()
     check(!model.needsAccessibility, "許可していれば、開いても案内は出ない")
+    // ⌃⏎：最後に使った「そのまま」以外の貼り方で貼る（覚えた物は設定に残す）。
+    var remembered: [PasteMethod] = []
+    model.onPasteMethodChange = { remembered.append($0) }
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .joinLines; return settings }
+    model.prepareForShow()
+    model.selection = textID
+    check(model.lastPasteMethod == .joinLines, "開いたときに、前回の貼り方を設定から読む")
+    model.pasteSelected()
+    check(model.lastPasteMethod == .joinLines && remembered.isEmpty, "「そのまま」で貼っても、前回の貼り方は変えない")
+    model.pasteWithLastMethod()
+    if case .paste(let ids, let mode)? = commands.last { check(ids == [textID] && mode == .joinLines, "⌃⏎ は前回の貼り方で貼る") } else { check(false, "⌃⏎ は前回の貼り方で貼る") }
+    model.paste(.plainText)
+    check(model.lastPasteMethod == .plainText && remembered == [.plainText], "⇧⏎ で貼ると、書式なしを前回の貼り方として覚える")
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .transform([.quote]); return settings }
+    model.prepareForShow()
+    model.selection = textID
+    model.pasteWithLastMethod()
+    if case .pasteText(let text, let copyOnly)? = commands.last {
+        check(!copyOnly && text == TextTransforms.apply([.quote], to: TransformContext(text: "一行目\n二行目")), "前回の貼り方が変換なら、変換してから貼る")
+    } else { check(false, "前回の貼り方が変換なら、変換してから貼る") }
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .transform([.pathAbsolute]); return settings }
+    model.prepareForShow()
+    model.selection = textID
+    let before = commands.count
+    model.pasteWithLastMethod()
+    check(commands.count == before && model.message != nil, "前回の貼り方がこの項目に使えなければ、貼らずに知らせる")
+    model.settings = { Settings() }
+    model.prepareForShow()
+    model.selection = textID
+    model.pasteWithLastMethod()
+    check(commands.count == before && model.message != nil, "前回の貼り方がまだ無ければ、貼らずに知らせる")
+    check(PasteMethod(.transform([.joinLines, .latexImage])) == nil && PasteMethod(.mode(.original)) == nil && PasteMethod(.moreTransforms) == nil, "そのまま・数式画像・ほかの変換は覚えない")
+    var savedSettings = Settings()
+    savedSettings.lastPasteMethod = .transform([.joinLines, .quote])
+    check((try? JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(savedSettings)))?.lastPasteMethod == .transform([.joinLines, .quote]), "前回の貼り方は設定のファイルに残る")
 }
 
 // 18. kobito シリーズの約束：④ 起動情報と、受け付ける URL
