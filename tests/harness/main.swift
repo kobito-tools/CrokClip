@@ -422,6 +422,19 @@ MainActor.assumeIsolated {
     model.selectStyle(model.styles.firstIndex { $0.id == "joinLines" }!)
     model.pasteSelected()
     if case .paste(let ids, let mode)? = commands.last { check(ids == [textID] && mode == .joinLines, "⇥ で選んだ貼り方で貼る") } else { check(false, "⇥ で選んだ貼り方で貼る") }
+    // アクセシビリティの許可の案内は、許可が無いときだけ出し、許可したら消える。
+    var granted = false
+    model.accessibilityGranted = { granted }
+    model.prepareForShow()
+    check(model.needsAccessibility, "許可が無ければ、開いたときに案内を出す")
+    granted = true
+    model.refreshAccessibility()
+    check(!model.needsAccessibility, "許可したら、開いている間に案内が消える")
+    granted = false
+    model.prepareForShow()
+    granted = true
+    model.prepareForShow()
+    check(!model.needsAccessibility, "許可していれば、開いても案内は出ない")
 }
 
 // 18. kobito シリーズの約束：④ 起動情報と、受け付ける URL

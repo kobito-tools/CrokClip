@@ -193,6 +193,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             tagsChanged(ids)
         case .openSettings:
             settingsWindow.show()
+        case .openAccessibilitySettings:
+            Paster.openAccessibilitySettings()
         }
     }
 

@@ -20,6 +20,8 @@ enum PanelCommand {
     case pushToStack([Int])
     case tagsChanged([Int])
     case openSettings
+    /// アクセシビリティの許可を頼み、システム設定を開く（貼り付けの許可が無いときの案内から）。
+    case openAccessibilitySettings
 }
 
 /// 変換メニューの1行（保存した組み合わせか、1つの変換）。
@@ -62,6 +64,10 @@ final class PanelModel: ObservableObject {
     @Published var message: String?
     @Published var showPreview = true
     @Published var rowColorMode: RowColorMode = .app
+    /// アクセシビリティの許可が無く、貼り付けられない（案内を出す）。開くたびと、開いている間に確かめ直す。
+    @Published private(set) var needsAccessibility = false
+    /// 許可があるか。試験では差し替える。
+    var accessibilityGranted: () -> Bool = { Paster.isTrusted(prompt: false) }
 
     // 貼り方（⇥ で切り替え、⏎ でこの貼り方で貼る）
     var styles: [PasteStyle] {
@@ -191,8 +197,15 @@ final class PanelModel: ObservableObject {
         sort = settings().sortOrder
         query = initialQuery
         thumbnails.removeAll()
+        refreshAccessibility()
         reload(keepSelection: false)
         requestFocus(.search)
+    }
+
+    /// 許可を確かめ直す。変わったときだけ知らせる。
+    func refreshAccessibility() {
+        let needs = !accessibilityGranted()
+        if needs != needsAccessibility { needsAccessibility = needs }
     }
 
     func requestFocus(_ field: Field?) {
