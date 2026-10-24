@@ -25,7 +25,7 @@ kobito_steps=(
   "起動情報を書き出す（画面は開きません）"
   "このリポジトリの場所を PC 固有領域の repos/ に記す（シンボリックリンク）"
 )
-typeset -g kobito_app_name="" kobito_here="" KOBITO_UV="" kobito_applications=""
+typeset -g kobito_app_name="" kobito_here="" KOBITO_UV="" kobito_applications="" kobito_app_id=""
 # この部品のある場所。部品が使う画像（assets/）は、写した先でもこの隣にある。
 typeset -g kobito_kit_here=${${(%):-%x}:A:h}
 typeset -gi kobito_yes=0 kobito_dry_run=0
@@ -162,6 +162,7 @@ kobito_write_launch_info() {
 
 # Python のアプリの決まった手順（docs/SETUP.md の 1〜5）をまとめて行う。
 kobito_python_app() {
+  kobito_check_repository
   kobito_ensure_uv
   kobito_uv_sync
   kobito_write_launch_info
@@ -175,33 +176,48 @@ kobito_series_directory() {
   print -r -- "${KOBITO_CONFIG_DIR:-$HOME/Library/Application Support/kobito-tools}"
 }
 
+# kobito_check_repository：repos/<アプリID> を調べ、同じ ID を名乗る別の場所のリポジトリがすでに記されていれば、
+# 何も書かずに終了コード 1 で止まる（CONTRACTS.md「ID がかぶったとき」：どちらかを勝手に選ばず、知らせて止める）。
+# 起動情報の書き出しより前に呼ぶ（かぶったまま書くと、起動情報だけがこのリポジトリに変わって食い違う）。読むだけなので --dry-run でも調べる。
+# アプリIDは $kobito_app_id に入れる（読めなければ空）。結果は覚えず、呼ぶたびに調べ直す（途中で別のクローンが記されることもある）。
+kobito_check_repository() {
+  kobito_app_id=$(plutil -extract app raw -o - "$kobito_here/kobito-app.json" 2>/dev/null)
+  [[ $kobito_app_id =~ '^[a-z][a-z0-9-]{0,39}$' ]] || { kobito_app_id=""; return 0 }
+  local link="$(kobito_series_directory)/repos/$kobito_app_id" other
+  [[ -L $link && -e $link && ${link:A} != ${kobito_here:A} ]] || return 0
+  other=$(plutil -extract app raw -o - "$link/kobito-app.json" 2>/dev/null)
+  [[ $other == $kobito_app_id ]] || return 0
+  kobito_step "同じアプリIDのリポジトリが、別の場所にあります"
+  kobito_info "アプリID: $kobito_app_id"
+  kobito_info "記されているリポジトリ: ${link:A}"
+  kobito_info "このリポジトリ: $kobito_here"
+  kobito_info "どちらかを勝手に選ばず、何も変えずに止まります。直し方は次のどちらかです。"
+  kobito_info "  ・記されているほうを使い続ける：このリポジトリは使わずに片付ける"
+  kobito_info "  ・このリポジトリに切り替える：記されているほうを片付けるか、リンクを消してから、もう一度動かす"
+  kobito_info "    rm \"$link\""
+  kobito_fail "アプリID「$kobito_app_id」が、別の場所のリポジトリとかぶっています。"
+}
+
 # kobito_link_repository：PC 固有領域の repos/<アプリID> に、このリポジトリへのシンボリックリンクを作る。
 # 探す側は、どこにクローンしたアプリでも repos/ から見つけられる。アプリIDは kobito-app.json の app。
-# 同じ先なら何もしない。先が消えたリンクは張り替える。別の場所の、同じ ID を名乗るリポジトリを指していれば、
-# どちらかを勝手に選ばず、張り替えずに知らせる（CONTRACTS.md「ID がかぶったとき」）。リンクでない物には触らない。
+# 同じ先なら何もしない。先が消えたリンク・同じ ID を名乗らないフォルダへのリンクは張り替える。リンクでない物には触らない。
+# 別の場所の、同じ ID を名乗るリポジトリを指していれば止まる（張る直前にも kobito_check_repository で調べ直す）。
 kobito_link_repository() {
+  kobito_check_repository
   kobito_step "このリポジトリの場所を記します（repos/ へのリンク）"
-  local app other
-  app=$(plutil -extract app raw -o - "$kobito_here/kobito-app.json" 2>/dev/null)
-  if [[ ! $app =~ '^[a-z][a-z0-9-]{0,39}$' ]]; then
+  if [[ -z $kobito_app_id ]]; then
     kobito_info "kobito-app.json からアプリIDを読めないので、リンクを作りません。"
     return 0
   fi
   local repos="$(kobito_series_directory)/repos"
-  local link="$repos/$app"
+  local link="$repos/$kobito_app_id"
   if [[ -L $link ]]; then
     if [[ -e $link && ${link:A} == ${kobito_here:A} ]]; then
       kobito_info "$link: 済んでいます"
       return 0
     fi
     if [[ -e $link ]]; then
-      other=$(plutil -extract app raw -o - "$link/kobito-app.json" 2>/dev/null)
-      if [[ $other == $app ]]; then
-        kobito_info "$link は、同じアプリID（$app）を名乗る別の場所のリポジトリ（${link:A}）を指しています。"
-        kobito_info "どちらかを勝手に選ばず、張り替えません。使うほうを決めて、もう片方を片付けるか、リンクを消してから、もう一度動かしてください。"
-        return 0
-      fi
-      kobito_info "$link は、$app を名乗らないフォルダ（${link:A}）を指しているので、張り替えます。"
+      kobito_info "$link は、$kobito_app_id を名乗らないフォルダ（${link:A}）を指しているので、張り替えます。"
     else
       kobito_info "$link の先が無くなっているので、張り替えます。"
     fi
