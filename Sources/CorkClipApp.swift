@@ -193,6 +193,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             tagsChanged(ids)
         case .openSettings:
             settingsWindow.show()
+        case .openAccessibilitySettings:
+            Paster.openAccessibilitySettings()
         }
     }
 
@@ -538,10 +540,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func pauseOneHour() { setPaused(true, until: Date().addingTimeInterval(3600)) }
     @objc private func resume() { setPaused(false, until: nil) }
 
-    @objc private func openAccessibilitySettings() {
-        _ = Paster.isTrusted(prompt: true)
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-    }
+    @objc private func openAccessibilitySettings() { Paster.openAccessibilitySettings() }
 
     @objc private func quit() { NSApplication.shared.terminate(nil) }
 }

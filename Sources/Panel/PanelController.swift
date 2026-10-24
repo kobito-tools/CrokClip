@@ -36,6 +36,8 @@ final class PanelController: NSObject, NSWindowDelegate {
     private let settings: () -> Settings
     private var targetApplication: NSRunningApplication?
     private var clickMonitor: Any?
+    /// 開いている間、アクセシビリティの許可を確かめ直す（許可したら案内を消す）。
+    private var accessibilityTimer: Timer?
     /// 本体に頼む操作。パネルは必要に応じて先に閉じてから渡す。
     var onCommand: (PanelCommand, NSRunningApplication?) -> Void = { _, _ in }
 
@@ -92,6 +94,9 @@ final class PanelController: NSObject, NSWindowDelegate {
         panel.alphaValue = 0
         panel.orderFrontRegardless()
         isVisible = true
+        accessibilityTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.model.refreshAccessibility() }
+        }
         if settings().showKobito, KobitoWindow.image != nil {
             kobito.attach(to: hidden, edge: settings().panelEdge)
             kobito.alphaValue = 0
@@ -149,6 +154,8 @@ final class PanelController: NSObject, NSWindowDelegate {
         isSettingsPreview = false
         if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
         clickMonitor = nil
+        accessibilityTimer?.invalidate()
+        accessibilityTimer = nil
         if QLPreviewPanel.sharedPreviewPanelExists(), QLPreviewPanel.shared().isVisible { QLPreviewPanel.shared().orderOut(nil) }
         let removeKobito = { [kobito, panel] in
             if kobito.parent != nil { panel.removeChildWindow(kobito) }
@@ -200,7 +207,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     private func perform(_ command: PanelCommand) {
         let target = targetApplication
         switch command {
-        case .paste, .copyOnly, .pasteText, .pasteLatex, .share, .openSettings, .pushToStack:
+        case .paste, .copyOnly, .pasteText, .pasteLatex, .share, .openSettings, .openAccessibilitySettings, .pushToStack:
             hide(animated: false)
         case .keep, .tagsChanged:
             break

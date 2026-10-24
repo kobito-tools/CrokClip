@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// 画面の端から出てくるパネル（3.1）。コルクボードに見立てて、上から、検索の帯、プレビューの紙（作業中はその画面）と貼り方、
-/// 画びょうで留めた履歴のカード、操作の案内の帯を並べる。
+/// 画びょうで留めた履歴のカード、操作の案内の帯を並べる。貼り付けの許可が無いときは、検索の帯の下に許可の案内を留める。
 /// キー操作は PanelController が受け取る。
 struct PanelView: View {
     @ObservedObject var model: PanelModel
@@ -12,6 +12,9 @@ struct PanelView: View {
         GeometryReader { geometry in
             VStack(spacing: 10) {
                 header
+                if model.needsAccessibility, model.mode == .list {
+                    AccessibilityGuide(model: model).transition(.opacity)
+                }
                 if model.mode != .list {
                     Card(title: nil) { ModeView(model: model, focused: $focused) }
                         .frame(height: max(240, geometry.size.height * 0.5))
@@ -32,6 +35,7 @@ struct PanelView: View {
             }
             .padding(.horizontal, 13).padding(.vertical, 12)
             .animation(.easeOut(duration: 0.15), value: model.message)
+            .animation(.easeOut(duration: 0.15), value: model.needsAccessibility)
         }
         .foregroundStyle(Theme.ink)
         .background(CorkBackground())
@@ -162,6 +166,38 @@ private struct PreviewSection: View {
         } else if state.styles.count > 1 {
             Card(title: nil) { StyleStrip(model: model, state: state) }.fixedSize(horizontal: false, vertical: true)
         }
+    }
+}
+
+/// アクセシビリティの許可が無いときの案内。赤い画びょうで留めたメモ用紙に、なぜいるかと、許可のしかたを書く。
+private struct AccessibilityGuide: View {
+    let model: PanelModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("貼り付けの許可がまだです", systemImage: "hand.raised.fill")
+                .font(.system(size: 12.5, weight: .semibold))
+            Text("選んだカードを前のアプリへ貼り付けるには、アクセシビリティの許可がいります。いまは、クリップボードに戻すだけです。")
+            Text("システム設定で CorkClip をオンにすると、この案内は消えます。")
+                .foregroundStyle(Theme.subtle)
+            // パネルは前のアプリをアクティブにしたまま出すので、ふつうのボタンだと灰色になる。貼り方の帯と同じ形で描く。
+            Button { model.onCommand(.openAccessibilitySettings) } label: {
+                Label("システム設定を開く", systemImage: "gearshape")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 11).padding(.vertical, 4)
+                    .background(Capsule().fill(Theme.accent))
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
+        }
+        .font(.system(size: 11.5))
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12).padding(.top, 11).padding(.bottom, 10)
+        .background(NotePaper(cornerRadius: 6))
+        .overlay(alignment: .top) { Pushpin(color: Theme.pinRed, size: 12).offset(y: -5) }
     }
 }
 

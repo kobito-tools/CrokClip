@@ -96,10 +96,7 @@ struct SettingsView: View {
         Form {
             Section {
                 PermissionRow(title: "アクセシビリティ", detail: "選んだ項目を、元のアプリに貼り付けるのに使います（⌘V を送ります）。無いときは、クリップボードに戻すだけになります。",
-                              granted: { Paster.isTrusted(prompt: false) }) {
-                    _ = Paster.isTrusted(prompt: true)
-                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-                }
+                              granted: { Paster.isTrusted(prompt: false) }) { Paster.openAccessibilitySettings() }
                 PermissionRow(title: "入力監視", detail: "ペーストスタックで、⌘V が押されたことだけを見て次の項目に入れ替えるのに使います。スタックを使わなければいりません。",
                               granted: { CGPreflightListenEventAccess() }) {
                     CGRequestListenEventAccess()
