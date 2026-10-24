@@ -24,6 +24,9 @@ enum PanelCommand {
     case openAccessibilitySettings
 }
 
+/// → で開く画面で、↑↓・⏎ がどちらの一覧に効くか（⇥ で切り替える）。
+enum MoreFocus { case transforms, actions }
+
 /// 変換メニューの1行（保存した組み合わせか、1つの変換）。
 struct TransformEntry: Identifiable, Equatable {
     let id: String
@@ -89,6 +92,8 @@ final class PanelModel: ObservableObject {
     }
     /// 選んだ貼り方。ほかの項目に移っても、その項目に同じ貼り方があれば続けて使う。
     private var preferredStyleID = "original"
+    /// 最後に使った「そのまま」以外の貼り方（⌃⏎）。開くたびに設定から読み、貼るたびに覚え直す。
+    @Published private(set) var lastPasteMethod: PasteMethod?
 
     // 操作の一覧（→・⌘K・右クリック）
     @Published private(set) var actions: [PanelAction] = []
@@ -97,6 +102,8 @@ final class PanelModel: ObservableObject {
     /// 選んだ項目を受け取れる送り先（本体が起動情報から作る）。
     var shareTargets: ([Int]) -> [Share.Target] = { _ in [] }
     @Published var actionIndex = 0
+    /// → で開く画面で、いま動かしている一覧。
+    @Published var moreFocus: MoreFocus = .transforms
 
     // タグ（F-04）
     @Published var tagInput = "" { didSet { updateTagSuggestions() } }
@@ -158,6 +165,7 @@ final class PanelModel: ObservableObject {
     var onSortChange: (SortOrder) -> Void = { _ in }
     var onLatexOptionsChange: (LatexOptions) -> Void = { _ in }
     var onSaveCombo: (TransformCombo) -> Void = { _ in }
+    var onPasteMethodChange: (PasteMethod) -> Void = { _ in }
     var onQuickLook: () -> Void = {}
 
     init(store: ClipStore) { self.store = store }
@@ -195,6 +203,7 @@ final class PanelModel: ObservableObject {
         showPreview = settings().showPreview
         rowColorMode = settings().rowColorMode
         sort = settings().sortOrder
+        lastPasteMethod = settings().lastPasteMethod
         query = initialQuery
         thumbnails.removeAll()
         refreshAccessibility()
@@ -521,32 +530,92 @@ final class PanelModel: ObservableObject {
             styleResult = Self.result(of: style, context: context, merged: ids.count > 1 ? mergedText(ids) : nil, keepParagraphs: settings().keepParagraphBreaks)
             resultPending = false
         }
-        switch currentStyle?.action ?? .mode(.original) {
+        // 前回の貼り方（⌃⏎）は、貼れると分かってから覚える。
+        let action = currentStyle?.action ?? .mode(.original)
+        let method = copyOnly ? nil : PasteMethod(action)
+        switch action {
         case .mode(.original):
             if copyOnly { ids.count == 1 ? onCommand(.copyOnly(ids[0])) : onCommand(.pasteText(mergedText(ids), copyOnly: true)) }
             else { onCommand(.paste(ids, .original)) }
         case .mode(let mode):
-            if copyOnly, let styleResult { onCommand(.pasteText(styleResult, copyOnly: true)) } else { onCommand(.paste(ids, mode)) }
+            if copyOnly, let styleResult { onCommand(.pasteText(styleResult, copyOnly: true)) }
+            else {
+                if let method, hasText(ids) { remember(method) }
+                onCommand(.paste(ids, mode))
+            }
         case .transform:
             guard let styleResult else { NSSound.beep(); return }
+            if let method { remember(method) }
             onCommand(.pasteText(styleResult, copyOnly: copyOnly))
         case .latexImage:
             beginLatex(text: transformContext?.text)
         case .moreTransforms:
-            beginTransform()
+            beginActions()
         }
+    }
+
+    /// ⇧⏎・⌥⏎：貼り方の帯を切り替えずに、書式なし・改行を消して貼る。
+    func paste(_ mode: Paster.Mode) {
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        guard let method = PasteMethod(.mode(mode)) else { onCommand(.paste(ids, mode)); return }
+        guard hasText(ids) else { NSSound.beep(); show("文字の無い項目は、「\(method.label)」で貼れません"); return }
+        remember(method)
+        onCommand(.paste(ids, mode))
+    }
+
+    /// ⌃⏎：最後に使った貼り方で貼る。まだ無いときと、この項目に使えないときは知らせるだけ。
+    func pasteWithLastMethod() {
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        guard let method = lastPasteMethod else { NSSound.beep(); show("まだ前回の貼り方がありません。⇥ や → で貼り方を選んで貼ると覚えます"); return }
+        let unusable = "前回の貼り方「\(method.label)」は、この項目には使えません"
+        switch method {
+        case .plainText, .joinLines:
+            // 文字の無い項目では貼れない（パネルを閉じる前に知らせる）。
+            guard hasText(ids) else { NSSound.beep(); show(unusable); return }
+            onCommand(.paste(ids, method == .plainText ? .plainText : .joinLines))
+        case .transform(let steps):
+            // 複数選んでいるときは、つないだ文字にかける。
+            let context = ids.count > 1 ? TransformContext(text: mergedText(ids), keepParagraphs: settings().keepParagraphBreaks) : transformContext
+            guard let context, let result = TextTransforms.apply(steps, to: context) else { NSSound.beep(); show(unusable); return }
+            onCommand(.pasteText(result, copyOnly: false))
+        }
+    }
+
+    /// 書式なし・改行を消すで貼れる文字が、どれか1つにでもあるか。
+    private func hasText(_ ids: [Int]) -> Bool { ids.contains { (try? store.text(of: $0)) != nil } }
+
+    private func remember(_ method: PasteMethod) {
+        guard method != lastPasteMethod else { return }
+        lastPasteMethod = method
+        onPasteMethodChange(method)
     }
 
     // MARK: - 操作の一覧
 
-    /// → か ⌘K で開く。
+    /// → か ⌘K（と貼り方の「ほかの変換…」）で開く。上にほかの変換、下にこの項目にできることを並べる。
+    /// ↑↓・⏎ は変換に効き（⇥ でできることに移る）、できることは1文字で選べる。
     func beginActions() {
-        guard !targets.isEmpty else { NSSound.beep(); return }
-        actions = actionItems(for: targets)
+        let ids = targets
+        guard !ids.isEmpty else { NSSound.beep(); return }
+        actions = actionItems(for: ids)
         actionsTitle = nil
         actionIndex = 0
-        mode = .actions
+        // 変換は1件だけ選んでいるときに使う。
+        transformEntries = ids.count == 1 ? availableTransforms() : []
+        chain = []
+        mode = .transform
+        transformIndex = 0
+        moreFocus = transformEntries.isEmpty ? .actions : .transforms
+        updateTransformPreview()
         requestFocus(nil)
+    }
+
+    /// ⇥：→ の画面で、変換とできることの一覧を行き来する。
+    func toggleMoreFocus() {
+        guard !transformEntries.isEmpty else { NSSound.beep(); return }
+        moreFocus = moreFocus == .transforms ? .actions : .transforms
     }
 
     func moveAction(_ delta: Int) {
@@ -567,6 +636,7 @@ final class PanelModel: ObservableObject {
     }
 
     /// 項目にできること。右クリックのメニューにも同じ物を出す（そのときは、その行を選んでから行う）。
+    /// コピーだけ・送る・Quick Look・新しい定型文・キーの一覧は、並べずにショートカット（⌘⏎・⇧⌘N・⌘Y・⌘N・⌘/）で使う。
     func actionItems(for ids: [Int]) -> [PanelAction] {
         guard let first = ids.first else { return [] }
         let clip = (pins + clips).first { $0.id == first }
@@ -579,20 +649,14 @@ final class PanelModel: ObservableObject {
                 run()
             })
         }
-        add("copy", "c", "コピーだけ（貼らない）", "doc.on.clipboard", "⌘⏎") { [unowned self] in pasteSelected(copyOnly: true) }
         add("tags", "t", "タグを付ける・外す", "tag", "⌘T") { [unowned self] in beginTags() }
         add("pin", "p", clip?.pinned == true ? "ピン留めを外す" : "ピン留めする", "pin", "⌘P") { [unowned self] in endMode(); togglePin() }
         if single { add("edit", "e", clip?.isSnippet == true ? "定型文を直す" : "編集してから貼る", "pencil", "⌘E") { [unowned self] in beginEdit() } }
         if ids.count >= 2 { add("merge", "m", "\(ids.count)件を1つにまとめる", "square.stack.3d.up", "⌘M") { [unowned self] in beginMerge() } }
-        if single { add("transform", "r", "変換を選ぶ（つなげる・保存する）", "wand.and.stars", nil) { [unowned self] in beginTransform() } }
         if single { add("latex", "l", clip?.kind == .formula ? "数式を開き直す" : "数式画像を作る", "function", "⌘L") { [unowned self] in beginLatex() } }
         add("stack", "k", "ペーストスタックに積む", "square.stack", nil) { [unowned self] in onCommand(.pushToStack(ids)) }
         if settings().keepCards { add("keep", "s", "カードに残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.keep(ids)) } }
-        add("share", "n", "送る…", "paperplane", "⇧⌘N") { [unowned self] in beginShare() }
-        if single { add("quicklook", "q", "Quick Look", "eye", "⌘Y") { [unowned self] in endMode(); onQuickLook() } }
-        add("snippet", "f", "新しい定型文", "text.badge.star", "⌘N") { [unowned self] in beginSnippet() }
         add("delete", "d", ids.count > 1 ? "\(ids.count)件を履歴から削除" : "履歴から削除", "trash", "⌘⌫") { [unowned self] in endMode(); delete(ids) }
-        add("help", "?", "キーの一覧", "keyboard", "⌘/") { [unowned self] in mode = .help; requestFocus(nil) }
         return items
     }
 
@@ -709,8 +773,9 @@ final class PanelModel: ObservableObject {
         return context
     }
 
-    func beginTransform() {
-        guard let context = transformContext else { NSSound.beep(); return }
+    /// 選んでいる項目にかけられる変換（保存した組み合わせが先）。
+    private func availableTransforms() -> [TransformEntry] {
+        guard let context = transformContext else { return [] }
         var entries = settings().transformCombos.map { TransformEntry(id: "combo-\($0.id)", label: "★ \($0.name)", steps: $0.steps, isCombo: true) }
         for kind in TransformKind.allCases {
             let available: Bool
@@ -721,13 +786,7 @@ final class PanelModel: ObservableObject {
             }
             if available { entries.append(TransformEntry(id: kind.rawValue, label: kind.label, steps: [kind], isCombo: false)) }
         }
-        guard !entries.isEmpty else { show("この項目にかけられる変換がありません"); return }
-        transformEntries = entries
-        chain = []
-        mode = .transform
-        transformIndex = 0
-        updateTransformPreview()
-        requestFocus(nil)
+        return entries
     }
 
     func moveTransform(_ delta: Int) {
@@ -768,6 +827,7 @@ final class PanelModel: ObservableObject {
             return
         }
         guard let result = transformPreview, let context = transformContext, TextTransforms.apply(currentSteps, to: context) != nil else { NSSound.beep(); return }
+        if !copyOnly, let method = PasteMethod(steps: currentSteps) { remember(method) }
         onCommand(.pasteText(result, copyOnly: copyOnly))
     }
 
@@ -782,6 +842,7 @@ final class PanelModel: ObservableObject {
     func applyCombo(_ number: Int) {
         let combos = settings().transformCombos
         guard combos.indices.contains(number - 1), let context = transformContext, let result = TextTransforms.apply(combos[number - 1].steps, to: context) else { NSSound.beep(); return }
+        if let method = PasteMethod(steps: combos[number - 1].steps) { remember(method) }
         onCommand(.pasteText(result, copyOnly: false))
     }
 

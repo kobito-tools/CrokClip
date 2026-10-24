@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 /// 画面の端から出てくるパネル（3.1）。コルクボードに見立てて、上から、検索の帯、プレビューの紙（作業中はその画面）と貼り方、
-/// 画びょうで留めた履歴のカード、操作の案内の帯を並べる。貼り付けの許可が無いときは、検索の帯の下に許可の案内を留める。
+/// 画びょうで留めた履歴のカード、主なキーの案内を並べる。貼り付けの許可が無いときは、検索の帯の下に許可の案内を留める。
+/// → の画面では、上にほかの変換、履歴のカードの代わりにこの項目にできることを出す。
 /// キー操作は PanelController が受け取る。
 struct PanelView: View {
     @ObservedObject var model: PanelModel
@@ -21,7 +22,15 @@ struct PanelView: View {
                 } else {
                     PreviewSection(model: model, state: model.previewState, height: max(190, geometry.size.height * 0.38))
                 }
-                list
+                if model.mode == .transform {
+                    Card(title: nil) {
+                        ActionList(model: model, active: model.moreFocus == .actions)
+                            .padding(12)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    }
+                } else {
+                    list
+                }
                 if let message = model.message {
                     Label(message, systemImage: "checkmark.circle.fill")
                         .font(.system(size: 12, weight: .medium))
@@ -438,20 +447,20 @@ private struct FlowLayout: Layout {
     }
 }
 
-/// いまの画面で使えるキーの案内。一覧では3つだけにし、ほかは → の一覧で見つけられるようにする。
+/// いまの画面で使えるキーの案内。一覧では主なキーを大きく出し（ShortcutGuide）、作業の画面ではその画面のキーを細い帯に出す。
 private struct FooterHints: View {
     @ObservedObject var model: PanelModel
     @ObservedObject var state: PreviewState
 
     private var items: [(String, String)] {
         switch model.mode {
-        case .list:
-            let style = model.currentStyle.map { $0.id == "more" ? "変換を選ぶ" : "「\($0.label)」で貼る" } ?? "貼る"
-            return [("⏎", style), ("⇥", "貼り方"), ("→", "できること"), ("⌘/", "キー")]
+        case .list: return []
         case .actions: return [("英字", "そのキーの操作"), ("⏎", "選んだ操作"), ("esc", "戻る")]
         case .tags: return [("⏎", "付ける（無ければ作る）"), ("↑↓", "候補"), ("⌫", "最後のタグを外す"), ("esc", "戻る")]
         case .edit: return [("⌘⏎", "貼る"), ("⇧⌘⏎", "コピーだけ"), ("esc", "戻る")]
-        case .transform: return [("⏎", "貼る"), ("space", "つなげる"), ("⌘S", "組み合わせを保存"), ("esc", "戻る")]
+        case .transform:
+            let enter = model.moreFocus == .actions ? "選んだ操作" : "変換して貼る"
+            return [("⏎", enter), ("英字", "できること"), ("⇥", "切り替え"), ("esc", "戻る")]
         case .merge: return [("⏎", "まとめて貼る"), ("⌘⏎", "新しい項目として保存"), ("↑↓", "区切り"), ("esc", "戻る")]
         case .latex: return [("⏎", "画像にして貼る"), ("⇧⏎", "改行"), ("⌘⏎", "コピーだけ"), ("esc", "戻る")]
         case .snippet: return [("⌘⏎", "保存"), ("⇥", "次の欄"), ("esc", "戻る")]
@@ -460,23 +469,105 @@ private struct FooterHints: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            ForEach(items, id: \.0) { key, text in
-                HStack(spacing: 4) {
-                    Text(key)
-                        .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Theme.ink)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(RoundedRectangle(cornerRadius: 5).fill(Theme.keycap))
-                        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Theme.cardBorder))
-                    Text(text).font(.system(size: 11)).lineLimit(1)
+        if model.mode == .list {
+            ShortcutGuide(model: model, state: state)
+        } else {
+            HStack(spacing: 12) {
+                ForEach(items, id: \.0) { key, text in
+                    HStack(spacing: 4) {
+                        Keycap(text: key, size: 10.5)
+                        Text(text).font(.system(size: 11)).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(Theme.subtle)
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .background(PaperStrip())
+        }
+    }
+}
+
+/// 一覧のときの主なキー。覚えていなくても見ればわかるよう、キーの名前を書いて大きめに出す。行をクリックしても同じことをする。
+private struct ShortcutGuide: View {
+    @ObservedObject var model: PanelModel
+    @ObservedObject var state: PreviewState
+
+    private struct Row: Identifiable {
+        let id: String
+        let keys: [String]
+        let text: String
+        let run: () -> Void
+    }
+
+    private var rows: [Row] {
+        let enter: String
+        switch model.currentStyle?.action {
+        case nil, .mode(.original)?: enter = "そのまま貼る"
+        case .moreTransforms?: enter = "ほかの変換を選ぶ"
+        case _: enter = "「\(model.currentStyle!.label)」で貼る"
+        }
+        let last = model.lastPasteMethod.map { "前回の「\($0.label)」で貼る" } ?? "前回の貼り方で貼る"
+        return [
+            Row(id: "enter", keys: ["⏎ Enter"], text: enter) { [model] in model.pasteSelected() },
+            Row(id: "shift", keys: ["⇧ Shift", "⏎ Enter"], text: "書式を除いて貼る") { [model] in model.paste(.plainText) },
+            Row(id: "control", keys: ["⌃ Ctrl", "⏎ Enter"], text: last) { [model] in model.pasteWithLastMethod() },
+            Row(id: "right", keys: ["→"], text: "ほかの変換・できること") { [model] in model.beginActions() },
+        ]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("主なキー").font(.system(size: 10.5, weight: .semibold)).foregroundStyle(Theme.subtle)
+                Spacer(minLength: 0)
+                Keycap(text: "⇥", size: 10)
+                Text("貼り方を切り替え").font(.system(size: 10.5)).foregroundStyle(Theme.subtle)
+                Keycap(text: "⌘/", size: 10).padding(.leading, 4)
+                Text("キーの一覧").font(.system(size: 10.5)).foregroundStyle(Theme.subtle)
+            }
+            .lineLimit(1)
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 5) {
+                ForEach(rows) { row in
+                    GridRow {
+                        HStack(spacing: 3) {
+                            ForEach(Array(row.keys.enumerated()), id: \.offset) { index, key in
+                                if index > 0 { Text("+").font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.subtle) }
+                                Keycap(text: key, size: 12)
+                            }
+                        }
+                        Text(row.text)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Theme.ink)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { row.run() }
                 }
             }
-            Spacer(minLength: 0)
         }
-        .foregroundStyle(Theme.subtle)
-        .padding(.horizontal, 8).padding(.vertical, 5)
+        .padding(.horizontal, 10).padding(.top, 7).padding(.bottom, 9)
         .background(PaperStrip())
+    }
+}
+
+/// キーの形の札。
+private struct Keycap: View {
+    let text: String
+    let size: CGFloat
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: size, weight: .semibold, design: .rounded))
+            .foregroundStyle(Theme.ink)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, size * 0.55).padding(.vertical, size * 0.2)
+            .background(RoundedRectangle(cornerRadius: 5).fill(Theme.keycap))
+            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Theme.cardBorder))
+            .background(RoundedRectangle(cornerRadius: 5).fill(Theme.cardShade).offset(y: 1.5))
     }
 }
 

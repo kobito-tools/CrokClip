@@ -435,6 +435,71 @@ MainActor.assumeIsolated {
     granted = true
     model.prepareForShow()
     check(!model.needsAccessibility, "許可していれば、開いても案内は出ない")
+    // ⌃⏎：最後に使った「そのまま」以外の貼り方で貼る（覚えた物は設定に残す）。
+    var remembered: [PasteMethod] = []
+    model.onPasteMethodChange = { remembered.append($0) }
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .joinLines; return settings }
+    model.prepareForShow()
+    model.selection = textID
+    check(model.lastPasteMethod == .joinLines, "開いたときに、前回の貼り方を設定から読む")
+    model.pasteSelected()
+    check(model.lastPasteMethod == .joinLines && remembered.isEmpty, "「そのまま」で貼っても、前回の貼り方は変えない")
+    model.pasteWithLastMethod()
+    if case .paste(let ids, let mode)? = commands.last { check(ids == [textID] && mode == .joinLines, "⌃⏎ は前回の貼り方で貼る") } else { check(false, "⌃⏎ は前回の貼り方で貼る") }
+    model.paste(.plainText)
+    check(model.lastPasteMethod == .plainText && remembered == [.plainText], "⇧⏎ で貼ると、書式なしを前回の貼り方として覚える")
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .transform([.quote]); return settings }
+    model.prepareForShow()
+    model.selection = textID
+    model.pasteWithLastMethod()
+    if case .pasteText(let text, let copyOnly)? = commands.last {
+        check(!copyOnly && text == TextTransforms.apply([.quote], to: TransformContext(text: "一行目\n二行目")), "前回の貼り方が変換なら、変換してから貼る")
+    } else { check(false, "前回の貼り方が変換なら、変換してから貼る") }
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .transform([.pathAbsolute]); return settings }
+    model.prepareForShow()
+    model.selection = textID
+    let before = commands.count
+    model.pasteWithLastMethod()
+    check(commands.count == before && model.message != nil, "前回の貼り方がこの項目に使えなければ、貼らずに知らせる")
+    model.settings = { Settings() }
+    model.prepareForShow()
+    model.selection = textID
+    model.pasteWithLastMethod()
+    check(commands.count == before && model.message != nil, "前回の貼り方がまだ無ければ、貼らずに知らせる")
+    // 文字の無い画像では、書式なし・改行を消すは貼らずに知らせ、前回の貼り方も変えない。
+    for method in [PasteMethod.plainText, .joinLines] {
+        model.settings = { var settings = Settings(); settings.lastPasteMethod = method; return settings }
+        model.prepareForShow()
+        model.selection = heavyID
+        model.message = nil
+        model.pasteWithLastMethod()
+        check(commands.count == before && model.message != nil, "前回の貼り方が「\(method.label)」でも、文字の無い画像には貼らずに知らせる")
+    }
+    remembered = []
+    model.message = nil
+    model.paste(.plainText)
+    check(commands.count == before && model.message != nil && remembered.isEmpty && model.lastPasteMethod == .joinLines, "文字の無い画像で ⇧⏎ を押しても、貼らず、前回の貼り方も変えない")
+    model.settings = { Settings() }
+    model.prepareForShow()
+    check(PasteMethod(.transform([.joinLines, .latexImage])) == nil && PasteMethod(.mode(.original)) == nil && PasteMethod(.moreTransforms) == nil, "そのまま・数式画像・ほかの変換は覚えない")
+    var savedSettings = Settings()
+    savedSettings.lastPasteMethod = .transform([.joinLines, .quote])
+    check((try? JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(savedSettings)))?.lastPasteMethod == .transform([.joinLines, .quote]), "前回の貼り方は設定のファイルに残る")
+    // →：上にほかの変換、下にこの項目にできること。
+    model.beginActions()
+    check(model.mode == .transform && !model.transformEntries.isEmpty && model.moreFocus == .transforms, "→ で、ほかの変換の一覧を開き、↑↓ は変換に効く")
+    let actionIDs = Set(model.actions.map(\.id))
+    check(!actionIDs.isEmpty && actionIDs.isDisjoint(with: ["copy", "transform", "share", "quicklook", "snippet", "help"]), "できることには、コピーだけ・変換を選ぶ・送る・Quick Look・新しい定型文・キーの一覧を並べない")
+    check(actionIDs.isSuperset(of: ["tags", "pin", "edit", "latex", "stack", "delete"]), "できることには、タグ・ピン・編集・数式・スタック・削除を並べる")
+    model.toggleMoreFocus()
+    check(model.moreFocus == .actions, "⇥ で、できることの一覧に移る")
+    model.endMode()
+    model.multi = [textID, heavyID]
+    model.selection = textID
+    model.beginActions()
+    check(model.mode == .transform && model.transformEntries.isEmpty && model.moreFocus == .actions && model.actions.contains { $0.id == "merge" }, "複数選んで → を押すと、変換は出さず、できることに効く")
+    model.endMode()
+    model.multi = []
 }
 
 // 18. kobito シリーズの約束：④ 起動情報と、受け付ける URL

@@ -87,6 +87,8 @@ struct Settings: Codable, Equatable {
     var autoExportTags: [String] = []
     /// 最後に使った送り先（「アプリID/口のID」。F-16）。⌥⇧⌘N で一覧を出さずにここへ送る。
     var lastShareTarget: String?
+    /// 最後に使った「そのまま」以外の貼り方。⌃⏎ でこの貼り方で貼る。
+    var lastPasteMethod: PasteMethod?
 
     static let defaultExcludedBundleIDs = [
         "com.apple.keychainaccess", "com.apple.Passwords",
@@ -111,6 +113,7 @@ struct Settings: Codable, Equatable {
         if !c.contains(.keepCards), let legacy = try? decoder.container(keyedBy: LegacyCodingKeys.self).decode(Bool.self, forKey: .workspaceKeep) { s.keepCards = legacy }
         s.basePath = try? c.decode(String.self, forKey: .basePath)
         s.lastShareTarget = try? c.decode(String.self, forKey: .lastShareTarget)
+        s.lastPasteMethod = try? c.decode(PasteMethod.self, forKey: .lastPasteMethod)
         self = s
     }
 
