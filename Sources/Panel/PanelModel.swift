@@ -530,16 +530,22 @@ final class PanelModel: ObservableObject {
             styleResult = Self.result(of: style, context: context, merged: ids.count > 1 ? mergedText(ids) : nil, keepParagraphs: settings().keepParagraphBreaks)
             resultPending = false
         }
+        // 前回の貼り方（⌃⏎）は、貼れると分かってから覚える。
         let action = currentStyle?.action ?? .mode(.original)
-        if !copyOnly, let method = PasteMethod(action) { remember(method) }
+        let method = copyOnly ? nil : PasteMethod(action)
         switch action {
         case .mode(.original):
             if copyOnly { ids.count == 1 ? onCommand(.copyOnly(ids[0])) : onCommand(.pasteText(mergedText(ids), copyOnly: true)) }
             else { onCommand(.paste(ids, .original)) }
         case .mode(let mode):
-            if copyOnly, let styleResult { onCommand(.pasteText(styleResult, copyOnly: true)) } else { onCommand(.paste(ids, mode)) }
+            if copyOnly, let styleResult { onCommand(.pasteText(styleResult, copyOnly: true)) }
+            else {
+                if let method, hasText(ids) { remember(method) }
+                onCommand(.paste(ids, mode))
+            }
         case .transform:
             guard let styleResult else { NSSound.beep(); return }
+            if let method { remember(method) }
             onCommand(.pasteText(styleResult, copyOnly: copyOnly))
         case .latexImage:
             beginLatex(text: transformContext?.text)
@@ -552,7 +558,9 @@ final class PanelModel: ObservableObject {
     func paste(_ mode: Paster.Mode) {
         let ids = targets
         guard !ids.isEmpty else { NSSound.beep(); return }
-        if let method = PasteMethod(.mode(mode)) { remember(method) }
+        guard let method = PasteMethod(.mode(mode)) else { onCommand(.paste(ids, mode)); return }
+        guard hasText(ids) else { NSSound.beep(); show("文字の無い項目は、「\(method.label)」で貼れません"); return }
+        remember(method)
         onCommand(.paste(ids, mode))
     }
 
@@ -561,16 +569,22 @@ final class PanelModel: ObservableObject {
         let ids = targets
         guard !ids.isEmpty else { NSSound.beep(); return }
         guard let method = lastPasteMethod else { NSSound.beep(); show("まだ前回の貼り方がありません。⇥ や → で貼り方を選んで貼ると覚えます"); return }
+        let unusable = "前回の貼り方「\(method.label)」は、この項目には使えません"
         switch method {
-        case .plainText: onCommand(.paste(ids, .plainText))
-        case .joinLines: onCommand(.paste(ids, .joinLines))
+        case .plainText, .joinLines:
+            // 文字の無い項目では貼れない（パネルを閉じる前に知らせる）。
+            guard hasText(ids) else { NSSound.beep(); show(unusable); return }
+            onCommand(.paste(ids, method == .plainText ? .plainText : .joinLines))
         case .transform(let steps):
             // 複数選んでいるときは、つないだ文字にかける。
             let context = ids.count > 1 ? TransformContext(text: mergedText(ids), keepParagraphs: settings().keepParagraphBreaks) : transformContext
-            guard let context, let result = TextTransforms.apply(steps, to: context) else { NSSound.beep(); show("前回の貼り方「\(method.label)」は、この項目には使えません"); return }
+            guard let context, let result = TextTransforms.apply(steps, to: context) else { NSSound.beep(); show(unusable); return }
             onCommand(.pasteText(result, copyOnly: false))
         }
     }
+
+    /// 書式なし・改行を消すで貼れる文字が、どれか1つにでもあるか。
+    private func hasText(_ ids: [Int]) -> Bool { ids.contains { (try? store.text(of: $0)) != nil } }
 
     private func remember(_ method: PasteMethod) {
         guard method != lastPasteMethod else { return }

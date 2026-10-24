@@ -466,6 +466,21 @@ MainActor.assumeIsolated {
     model.selection = textID
     model.pasteWithLastMethod()
     check(commands.count == before && model.message != nil, "前回の貼り方がまだ無ければ、貼らずに知らせる")
+    // 文字の無い画像では、書式なし・改行を消すは貼らずに知らせ、前回の貼り方も変えない。
+    for method in [PasteMethod.plainText, .joinLines] {
+        model.settings = { var settings = Settings(); settings.lastPasteMethod = method; return settings }
+        model.prepareForShow()
+        model.selection = heavyID
+        model.message = nil
+        model.pasteWithLastMethod()
+        check(commands.count == before && model.message != nil, "前回の貼り方が「\(method.label)」でも、文字の無い画像には貼らずに知らせる")
+    }
+    remembered = []
+    model.message = nil
+    model.paste(.plainText)
+    check(commands.count == before && model.message != nil && remembered.isEmpty && model.lastPasteMethod == .joinLines, "文字の無い画像で ⇧⏎ を押しても、貼らず、前回の貼り方も変えない")
+    model.settings = { Settings() }
+    model.prepareForShow()
     check(PasteMethod(.transform([.joinLines, .latexImage])) == nil && PasteMethod(.mode(.original)) == nil && PasteMethod(.moreTransforms) == nil, "そのまま・数式画像・ほかの変換は覚えない")
     var savedSettings = Settings()
     savedSettings.lastPasteMethod = .transform([.joinLines, .quote])
