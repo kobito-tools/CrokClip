@@ -61,7 +61,9 @@ for arch in arm64 x86_64; do
     -o "$BUILD_DIR/$EXEC_NAME-$arch"
 done
 lipo -create "$BUILD_DIR/$EXEC_NAME-arm64" "$BUILD_DIR/$EXEC_NAME-x86_64" -output "$CONTENTS/MacOS/$EXEC_NAME"
-codesign --force --sign - --timestamp=none "$STAGE"
+# Hardened Runtime を付ける（ほかのプログラムが DYLD_INSERT_LIBRARIES などで CorkClip にコードを読み込ませ、
+# CorkClip に与えたアクセシビリティ・入力監視の許可を使うのを防ぐ）。アドホック署名でも付けられる。
+codesign --force --sign - --options runtime --timestamp=none "$STAGE"
 
 rm -rf "$APP_NAME.app"
 mv "$STAGE" "$APP_NAME.app"

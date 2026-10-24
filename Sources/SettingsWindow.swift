@@ -214,8 +214,8 @@ struct SettingsView: View {
     // MARK: - 保存
 
     private func retention(_ kind: ClipKind) -> Binding<Int> {
-        Binding(get: { model.settings.retentionDays[kind.rawValue] ?? 0 },
-                set: { model.settings.retentionDays[kind.rawValue] = $0 > 0 ? $0 : nil })
+        Binding(get: { model.settings.retention(for: kind) },
+                set: { model.settings.retentionDays[kind.rawValue] = min(max(0, $0), 3650) })
     }
 
     private var storage: some View {
@@ -223,14 +223,23 @@ struct SettingsView: View {
             Section {
                 ExplainBox(title: "履歴をいつまで取っておくか", text: "古い履歴は自動で消して、Mac の容量を使いすぎないようにします。ピン留めした項目と定型文は、ここの設定にかかわらず消しません。")
             }
-            Section("消える期限（最後に使ってからの日数。0 は無期限）") {
+            Section("消える期限（最後に使ってからの日数。初期値は30日。0 は無期限）") {
                 ForEach(ClipKind.allCases, id: \.self) { kind in
-                    Stepper(value: retention(kind), in: 0...3650, step: kind == .text ? 30 : 7) {
-                        Text("\(kind.label)：\(retention(kind).wrappedValue == 0 ? "無期限" : "\(retention(kind).wrappedValue)日")")
+                    HStack {
+                        Text(kind.label)
+                        Spacer()
+                        // 日数は直接入力できる（矢印は1日ずつ）。
+                        TextField(kind.label, value: retention(kind), format: .number)
+                            .labelsHidden()
+                            .textFieldStyle(.roundedBorder)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 64)
+                        Text(retention(kind).wrappedValue == 0 ? "日（無期限）" : "日").frame(width: 76, alignment: .leading)
+                        Stepper(kind.label, value: retention(kind), in: 0...3650).labelsHidden()
                     }
                 }
                 Toggle("タグの付いた項目も期限で消す", isOn: $model.settings.expireTagged)
-                Text("ピン留めした項目と定型文は消しません。").font(.caption).foregroundStyle(.secondary)
+                Text("ピン留めした項目と定型文は消しません。パスワードなどをコピーしても長く残らないよう、文字も含めて期限で消します。").font(.caption).foregroundStyle(.secondary)
             }
             Section("上限") {
                 Stepper("件数：\(model.settings.maxItems)件", value: $model.settings.maxItems, in: 100...500_000, step: 1000)
@@ -244,7 +253,8 @@ struct SettingsView: View {
                     Button("今すぐ整理") { model.onCleanup() }
                     Button("Finder で表示") { NSWorkspace.shared.activateFileViewerSelecting([ClipStore.defaultDirectory]) }
                 }
-                Text("履歴はこのMacの ~/Library/Application Support/CorkClip/ にだけ保存します。").font(.caption).foregroundStyle(.secondary)
+                Toggle("履歴を Time Machine のバックアップに含めない", isOn: $model.settings.excludeHistoryFromBackup)
+                Text("履歴はこのMacの ~/Library/Application Support/CorkClip/ にだけ保存します。消した項目は、データベースの中でも上書きして消します。バックアップに含めないと、Mac を復元したときに履歴・ピン・定型文は戻りません。").font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -328,10 +338,10 @@ struct SettingsView: View {
     private var companions: some View {
         Form {
             Section {
-                ExplainBox(title: "連携でできること", text: "CorkClip は単独で使えます。kobito シリーズのほかのアプリも使っているなら、次のことができるようになります。\n・タグをシリーズのアプリと共有する\n・⌘S で残したクリップを、日ごとのカードとして、カードを読めるシリーズのアプリに並べる\n・⇧⌘N で選んだクリップを、受け取れるアプリへ送る（送り先は、入っているアプリから自動で並びます）")
+                ExplainBox(title: "連携でできること", text: "CorkClip は単独で使えます。kobito シリーズのほかのアプリも使っているなら、次のことができるようになります。\n・タグをシリーズのアプリと共有する\n・⌘S で残したクリップを、日ごとのカードとして、カードを読めるシリーズのアプリに並べる")
                 VStack(alignment: .leading, spacing: 4) {
                     Text("はじめかた").font(.system(size: 12, weight: .semibold))
-                    Text("1. 下の「基準パス」で、シリーズのアプリと共有するフォルダを選びます（シリーズのアプリで使っているフォルダがあれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。\n3. 送り先は設定いりません。受け取れるアプリを一度起動しておけば、⇧⌘N の一覧に並びます。")
+                    Text("1. 下の「基準パス」で、シリーズのアプリと共有するフォルダを選びます（シリーズのアプリで使っているフォルダがあれば「これを使う」ボタンが出ます）。\n2. 必要なら「自動で残すタグ」を選びます。")
                         .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -374,7 +384,7 @@ struct SettingsView: View {
             } header: {
                 Text("カードに残す")
             } footer: {
-                Text("⌘S で残したクリップは、日ごとに「10月15日のクリップ」という1枚のカード（シリーズの約束③）になり、カードを読めるシリーズのアプリに並びます。カードを押すと、その日に残したクリップでパネルが開きます。「自動で残すタグ」を選んでおくと、そのタグを付けるだけで残ります（例：#論文）。基準パスを選んでいるときだけ働きます。カードを使わないなら、オフにすると操作の一覧からも消えます。")
+                Text("⌘S で残したクリップは、日ごとに「10月15日のクリップ」という1枚のカード（シリーズの約束③）になり、カードを読めるシリーズのアプリに並びます。カードを押すと、その日に残したクリップでパネルが開きます。「自動で残すタグ」を選んでおくと、そのタグを付けるだけで残ります（例：#論文）。基準パスを選んでいるときだけ働きます。残した物は → の「カードから外す」（U）で消せます。基準パスが Google ドライブなどの同期するフォルダなら、残した物（文字・画像）はクラウドにも保存されます。パスワードなどが入らないよう、自動で残すタグは気をつけて選んでください。カードを使わないなら、オフにすると操作の一覧からも消えます。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {

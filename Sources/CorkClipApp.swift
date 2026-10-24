@@ -74,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NSApplication.shared.terminate(nil)
             return
         }
+        store.setExcludedFromBackup(settings.excludeHistoryFromBackup)
         keptSchema = resources.appendingPathComponent("schema/kept")
         paster = Paster(store: store) { [unowned self] in settings }
         watcher = PasteboardWatcher(excludedBundleIDs: { [unowned self] in settings.excludedBundleIDs }) { [unowned self] capture in save(capture) }
@@ -89,7 +90,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.model.onLatexOptionsChange = { [unowned self] options in if settings.latexOptions != options { updateSettings { $0.latexOptions = options } } }
         panel.model.onSaveCombo = { [unowned self] combo in updateSettings { $0.transformCombos.append(combo) } }
         panel.model.onPasteMethodChange = { [unowned self] method in updateSettings { $0.lastPasteMethod = method } }
-        panel.model.shareTargets = { [unowned self] ids in shareTargets(ids) }
 
         let settingsModel = SettingsModel(settings: settings)
         settingsModel.onChange = { [unowned self] new in applySettings(new) }
@@ -186,8 +186,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if copyOnly { paster.write([image.representations]) } else { paster.deliver([image.representations], into: target, cursorOffset: nil) }
         case .keep(let ids):
             keep(ids, automatic: false)
-        case .share(let ids, let target):
-            share(ids, to: target)
+        case .unkeep(let ids):
+            unkeep(ids)
         case .pushToStack(let ids):
             stack.push(ids)
         case .tagsChanged(let ids):
@@ -265,6 +265,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    /// カードから外す。基準パスの DB と画像から消し、カードを書き直す。
+    private func unkeep(_ ids: [Int]) {
+        guard let basePath = settings.basePath else { NSSound.beep(); return }
+        let store = store!, schema = keptSchema!
+        let kept = ids.filter { (try? store.exportedAt($0)) != nil }
+        guard !kept.isEmpty else { return }
+        storeQueue.async { [weak self] in
+            let result: Result<Void, Error> = Result {
+                try KeptCards.remove(clipIDs: kept, basePath: basePath, schemaDirectory: schema)
+                try store.clearExported(kept)
+            }
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self?.panel.model.show("カードから外しました（\(kept.count)件）")
+                    self?.panel.refreshIfVisible()
+                case .failure(let error):
+                    self?.alert("カードから外せませんでした", (error as? StoreError)?.message ?? "\(error)")
+                }
+            }
+        }
+    }
+
     private nonisolated static func keptEntry(_ id: Int, store: ClipStore) -> KeptCards.Entry? {
         guard let detail = try? store.detail(id, maxTextLength: ClipStore.maxStoredTextLength) else { return nil }
         let tags = (try? store.tags(of: id)) ?? []
@@ -282,7 +305,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    /// 画像を PNG にそろえる（残す画像・送る画像）。
+    /// 画像を PNG にそろえる（残す画像）。
     private nonisolated static func png(_ data: Data) -> Data? {
         if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return data }
         guard let image = NSImage(data: data), let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
@@ -320,37 +343,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settingsWindow.model.datasetID = try? Dataset.read(basePath)?.datasetId
     }
 
-    // MARK: - 送る（F-16）
-
-    /// 選んだ項目の中身（⑦ 受け渡し）。画像は PNG にそろえ、ファイルはパスだけを渡す。
-    private func sharePayload(_ ids: [Int]) -> Share.Payload {
-        var texts: [String] = [], payload = Share.Payload()
-        for id in ids {
-            guard let detail = try? store.detail(id, maxTextLength: ClipStore.maxStoredTextLength) else { continue }
-            if let data = detail.imageData.flatMap(Self.png) { payload.images.append(Share.Image(name: "クリップ\(payload.images.count + 1).png", mimeType: "image/png", data: data)) }
-            if !detail.filePaths.isEmpty { payload.files += detail.filePaths.map { Share.File(path: $0, name: ($0 as NSString).lastPathComponent) } }
-            else if let latex = detail.latex { texts.append(latex.source) }
-            else if let text = detail.text, !text.isEmpty { texts.append(text) }
-        }
-        payload.text = texts.joined(separator: "\n\n")
-        return payload
-    }
-
-    private func shareTargets(_ ids: [Int]) -> [Share.Target] {
-        Share.targets(for: sharePayload(ids).kinds)
-    }
-
-    private func share(_ ids: [Int], to target: Share.Target) {
-        let payload = sharePayload(ids)
-        guard !payload.kinds.isDisjoint(with: target.receive.accepts) else { NSSound.beep(); return }
-        do {
-            try Share.send(payload, to: target)
-            if settings.lastShareTarget != target.key { updateSettings { $0.lastShareTarget = target.key } }
-        } catch {
-            alert("\(target.appName) に送れませんでした", (error as? StoreError)?.message ?? error.localizedDescription)
-        }
-    }
-
     // MARK: - 設定
 
     private func updateSettings(_ change: (inout Settings) -> Void) {
@@ -365,6 +357,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard old != new else { return }
         settings = new
         settings.save(to: settingsURL)
+        if old.excludeHistoryFromBackup != new.excludeHistoryFromBackup { store.setExcludedFromBackup(new.excludeHistoryFromBackup) }
         if old.openPanelHotKey != new.openPanelHotKey || old.stackHotKey != new.stackHotKey { registerHotKeys(alertOnFailure: true) }
         if old.basePath != new.basePath || old.keepCards != new.keepCards { syncTags(); recordDataset(); refreshCards() }
         // パネルの見た目を変えたら、設定の画面の横に実物を出して、すぐに反映する。
@@ -443,12 +436,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             default: stack.toggle()
             }
         case "pause":
-            if let minutes = parameters["minutes"].flatMap(Int.init) { setPaused(true, until: Date().addingTimeInterval(Double(minutes) * 60)) }
-            else { setPaused(!watcher.effectivelyPaused, until: nil) }
-        case "resume": setPaused(false, until: nil)
+            if let minutes = parameters["minutes"].flatMap(Int.init), minutes > 0 { setPaused(true, until: Date().addingTimeInterval(Double(min(minutes, 7 * 24 * 60)) * 60)) }
+            else if !watcher.effectivelyPaused { setPaused(true, until: nil) }
+            else if confirmResumeFromURL() { setPaused(false, until: nil) }
+        case "resume":
+            if watcher.effectivelyPaused, confirmResumeFromURL() { setPaused(false, until: nil) }
         case "settings": settingsWindow.show()
         default: panel.show()
         }
+    }
+
+    /// URL はほかのアプリやウェブページからも開けるので、止めていた取得を URL で再開するときは確かめる。
+    private func confirmResumeFromURL() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "クリップボードの取得を再開しますか？"
+        alert.informativeText = "ほかのアプリかリンクから、CorkClip の一時停止を解く依頼（corkclip://）が届きました。自分で開いたのでなければ「再開しない」を選んでください。"
+        alert.addButton(withTitle: "再開しない")
+        alert.addButton(withTitle: "再開する")
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        return alert.runModal() == .alertSecondButtonReturn
     }
 
     private func handleSeriesURL(_ url: URL) {

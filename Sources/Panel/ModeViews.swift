@@ -9,7 +9,6 @@ struct ModeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             switch model.mode {
-            case .actions: ActionList(model: model, active: true)
             case .tags: tags
             case .edit: edit
             case .transform: transform
@@ -286,7 +285,7 @@ struct ModeView: View {
         ("", "── 覚えると速いキー ──"),
         ("⌥⏎", "改行を消して貼る"), ("⌃1〜9", "保存した変換の組み合わせで貼る"),
         ("⌘T ⌘E ⌘P", "タグ・編集してから貼る・ピン留め"), ("⌘L ⌘M ⌘N", "数式画像・まとめる・新しい定型文"),
-        ("⌘S ⇧⌘N", "カードに残す・送る（⌥⇧⌘N で前回の送り先へ）"), ("⌥⌘↑↓", "ピンの並べ替え"),
+        ("⌘S", "カードに残す"), ("⌥⌘↑↓", "ピンの並べ替え"),
         ("⌘Y", "Quick Look（検索が空のときは space でも）"), ("⌘⌫", "履歴から削除"),
         ("⌘/ ⌘, esc", "キーの一覧・設定・戻る"), ("ドラッグ", "ほかのアプリへ取り出す"),
     ]
@@ -297,7 +296,7 @@ func modeTitle(_ text: String, _ symbol: String) -> some View {
     Label(text, systemImage: symbol).font(.system(size: 13, weight: .semibold))
 }
 
-/// この項目にできること（送り先の一覧にも使う）。1文字で選べ、クリックでも行う。
+/// この項目にできること。1文字で選べ、クリックでも行う。
 /// active でないとき（→ の画面で変換を動かしているとき）は、選んでいる行を薄く出す。
 struct ActionList: View {
     @ObservedObject var model: PanelModel
@@ -305,7 +304,7 @@ struct ActionList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            modeTitle(model.actionsTitle ?? (model.targets.count > 1 ? "\(model.targets.count)件にできること" : "この項目にできること"), model.actionsTitle == nil ? "bolt" : "paperplane")
+            modeTitle(model.targets.count > 1 ? "\(model.targets.count)件にできること" : "この項目にできること", "bolt")
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 1) {

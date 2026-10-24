@@ -17,11 +17,21 @@ final class KeyPanel: NSPanel {
 
     override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool { quickLook != nil }
     override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) { panel.dataSource = quickLook; panel.delegate = quickLook }
-    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) { panel.dataSource = nil; panel.delegate = nil }
+    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
+        panel.dataSource = nil
+        panel.delegate = nil
+        // 閉じたら、書き出した中身の写しを残さない。
+        quickLook = nil
+        QuickLookSource.removeTemporaryFiles()
+    }
 }
 
 /// Quick Look に渡す一時ファイル。
 final class QuickLookSource: NSObject, QLPreviewPanelDataSource, QLPreviewPanelDelegate {
+    /// 項目の中身を書き出す一時フォルダ。Quick Look を閉じたときと起動したときに消す。
+    static var temporaryDirectory: URL { FileManager.default.temporaryDirectory.appendingPathComponent("CorkClip-QuickLook", isDirectory: true) }
+    static func removeTemporaryFiles() { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
     let urls: [URL]
     init(urls: [URL]) { self.urls = urls }
     func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int { urls.count }
@@ -65,6 +75,8 @@ final class PanelController: NSObject, NSWindowDelegate {
         model.settings = settings
         model.onCommand = { [weak self] command in self?.perform(command) }
         model.onQuickLook = { [weak self] in self?.quickLook() }
+        // 前回、閉じる前に終わったときの Quick Look の写しを消す。
+        QuickLookSource.removeTemporaryFiles()
     }
 
     func toggle() { isVisible ? hide() : show() }
@@ -207,9 +219,9 @@ final class PanelController: NSObject, NSWindowDelegate {
     private func perform(_ command: PanelCommand) {
         let target = targetApplication
         switch command {
-        case .paste, .copyOnly, .pasteText, .pasteLatex, .share, .openSettings, .openAccessibilitySettings, .pushToStack:
+        case .paste, .copyOnly, .pasteText, .pasteLatex, .openSettings, .openAccessibilitySettings, .pushToStack:
             hide(animated: false)
-        case .keep, .tagsChanged:
+        case .keep, .unkeep, .tagsChanged:
             break
         }
         onCommand(command, target)
@@ -230,15 +242,6 @@ final class PanelController: NSObject, NSWindowDelegate {
         if flags == [.command], character == "," { perform(.openSettings); return true }
         switch model.mode {
         case .list: return handleListKey(event, flags: flags, key: key, character: character, isReturn: isReturn)
-        case .actions:
-            if key == 125 { model.moveAction(1) }
-            else if key == 126 { model.moveAction(-1) }
-            else if isReturn || key == 124 { model.runSelectedAction() }
-            else if key == 123 { model.endMode() }  // ← で戻る
-            else if flags.subtracting(.shift).isEmpty, let typed = event.characters?.lowercased().first, model.runAction(key: typed) { }
-            else if flags.contains(.command) { return false }
-            else { NSSound.beep() }
-            return true
         case .tags:
             if key == 125 { model.moveTagSuggestion(1); return true }
             if key == 126 { model.moveTagSuggestion(-1); return true }
@@ -324,8 +327,6 @@ final class PanelController: NSObject, NSWindowDelegate {
                 }
                 return true
             }
-            if flags == [.command, .shift], character == "n" { model.beginShare(); return true }
-            if flags == [.command, .shift, .option], character == "n" { model.shareToLast(); return true }
             if flags == [.control], let number = Int(character), (1...9).contains(number) { model.applyCombo(number); return true }
             return false
         }
@@ -344,9 +345,9 @@ final class PanelController: NSObject, NSWindowDelegate {
     /// 選んだ項目を一時ファイルに書き出して Quick Look で開く。
     private func quickLook() {
         guard let id = model.selection, let detail = try? model.store.detail(id, maxTextLength: ClipStore.maxStoredTextLength) else { NSSound.beep(); return }
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("CorkClip-QuickLook", isDirectory: true)
-        try? FileManager.default.removeItem(at: directory)
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let directory = QuickLookSource.temporaryDirectory
+        QuickLookSource.removeTemporaryFiles()
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         var urls: [URL] = detail.filePaths.map { URL(fileURLWithPath: $0) }.filter { FileManager.default.fileExists(atPath: $0.path) }
         if urls.isEmpty, let items = try? model.store.representations(of: id), let first = items.first {
             let candidates: [(String, String)] = [("com.adobe.pdf", "pdf"), ("public.png", "png"), ("public.tiff", "tiff"), ("public.jpeg", "jpg"), ("public.rtf", "rtf"), ("public.html", "html")]
