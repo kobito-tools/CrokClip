@@ -460,7 +460,7 @@ private struct FooterHints: View {
         case .edit: return [("⌘⏎", "貼る"), ("⇧⌘⏎", "コピーだけ"), ("esc", "戻る")]
         case .transform:
             let enter = model.moreFocus == .actions ? "選んだ操作" : "変換して貼る"
-            return [("⏎", enter), ("英字", "できること"), ("⇥", model.moreFocus == .actions ? "変換へ" : "できることへ"), ("esc", "戻る")]
+            return [("⏎", enter), ("英字", "できること"), ("⇥", "切り替え"), ("esc", "戻る")]
         case .merge: return [("⏎", "まとめて貼る"), ("⌘⏎", "新しい項目として保存"), ("↑↓", "区切り"), ("esc", "戻る")]
         case .latex: return [("⏎", "画像にして貼る"), ("⇧⏎", "改行"), ("⌘⏎", "コピーだけ"), ("esc", "戻る")]
         case .snippet: return [("⌘⏎", "保存"), ("⇥", "次の欄"), ("esc", "戻る")]
