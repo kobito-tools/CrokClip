@@ -170,7 +170,8 @@ Swift・Tauri などで作り、アプリの形（`.app`）で配るアプリは
 | 起動 | 起動情報④の `command`（`["/usr/bin/open", "-b", "<バンドルID>"]` など）。今までどおり |
 | `--metadata` | `.app` の実行ファイルが同じ引数を受け付けると、そろって見やすい（任意） |
 | 規格の文書 | 共通部品を同梱しないので、規格の文書と `setup.zsh` だけを写して持つ。kobito-workspace で `uv run scripts/vendor_kit.py --docs-only <リポジトリ>/docs/kobito-spec` を動かすと、`docs/kobito-spec/` に写る（`--check --docs-only` で、手で書き換えていないか・元より古いかを確かめられる） |
-| `setup.sh` | `docs/kobito-spec/setup.zsh` を読み込み、自分の手順（ビルドなど）を足す（[SETUP.md](SETUP.md)） |
+| `setup.sh` | `docs/kobito-spec/setup.zsh` を読み込み、自分の手順（ビルドなど）を足す。`kobito_link_repository` で `repos/` へのリンクも作る（[SETUP.md](SETUP.md)） |
+| アプリケーションフォルダ | `.app` を移すときは、`/Applications` の直下ではなく `/Applications/kobito-tools/` の下に置く（`kobito_applications_folder`。[SETUP.md §1](SETUP.md)） |
 | アイコン | Python のアプリと同じく `kobito/icon.svg`・`kobito/icon-1024.png`。`.app` のアイコン（`.icns`）は、ここから作る |
 | テスト | 自分の言語のやり方でよい（`swift test`・`cargo test` など） |
 
@@ -196,7 +197,10 @@ Swift・Tauri などで作り、アプリの形（`.app`）で配るアプリは
 | 順 | 見つけ方 | 内容 |
 |---|---|---|
 | 主 | 起動情報④ | PC 固有領域の `kobito-tools/apps/*.json`。`.app` も、どこに置いたアプリも見つかる。workspace に並べるのは、ここに登録されたアプリだけ |
-| 補 | フォルダから探す | 並びのフォルダ（kobito-workspace の親のフォルダ）と、設定で足したフォルダの、**直下のフォルダ**を見て、`kobito-app.json` があるものを探す |
+| 補 | フォルダから探す | 並びのフォルダ（kobito-workspace の親のフォルダ）と、PC 固有領域の `repos/`、設定で足したフォルダの、**直下のフォルダ**を見て、`kobito-app.json` があるものを探す |
+
+- `repos/` には、各アプリの `setup.sh` が、アプリIDの名前で自分のリポジトリへのシンボリックリンクを作ります（[SETUP.md §1「リポジトリの場所」](SETUP.md)）。並びのフォルダの外にクローンしたアプリも、ここから見つかります。
+- 先の無いリンクは見ません。同じリポジトリが並びのフォルダと `repos/` の両方から見つかっても、実体のパスで比べて1件にします。
 
 - フォルダから探すときは、目印を読むだけで、何も実行しません。隠しフォルダ（`.` で始まる）は見ません。
 - 見つかって、まだ④に登録されていないアプリは、設定の画面の「見つかったアプリ」に出します。
@@ -205,7 +209,7 @@ Swift・Tauri などで作り、アプリの形（`.app`）で配るアプリは
   - `setup.sh` が無い Python のアプリは `<uv> run --project <フォルダ> <フォルダ>/launch.py --write-launch-info`
 - 動かすのは、その時点で探し直して見つかったフォルダの、目印が名乗ったファイルだけです。フォルダの外を指すファイル（シンボリックリンクなど）は動かしません。
 - 登録の記録は `kobito-tools/Workspace/logs/setup-<アプリID>.log` に残します。終わったら、④が書かれたかを確かめます。
-- 探すフォルダは、設定の「アプリを探すフォルダ」で足したり外したりできます（並びのフォルダは外せません）。
+- 探すフォルダは、設定の「アプリを探すフォルダ」で足したり外したりできます（並びのフォルダと `repos/` は外せません）。
 - 同じアプリIDの目印が2つ以上見つかったとき、または別の場所のアプリが同じ ID ですでに④に登録されているときは、登録させずに知らせます（[CONTRACTS.md「ID がかぶったとき」](CONTRACTS.md#id-がかぶったとき)）。
 
 ## 8. `install.sh` の一覧に出る条件
@@ -256,12 +260,12 @@ class TemporaryTestCase(IsolatedTestCase):
 
 | # | すること |
 |---|---|
-| 1 | kobito-workspace で `uv run scripts/vendor_kit.py <アプリのパッケージ>` を動かし、共通部品 0.5.0 を写し直す（ネイティブのアプリは `--docs-only <リポジトリ>/docs/kobito-spec`） |
+| 1 | kobito-workspace で `uv run scripts/vendor_kit.py <アプリのパッケージ>` を動かし、共通部品 0.6.0 を写し直す（ネイティブのアプリは `--docs-only <リポジトリ>/docs/kobito-spec`） |
 | 2 | `kobito/` を作り、アイコンを `kobito/icon.svg`・`kobito/icon-1024.png` に移す（`assets/icon.svg`・`web/icon.svg` などから）。紹介のカードの画像があれば `kobito/screenshot.png` |
 | 3 | 起動情報④の `icon` を `package.icon_record(<リポジトリ>, <1文字>)` にする |
 | 4 | `kobito-app.json` に `package: 1`・`version`・`tagline`・`tagline_en` を足す |
 | 5 | `<アプリ名>-Setup.command` を `git mv` で `Setup.command` にする（100755 のまま） |
-| 6 | `setup.sh` を、`setup.zsh` を読み込む短い形にする（[SETUP.md](SETUP.md) の見本）。自分だけの手順（常駐の登録など）は残す |
+| 6 | `setup.sh` を、`setup.zsh` を読み込む短い形にする（[SETUP.md](SETUP.md) の見本）。自分だけの手順（常駐の登録など）は残す。Python のアプリは `kobito_python_app` が `repos/` へのリンクも作る。ネイティブのアプリは `kobito_link_repository` を呼び、`.app` を移すときは `kobito_applications_folder` で用意した `/Applications/kobito-tools/` の下に置く（共通部品 0.6.0 から） |
 | 7 | `scripts/dev_server.py` をやめ、`cli.run(…, dev=…)` に開発用の起動を渡す（`launch.py --dev`） |
 | 8 | テストを `tests/test_*.py` にそろえ、`uv run python -m unittest discover -s tests -t tests` で全部動くようにする。土台は `kit.testing.IsolatedTestCase` |
 | 9 | README の起動・テストのしかたを直す |
@@ -365,7 +369,7 @@ uv run scripts/check_package.py --json ../Sample          # 結果を JSON で
 | 入口 | Python のアプリは、リポジトリの直下の `launch.py` だけ。引数の形は全アプリ同じ（§3） |
 | 目印 | 各リポジトリの直下に `kobito-app.json`（§2）。読むだけで判定し、何も実行しない |
 | 特別枠 | `.app` で配るアプリは `launch.py` を持たず、`"kind": "native"`。`.app` の `--write-launch-info` と `setup.sh` で登録する（§5） |
-| 見つけ方 | 起動情報④が主。並びのフォルダから目印を探すのが補い。登録は利用者が OK したときだけ（§7） |
+| 見つけ方 | 起動情報④が主。並びのフォルダと `repos/` から目印を探すのが補い。登録は利用者が OK したときだけ（§7。`repos/` は 2026-10-24 に追記） |
 | install.sh | GitHub の topic `kobito-app` で一覧を作り、目印から表示名・ひとこと・種類を出す（§8） |
 | アプリID | 一覧は持たない。各アプリが目印と④で名乗り、かぶったら登録させずに知らせる（2026-10-21 に追記。§7、[CONTRACTS.md「アプリID」](CONTRACTS.md#アプリid)） |
 | 置き場所 | 約束①〜⑦には足さず、この文書に別の決まりとして置く（§1） |

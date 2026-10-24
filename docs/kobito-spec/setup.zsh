@@ -6,7 +6,7 @@
 #   source "${0:A:h}/sample_app/kobito_kit/setup.zsh" || exit 1
 #   kobito_steps+=("ログインしたときに起動するかを尋ねる（--yes では登録しない）")   # 使い方に出す、このアプリだけの手順
 #   kobito_setup "Sample" "$@"      # 引数（--yes・--dry-run・--help）を読み、macOS かを確かめ、リポジトリの直下に移る
-#   kobito_python_app               # uv を確かめる（無ければ入れるかを尋ねる）・uv sync・launch.py --write-launch-info
+#   kobito_python_app               # uv を確かめる（無ければ入れるかを尋ねる）・uv sync・launch.py --write-launch-info・repos/ へのリンク
 #   kobito_step "ログインしたときの起動"
 #   if kobito_ask "ログインしたときに起動しますか？" n; then
 #     kobito_run launchctl …
@@ -23,8 +23,11 @@ kobito_steps=(
   "uv があるかを確かめる（無ければ、入れるかを尋ねる）"
   "uv sync で Python と部品を用意する"
   "起動情報を書き出す（画面は開きません）"
+  "このリポジトリの場所を PC 固有領域の repos/ に記す（シンボリックリンク）"
 )
-typeset -g kobito_app_name="" kobito_here="" KOBITO_UV=""
+typeset -g kobito_app_name="" kobito_here="" KOBITO_UV="" kobito_applications=""
+# この部品のある場所。部品が使う画像（assets/）は、写した先でもこの隣にある。
+typeset -g kobito_kit_here=${${(%):-%x}:A:h}
 typeset -gi kobito_yes=0 kobito_dry_run=0
 
 # ---- 表示 ----
@@ -157,11 +160,110 @@ kobito_write_launch_info() {
   kobito_run "$KOBITO_UV" run launch.py --write-launch-info || kobito_fail "起動情報を書き出せませんでした。"
 }
 
-# Python のアプリの決まった手順（docs/SETUP.md の 1〜4）をまとめて行う。
+# Python のアプリの決まった手順（docs/SETUP.md の 1〜5）をまとめて行う。
 kobito_python_app() {
   kobito_ensure_uv
   kobito_uv_sync
   kobito_write_launch_info
+  kobito_link_repository
+}
+
+# ---- リポジトリの場所（repos/） ----
+
+# PC 固有領域（kobito-tools/）。テストでは KOBITO_CONFIG_DIR で変えられる。
+kobito_series_directory() {
+  print -r -- "${KOBITO_CONFIG_DIR:-$HOME/Library/Application Support/kobito-tools}"
+}
+
+# kobito_link_repository：PC 固有領域の repos/<アプリID> に、このリポジトリへのシンボリックリンクを作る。
+# 探す側は、どこにクローンしたアプリでも repos/ から見つけられる。アプリIDは kobito-app.json の app。
+# 同じ先なら何もしない。先が消えたリンクは張り替える。別の場所の、同じ ID を名乗るリポジトリを指していれば、
+# どちらかを勝手に選ばず、張り替えずに知らせる（CONTRACTS.md「ID がかぶったとき」）。リンクでない物には触らない。
+kobito_link_repository() {
+  kobito_step "このリポジトリの場所を記します（repos/ へのリンク）"
+  local app other
+  app=$(plutil -extract app raw -o - "$kobito_here/kobito-app.json" 2>/dev/null)
+  if [[ ! $app =~ '^[a-z][a-z0-9-]{0,39}$' ]]; then
+    kobito_info "kobito-app.json からアプリIDを読めないので、リンクを作りません。"
+    return 0
+  fi
+  local repos="$(kobito_series_directory)/repos"
+  local link="$repos/$app"
+  if [[ -L $link ]]; then
+    if [[ -e $link && ${link:A} == ${kobito_here:A} ]]; then
+      kobito_info "$link: 済んでいます"
+      return 0
+    fi
+    if [[ -e $link ]]; then
+      other=$(plutil -extract app raw -o - "$link/kobito-app.json" 2>/dev/null)
+      if [[ $other == $app ]]; then
+        kobito_info "$link は、同じアプリID（$app）を名乗る別の場所のリポジトリ（${link:A}）を指しています。"
+        kobito_info "どちらかを勝手に選ばず、張り替えません。使うほうを決めて、もう片方を片付けるか、リンクを消してから、もう一度動かしてください。"
+        return 0
+      fi
+      kobito_info "$link は、$app を名乗らないフォルダ（${link:A}）を指しているので、張り替えます。"
+    else
+      kobito_info "$link の先が無くなっているので、張り替えます。"
+    fi
+  elif [[ -e $link ]]; then
+    kobito_info "$link はシンボリックリンクではないので、触りません。中を確かめて、片付けてから、もう一度動かしてください。"
+    return 0
+  fi
+  kobito_run mkdir -p "$repos" || kobito_fail "フォルダを作れません: $repos"
+  kobito_run ln -sfn "$kobito_here" "$link" || kobito_fail "リンクを作れません: $link"
+}
+
+# ---- アプリケーションフォルダ（.app を移すアプリ） ----
+
+# kobito_has_custom_icon <フォルダ>：Finder のカスタムアイコンが付いているか（Icon\r があり、FinderInfo に印がある）。
+kobito_has_custom_icon() {
+  [[ -f $1/$'Icon\r' ]] || return 1
+  local info
+  info=$(xattr -px com.apple.FinderInfo "$1" 2>/dev/null) || return 1
+  info=${info//[[:space:]]/}
+  # FinderInfo の 9 バイトめ（finderFlags の上位）の 0x04 が kHasCustomIcon（0x0400）。
+  [[ ${#info} -ge 18 ]] && (( 0x${info[17,18]} & 0x04 ))
+}
+
+# kobito_applications_folder：アプリケーションフォルダの下の kobito-tools フォルダを用意し、その場所を $kobito_applications に入れる。
+# 無ければ作って、シリーズのアイコンを付ける。あってアイコンが付いていれば、そのまま使う。
+# あるのにアイコンが無い・フォルダでないときは、別のアプリが作ったものとみなして止まる。sudo は使わない。
+# 移すかどうかを尋ねて「はい」のときだけ呼び、.app は "$kobito_applications/<アプリ>.app" に置く。
+# アプリケーションフォルダの直下に残っている古い .app には触らない。テストでは KOBITO_APPLICATIONS_DIR で場所を変えられる。
+kobito_applications_folder() {
+  local parent=${KOBITO_APPLICATIONS_DIR:-/Applications}
+  local folder="$parent/kobito-tools" icon="$kobito_kit_here/assets/kobito-tools-folder-icon.png"
+  kobito_applications=$folder
+  kobito_step "アプリケーションフォルダの kobito-tools フォルダを用意します"
+  if [[ -e $folder || -L $folder ]]; then
+    [[ -d $folder ]] || kobito_fail "$folder はフォルダではありません。別のアプリが置いた物のようです。中を確かめて、名前を変えるか片付けてから、もう一度動かしてください。"
+    kobito_has_custom_icon "$folder" || kobito_fail "$folder は、別のアプリが作ったフォルダのようです（kobito シリーズのアイコンが付いていません）。中を確かめて、名前を変えるか片付けてから、もう一度動かしてください。"
+    kobito_info "$folder: あります"
+    return 0
+  fi
+  [[ -f $icon ]] || kobito_fail "フォルダのアイコンの画像が見つかりません: $icon"
+  [[ -d $parent ]] || kobito_fail "アプリケーションフォルダが見つかりません: $parent"
+  [[ -w $parent ]] || kobito_fail "$parent に書き込めません（管理者の権限が要ります）。この初期設定は sudo を使いません。$parent に書き込める利用者で、もう一度動かしてください。"
+  kobito_run mkdir "$folder" || kobito_fail "フォルダを作れません: $folder"
+  # Xcode が無くても動くよう、macOS に入っている osascript（JavaScript）から NSWorkspace でアイコンを付ける。
+  kobito_info "\$ osascript -l JavaScript …（$icon を $folder のアイコンにする）"
+  if (( kobito_dry_run )); then
+    kobito_info "（--dry-run のため、しません）"
+    return 0
+  fi
+  if ! osascript -l JavaScript -e '
+ObjC.import("AppKit");
+function run(argv) {
+  var image = $.NSImage.alloc.initWithContentsOfFile(argv[0]);
+  if (image.isNil()) throw new Error("画像を読めません: " + argv[0]);
+  if (!$.NSWorkspace.sharedWorkspace.setIconForFileOptions(image, argv[1], 0)) throw new Error("アイコンを付けられません: " + argv[1]);
+}' "$icon" "$folder" >/dev/null || ! kobito_has_custom_icon "$folder"; then
+    # アイコンの無いフォルダを残すと、次から「別のアプリが作った」とみなしてしまうので、空のうちに消す。
+    rm -f -- "$folder/"$'Icon\r'
+    rmdir "$folder" 2>/dev/null
+    kobito_fail "$folder にアイコンを付けられませんでした。"
+  fi
+  kobito_info "$folder を作り、アイコンを付けました。"
 }
 
 # ---- おわり ----

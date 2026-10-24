@@ -1,6 +1,6 @@
 # kobito シリーズの規格（写し）
 
-このフォルダは kobito-workspace の共通部品の中の、シリーズの規格の文書（`kobito_workspace/kit/docs`）と、`setup.sh` が読み込む共通の手順（`kobito_workspace/kit/setup.zsh`）の写しです。**直接書き換えないでください。**
+このフォルダは kobito-workspace の共通部品の中の、シリーズの規格の文書（`kobito_workspace/kit/docs`）と、`setup.sh` が読み込む共通の手順（`kobito_workspace/kit/setup.zsh`）と、それが使う画像（`assets/`）の写しです。**直接書き換えないでください。**
 
 - 写した元の版は `KIT_VERSION.json` にあります。
 - 更新するときは、kobito-workspace で `uv run scripts/vendor_kit.py --docs-only <このフォルダ>` を実行します。
