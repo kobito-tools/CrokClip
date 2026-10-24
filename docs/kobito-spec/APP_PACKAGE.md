@@ -170,7 +170,7 @@ Swift・Tauri などで作り、アプリの形（`.app`）で配るアプリは
 | 起動 | 起動情報④の `command`（`["/usr/bin/open", "-b", "<バンドルID>"]` など）。今までどおり |
 | `--metadata` | `.app` の実行ファイルが同じ引数を受け付けると、そろって見やすい（任意） |
 | 規格の文書 | 共通部品を同梱しないので、規格の文書と `setup.zsh` だけを写して持つ。kobito-workspace で `uv run scripts/vendor_kit.py --docs-only <リポジトリ>/docs/kobito-spec` を動かすと、`docs/kobito-spec/` に写る（`--check --docs-only` で、手で書き換えていないか・元より古いかを確かめられる） |
-| `setup.sh` | `docs/kobito-spec/setup.zsh` を読み込み、自分の手順（ビルドなど）を足す。`kobito_link_repository` で `repos/` へのリンクも作る（[SETUP.md](SETUP.md)） |
+| `setup.sh` | `docs/kobito-spec/setup.zsh` を読み込み、自分の手順（ビルドなど）を足す。ビルドの前に `kobito_check_repository` でアプリIDのかぶりを確かめ、起動情報のあとに `kobito_link_repository` で `repos/` へのリンクを作る（[SETUP.md](SETUP.md)） |
 | アプリケーションフォルダ | `.app` を移すときは、`/Applications` の直下ではなく `/Applications/kobito-tools/` の下に置く（`kobito_applications_folder`。[SETUP.md §1](SETUP.md)） |
 | アイコン | Python のアプリと同じく `kobito/icon.svg`・`kobito/icon-1024.png`。`.app` のアイコン（`.icns`）は、ここから作る |
 | テスト | 自分の言語のやり方でよい（`swift test`・`cargo test` など） |
@@ -260,12 +260,12 @@ class TemporaryTestCase(IsolatedTestCase):
 
 | # | すること |
 |---|---|
-| 1 | kobito-workspace で `uv run scripts/vendor_kit.py <アプリのパッケージ>` を動かし、共通部品 0.6.0 を写し直す（ネイティブのアプリは `--docs-only <リポジトリ>/docs/kobito-spec`） |
+| 1 | kobito-workspace で `uv run scripts/vendor_kit.py <アプリのパッケージ>` を動かし、共通部品 0.6.1 を写し直す（ネイティブのアプリは `--docs-only <リポジトリ>/docs/kobito-spec`） |
 | 2 | `kobito/` を作り、アイコンを `kobito/icon.svg`・`kobito/icon-1024.png` に移す（`assets/icon.svg`・`web/icon.svg` などから）。紹介のカードの画像があれば `kobito/screenshot.png` |
 | 3 | 起動情報④の `icon` を `package.icon_record(<リポジトリ>, <1文字>)` にする |
 | 4 | `kobito-app.json` に `package: 1`・`version`・`tagline`・`tagline_en` を足す |
 | 5 | `<アプリ名>-Setup.command` を `git mv` で `Setup.command` にする（100755 のまま） |
-| 6 | `setup.sh` を、`setup.zsh` を読み込む短い形にする（[SETUP.md](SETUP.md) の見本）。自分だけの手順（常駐の登録など）は残す。Python のアプリは `kobito_python_app` が `repos/` へのリンクも作る。ネイティブのアプリは `kobito_link_repository` を呼び、`.app` を移すときは `kobito_applications_folder` で用意した `/Applications/kobito-tools/` の下に置く（共通部品 0.6.0 から） |
+| 6 | `setup.sh` を、`setup.zsh` を読み込む短い形にする（[SETUP.md](SETUP.md) の見本）。自分だけの手順（常駐の登録など）は残す。Python のアプリは `kobito_python_app` が `repos/` へのリンクも作る。ネイティブのアプリは、ビルドと起動情報より前に `kobito_check_repository` を、起動情報のあとに `kobito_link_repository` を呼び、`.app` を移すときは `kobito_applications_folder` で用意した `/Applications/kobito-tools/` の下に置く（共通部品 0.6.1 から） |
 | 7 | `scripts/dev_server.py` をやめ、`cli.run(…, dev=…)` に開発用の起動を渡す（`launch.py --dev`） |
 | 8 | テストを `tests/test_*.py` にそろえ、`uv run python -m unittest discover -s tests -t tests` で全部動くようにする。土台は `kit.testing.IsolatedTestCase` |
 | 9 | README の起動・テストのしかたを直す |

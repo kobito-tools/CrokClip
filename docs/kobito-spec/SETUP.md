@@ -36,6 +36,7 @@ kobito シリーズの各アプリを、新しい PC で使える状態にする
 
 | # | すること | 既定（`--yes`） |
 |---|---|---|
+| 0 | アプリIDが、別の場所のリポジトリとかぶっていないかを確かめる（`repos/<アプリID>` を読むだけ）。かぶっていれば、何も変えずに止まる | — |
 | 1 | 必要な道具があるかを確かめる。無ければ入れ方を表示する | — |
 | 2 | 足りない道具のうち、公式の手順で入れられるもの（uv・Rust）は、入れるかを尋ねる | 入れる |
 | 3 | 動かす準備をする（Python のアプリは `uv sync`、ネイティブのアプリはビルド） | — |
@@ -69,8 +70,10 @@ kobito シリーズの各アプリを、新しい PC で使える状態にする
 | 無い | リンクを作る |
 | このリポジトリを指すリンク | 何もしない |
 | 先が無いリンク・同じ ID を名乗らないフォルダを指すリンク | このリポジトリへ張り替える |
-| 別の場所の、同じ ID を名乗るリポジトリを指すリンク | 張り替えずに知らせる（どちらかを勝手に選ばない。[CONTRACTS.md「ID がかぶったとき」](CONTRACTS.md#id-がかぶったとき)）。`setup.sh` は続ける |
+| 別の場所の、同じ ID を名乗るリポジトリを指すリンク | どちらかを勝手に選ばず、知らせて止まる（終了コード 1。[CONTRACTS.md「ID がかぶったとき」](CONTRACTS.md#id-がかぶったとき)）。直し方の案（使い続けるほうを決め、もう片方を片付けるか、リンクを消す）を表示する |
 | リンクでない物 | 触らずに知らせる。`setup.sh` は続ける |
+
+かぶりは、`uv sync`・ビルド・起動情報の書き出しより**前に**確かめます（手順 0、`kobito_check_repository`）。あとで確かめると、起動情報だけがこのリポジトリに書き換わり、`repos/` は元のリポジトリのままで食い違うためです。`--dry-run` でも確かめます（読むだけなので）。
 
 ### アプリケーションフォルダへ移すとき
 
@@ -107,7 +110,7 @@ workspace の「見つかったアプリ」から登録するときは、workspa
 source "${0:A:h}/sample_app/kobito_kit/setup.zsh" || exit 1
 kobito_steps+=("ログインしたときに起動するかを尋ねる（--yes では登録しない）")   # 使い方に出す、このアプリだけの手順
 kobito_setup "Sample" "$@"       # 引数を読み、macOS かを確かめ、リポジトリの直下に移る
-kobito_python_app                # 1〜5：uv を確かめる（無ければ入れるかを尋ねる）・uv sync・launch.py --write-launch-info・repos/ へのリンク
+kobito_python_app                # 0〜5：アプリIDのかぶりを確かめる・uv を確かめる（無ければ入れるかを尋ねる）・uv sync・launch.py --write-launch-info・repos/ へのリンク
 kobito_step "ログインしたときの起動"
 if kobito_ask "ログインしたときに起動しますか？" n; then
   kobito_run launchctl bootstrap "gui/$UID" "$HOME/Library/LaunchAgents/com.example.sample.plist"
@@ -125,6 +128,7 @@ source "${0:A:h}/docs/kobito-spec/setup.zsh" || exit 1
 kobito_steps=("Xcode Command Line Tools があるかを確かめる" "Swift でビルドする" "起動情報を書き出す"
               "このリポジトリの場所を PC 固有領域の repos/ に記す（シンボリックリンク）" "アプリケーションフォルダの kobito-tools フォルダへ移すかを尋ねる")
 kobito_setup "Sample Native" "$@"
+kobito_check_repository          # 0：アプリIDのかぶりを確かめる。ビルド・起動情報より前に呼ぶ（かぶっていれば何も変えずに止まる）
 kobito_step "必要な道具を確かめます"
 kobito_need xcrun "ターミナルで xcode-select --install を実行して入れてから、もう一度動かしてください。"
 kobito_step "ビルドします"
@@ -139,7 +143,7 @@ if kobito_ask "/Applications/kobito-tools へ移しますか？" n; then
 fi
 kobito_step "起動情報を書き出します"            # .app の場所を含むので、移したあとに書く
 kobito_run "$app/Contents/MacOS/SampleNative" --write-launch-info || kobito_fail "起動情報を書き出せませんでした。"
-kobito_link_repository           # repos/<アプリID> に、このリポジトリへのリンクを作る
+kobito_link_repository           # repos/<アプリID> に、このリポジトリへのリンクを作る（起動情報のあと）
 kobito_finish "open \"$app\""
 ```
 
@@ -156,8 +160,9 @@ kobito_finish "open \"$app\""
 | `kobito_run <コマンド…>` | 動かすコマンドを表示して動かす。`--dry-run` なら表示するだけ |
 | `kobito_need <コマンド> <入れ方>` | 無ければ入れ方を出して止まる（sudo が要る道具の案内に使う） |
 | `kobito_ensure_uv`・`kobito_uv_sync`・`kobito_write_launch_info` | uv の確かめ（`$KOBITO_UV`）・`uv sync`・`uv run launch.py --write-launch-info` |
+| `kobito_check_repository` | `kobito-app.json` の `app` を読み（`$kobito_app_id`）、`repos/<アプリID>` が別の場所の同じ ID のリポジトリを指していれば、直し方の案を出して終了コード 1 で止まる。読むだけ。起動情報を書く前に呼ぶ（`kobito_python_app` は最初に呼ぶ） |
 | `kobito_link_repository` | `kobito-app.json` の `app` を読み、PC 固有領域の `repos/<アプリID>` にこのリポジトリへのシンボリックリンクを作る（§1「リポジトリの場所」）。`--dry-run` なら表示するだけ。PC 固有領域は `KOBITO_CONFIG_DIR` で変えられる（テスト用） |
-| `kobito_python_app` | 上の4つ（uv の確かめ・`uv sync`・起動情報・`repos/` へのリンク）をまとめて行う |
+| `kobito_python_app` | かぶりの確かめ・uv の確かめ・`uv sync`・起動情報・`repos/` へのリンクを、この順にまとめて行う |
 | `kobito_applications_folder` | アプリケーションフォルダの `kobito-tools` フォルダを用意し、場所を `$kobito_applications` に入れる（§1「アプリケーションフォルダへ移すとき」）。移すと答えたときだけ呼ぶ。アプリケーションフォルダは `KOBITO_APPLICATIONS_DIR`（既定 `/Applications`）で変えられる（テスト用） |
 | `kobito_finish [行…]` | 起動のしかたを表示して、終了コード 0 で終わる。行を渡さなければ `uv run launch.py` を出す |
 | `$kobito_yes`・`$kobito_dry_run`・`$kobito_here` | 引数の状態と、リポジトリの場所 |
