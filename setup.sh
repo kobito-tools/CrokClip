@@ -11,6 +11,7 @@ EXEC_NAME="CorkClip"
 APPLICATIONS_DIR="${KOBITO_APPLICATIONS_DIR:-/Applications}"
 
 kobito_steps=(
+  "同じアプリIDのリポジトリが別の場所に記されていないかを確かめる（あれば何も変えずに止まる）"
   "Xcode Command Line Tools があるかを確かめる（無ければ入れ方を表示して止まる）"
   "$APP_NAME.app をビルドする"
   "アプリケーションフォルダの kobito-tools フォルダへ移すかを尋ねる（--yes では移さない）"
@@ -19,6 +20,8 @@ kobito_steps=(
   "許可（アクセシビリティ・入力監視）の案内を表示する"
 )
 kobito_setup "$APP_NAME" "$@"
+# 同じアプリIDのリポジトリが別の場所に記されていれば、ビルドや起動情報の書き出しより前に、何も変えずに止まる。
+kobito_check_repository
 
 kobito_step "必要な道具を確かめます"
 if ! xcode-select -p >/dev/null 2>&1 || ! xcrun --find swiftc >/dev/null 2>&1; then
