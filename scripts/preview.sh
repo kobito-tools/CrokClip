@@ -15,5 +15,5 @@ if ! xcrun swiftc -o "$work/preview" $sources scripts/preview/main.swift \
 fi
 # 数式を描く KaTeX は、実行ファイルの隣（Bundle.main の resourceURL）から読む。
 cp -R Resources/katex "$work/katex"
-export KOBITO_CONFIG_DIR="$work/kobito-tools" KOBITO_SHARE_DIR="$work/kobito-share"
+export KOBITO_CONFIG_DIR="$work/kobito-tools"
 "$work/preview" "$work" schema "$out"
