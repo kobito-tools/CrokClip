@@ -16,7 +16,7 @@ python3 scripts/make-images.py             # 絵を描き直す（アイコン�
 ./scripts/demo.sh [コマ/秒]                # README のデモ（docs/images/demo.gif）を作り直す（Google Chrome・Node.js 22 以降・ffmpeg を使う）
 ```
 
-版番号は `build.sh` の `VERSION` で指定し、`kobito-app.json` の `version` も同じにします（`tests/run.sh` が確かめます）。ソースから使う人向けの入口は `setup.sh` です（同じアプリIDのリポジトリが別の場所に記されていないかの確かめ・ビルド・アプリケーションフォルダの `kobito-tools` フォルダへ移すかの確認・起動情報の書き出し・PC 固有領域の `repos/corkclip` へのリンク・許可と起動の案内。`--yes`・`--dry-run`・`--help` を受け付けます）。引数の読み方・表示・尋ね方は、シリーズ共通の `docs/kobito-spec/setup.zsh` を読み込んで使います。`Setup.command` は `setup.sh` を Finder から動かすための入口です。移すと答えたときだけ、`/Applications/kobito-tools` を用意します（無ければ作ってアイコンを付ける。アイコンの無い同名のフォルダがあれば、別のアプリの物とみなして止まる）。`/Applications` の直下の古い `CorkClip.app` には触りません（残っていれば知らせるだけ）。試すときは `KOBITO_APPLICATIONS_DIR`・`KOBITO_CONFIG_DIR`・`KOBITO_SHARE_DIR` に一時フォルダを指すと、実際のアプリケーションフォルダと PC 固有領域に触れません。
+版番号は `build.sh` の `VERSION` で指定し、`kobito-app.json` の `version` も同じにします（`tests/run.sh` が確かめます）。ソースから使う人向けの入口は `setup.sh` です（同じアプリIDのリポジトリが別の場所に記されていないかの確かめ・ビルド・アプリケーションフォルダの `kobito-tools` フォルダへ移すかの確認・起動情報の書き出し・PC 固有領域の `repos/corkclip` へのリンク・許可と起動の案内。`--yes`・`--dry-run`・`--help` を受け付けます）。引数の読み方・表示・尋ね方は、シリーズ共通の `docs/kobito-spec/setup.zsh` を読み込んで使います。`Setup.command` は `setup.sh` を Finder から動かすための入口です。移すと答えたときだけ、`/Applications/kobito-tools` を用意します（無ければ作ってアイコンを付ける。アイコンの無い同名のフォルダがあれば、別のアプリの物とみなして止まる）。`/Applications` の直下の古い `CorkClip.app` には触りません（残っていれば知らせるだけ）。試すときは `KOBITO_APPLICATIONS_DIR`・`KOBITO_CONFIG_DIR` に一時フォルダを指すと、実際のアプリケーションフォルダと PC 固有領域に触れません。
 
 ### 絵とアイコン
 
