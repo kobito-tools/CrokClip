@@ -3,7 +3,7 @@ import Foundation
 /// kobito シリーズの約束（docs/kobito-spec/CONTRACTS.md）のうち、PC 固有領域に置くもの。
 ///
 ///   ~/Library/Application Support/kobito-tools/
-///     apps/<アプリID>.json   ④ 起動情報（自分の分を起動のたびに書き、ほかの分は「送る」の送り先を作るのに読む）
+///     apps/<アプリID>.json   ④ 起動情報（自分の分を起動のたびに書く。ほかのアプリの分は読まない）
 ///     datasets.json          ⑥ 基準パスの履歴（基準パスの候補にし、開いたら自分の1件を書く）
 ///
 /// テストでは実際の設定に触れないよう、環境変数 KOBITO_CONFIG_DIR で場所を変えられる（シリーズ共通の決まり）。
@@ -70,24 +70,6 @@ enum Series {
 
     // MARK: - ④ 起動情報
 
-    /// 受け渡しの口（receive）の1つ。
-    struct Receive: Equatable {
-        let id: String
-        let label: String
-        let accepts: Set<String>
-        let url: String
-    }
-
-    /// 起動情報1件（読む側で使う項目だけ）。
-    struct LaunchInfo: Equatable {
-        let app: String
-        let name: String
-        let command: [String]
-        let receive: [Receive]
-    }
-
-    static let shareKinds: Set<String> = ["text", "image", "file"]
-
     /// 見せ方（④「見せ方と操作」）。色はシリーズの配色の名前から選ぶ。
     static let appNameEnglish = "CorkClip"
     static let color = "teal"
@@ -131,31 +113,6 @@ enum Series {
                                               options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
         data.append(0x0a)
         return data
-    }
-
-    /// 起動情報を確かめる。必須の項目が欠けていれば nil。形の合わない口だけを捨てる。
-    static func launchInfo(_ object: [String: Any]) -> LaunchInfo? {
-        guard let app = object["app"] as? String, app.range(of: "^[a-z][a-z0-9-]{0,39}$", options: .regularExpression) != nil,
-              let name = object["name"] as? String, !name.isEmpty,
-              let command = object["command"] as? [String], !command.isEmpty, command.allSatisfy({ !$0.isEmpty }) else { return nil }
-        let receive = (object["receive"] as? [Any] ?? []).compactMap { item -> Receive? in
-            guard let item = item as? [String: Any], let id = item["id"] as? String, !id.isEmpty,
-                  let label = item["label"] as? String, !label.isEmpty,
-                  let accepts = item["accepts"] as? [Any], let url = item["url"] as? String,
-                  url.hasPrefix("kobito://"), url.contains("{file}") else { return nil }
-            let kinds = Set(accepts.compactMap { $0 as? String }).intersection(shareKinds)
-            return kinds.isEmpty ? nil : Receive(id: id, label: label, accepts: kinds, url: url)
-        }
-        return LaunchInfo(app: app, name: name, command: command, receive: receive)
-    }
-
-    /// このMacのすべての起動情報。ファイル名とアプリIDが合わないもの・読めないものは捨てる。
-    static func launchInfos() -> [LaunchInfo] {
-        let files = (try? FileManager.default.contentsOfDirectory(at: appsDirectory, includingPropertiesForKeys: nil)) ?? []
-        return files.filter { $0.pathExtension == "json" }.sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { file in
-            guard let info = readJSON(file).flatMap(launchInfo), info.app == file.deletingPathExtension().lastPathComponent else { return nil }
-            return info
-        }
     }
 
     // MARK: - 受け付ける URL

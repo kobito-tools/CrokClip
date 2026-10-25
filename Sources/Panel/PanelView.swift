@@ -455,7 +455,6 @@ private struct FooterHints: View {
     private var items: [(String, String)] {
         switch model.mode {
         case .list: return []
-        case .actions: return [("英字", "そのキーの操作"), ("⏎", "選んだ操作"), ("esc", "戻る")]
         case .tags: return [("⏎", "付ける（無ければ作る）"), ("↑↓", "候補"), ("⌫", "最後のタグを外す"), ("esc", "戻る")]
         case .edit: return [("⌘⏎", "貼る"), ("⇧⌘⏎", "コピーだけ"), ("esc", "戻る")]
         case .transform:

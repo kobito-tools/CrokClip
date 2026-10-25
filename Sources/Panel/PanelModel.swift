@@ -4,7 +4,7 @@ import SwiftUI
 
 /// パネルの上部に出す作業の画面。list のときはプレビュー。
 enum PanelMode: Equatable {
-    case list, actions, tags, edit, transform, merge, latex, snippet, help
+    case list, tags, edit, transform, merge, latex, snippet, help
 }
 
 /// パネルから本体（AppDelegate）に頼む操作。
@@ -15,8 +15,8 @@ enum PanelCommand {
     case pasteLatex(LatexImage, copyOnly: Bool)
     /// カードに残す（F-17）。
     case keep([Int])
-    /// 送る（F-16）。送り先は Share.targets から選んだもの。
-    case share([Int], Share.Target)
+    /// カードから外す（F-17）。
+    case unkeep([Int])
     case pushToStack([Int])
     case tagsChanged([Int])
     case openSettings
@@ -97,10 +97,6 @@ final class PanelModel: ObservableObject {
 
     // 操作の一覧（→・⌘K・右クリック）
     @Published private(set) var actions: [PanelAction] = []
-    /// 操作の一覧の見出し（nil ならふつうの「この項目にできること」）。
-    @Published private(set) var actionsTitle: String?
-    /// 選んだ項目を受け取れる送り先（本体が起動情報から作る）。
-    var shareTargets: ([Int]) -> [Share.Target] = { _ in [] }
     @Published var actionIndex = 0
     /// → で開く画面で、いま動かしている一覧。
     @Published var moreFocus: MoreFocus = .transforms
@@ -600,7 +596,6 @@ final class PanelModel: ObservableObject {
         let ids = targets
         guard !ids.isEmpty else { NSSound.beep(); return }
         actions = actionItems(for: ids)
-        actionsTitle = nil
         actionIndex = 0
         // 変換は1件だけ選んでいるときに使う。
         transformEntries = ids.count == 1 ? availableTransforms() : []
@@ -636,7 +631,7 @@ final class PanelModel: ObservableObject {
     }
 
     /// 項目にできること。右クリックのメニューにも同じ物を出す（そのときは、その行を選んでから行う）。
-    /// コピーだけ・送る・Quick Look・新しい定型文・キーの一覧は、並べずにショートカット（⌘⏎・⇧⌘N・⌘Y・⌘N・⌘/）で使う。
+    /// コピーだけ・Quick Look・新しい定型文・キーの一覧は、並べずにショートカット（⌘⏎・⌘Y・⌘N・⌘/）で使う。
     func actionItems(for ids: [Int]) -> [PanelAction] {
         guard let first = ids.first else { return [] }
         let clip = (pins + clips).first { $0.id == first }
@@ -656,36 +651,11 @@ final class PanelModel: ObservableObject {
         if single { add("latex", "l", clip?.kind == .formula ? "数式を開き直す" : "数式画像を作る", "function", "⌘L") { [unowned self] in beginLatex() } }
         add("stack", "k", "ペーストスタックに積む", "square.stack", nil) { [unowned self] in onCommand(.pushToStack(ids)) }
         if settings().keepCards { add("keep", "s", "カードに残す", "calendar.badge.plus", "⌘S") { [unowned self] in endMode(); onCommand(.keep(ids)) } }
+        if settings().keepCards, ids.contains(where: { (try? store.exportedAt($0)) != nil }) {
+            add("unkeep", "u", "カードから外す", "calendar.badge.minus", nil) { [unowned self] in endMode(); onCommand(.unkeep(ids)) }
+        }
         add("delete", "d", ids.count > 1 ? "\(ids.count)件を履歴から削除" : "履歴から削除", "trash", "⌘⌫") { [unowned self] in endMode(); delete(ids) }
         return items
-    }
-
-    // MARK: - 送る（F-16）
-
-    static let noShareTargets = "送り先のアプリがありません。kobito シリーズについては https://github.com/kobito-tools を参照してください"
-
-    /// ⇧⌘N：送り先の一覧を出す（1〜9 で選ぶ）。
-    func beginShare() {
-        let ids = targets
-        guard !ids.isEmpty else { NSSound.beep(); return }
-        let found = shareTargets(ids)
-        guard !found.isEmpty else { endMode(); show(Self.noShareTargets); return }
-        actions = found.enumerated().map { index, target in
-            PanelAction(id: "share-\(target.key)", key: index < 9 ? Character("\(index + 1)") : "·", label: target.title, symbol: "paperplane",
-                        shortcut: target.key == settings().lastShareTarget ? "⌥⇧⌘N" : nil) { [weak self] in self?.onCommand(.share(ids, target)) }
-        }
-        actionsTitle = ids.count > 1 ? "\(ids.count)件をどこへ送るか" : "どこへ送るか"
-        actionIndex = max(found.firstIndex { $0.key == settings().lastShareTarget } ?? 0, 0)
-        mode = .actions
-        requestFocus(nil)
-    }
-
-    /// ⌥⇧⌘N：最後に使った送り先へ、一覧を出さずに送る。まだ無い・今は使えないなら一覧を出す。
-    func shareToLast() {
-        let ids = targets
-        guard !ids.isEmpty else { NSSound.beep(); return }
-        if let last = settings().lastShareTarget, let target = shareTargets(ids).first(where: { $0.key == last }) { onCommand(.share(ids, target)) }
-        else { beginShare() }
     }
 
     // MARK: - タグ（F-04）

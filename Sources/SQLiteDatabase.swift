@@ -22,7 +22,8 @@ final class SQLiteDatabase {
             throw DatabaseError(message: "データベースを開けませんでした: \(message)")
         }
         let synchronous = journal == .wal ? "NORMAL" : "FULL"
-        try exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA journal_mode = \(journal.rawValue); PRAGMA synchronous = \(synchronous);")
+        // secure_delete：消した行の中身を空き領域に残さず、0 で上書きする（消したパスワードなどがファイルに残らないように）。
+        try exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA secure_delete = ON; PRAGMA journal_mode = \(journal.rawValue); PRAGMA synchronous = \(synchronous);")
     }
 
     deinit { sqlite3_close_v2(handle) }
@@ -104,6 +105,9 @@ final class SQLiteDatabase {
         guard sqlite3_step(statement) == SQLITE_DONE else { throw DatabaseError(message: lastError) }
         return Int(sqlite3_changes(handle))
     }
+
+    /// WAL の中身を本体に書き戻し、WAL を空にする（消した行の古い中身を WAL に残さない）。
+    func checkpoint() { try? exec("PRAGMA wal_checkpoint(TRUNCATE)") }
 
     func transaction<T>(_ body: () throws -> T) throws -> T {
         try exec("BEGIN IMMEDIATE")
