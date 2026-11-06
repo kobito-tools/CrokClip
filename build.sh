@@ -28,7 +28,7 @@ iconutil -c icns "$BUILD_DIR/AppIcon.iconset" -o "$CONTENTS/Resources/AppIcon.ic
 # 起動情報（④）の icon.file が指すアイコンの元。リポジトリと同じ kobito/icon.svg の形で入れる（約束で 256 KB まで）。
 mkdir -p "$CONTENTS/Resources/kobito"
 cp kobito/icon.svg "$CONTENTS/Resources/kobito/icon.svg"
-(( $(stat -f %z kobito/icon.svg) <= 262144 )) || { echo "kobito/icon.svg が 256 KB を超えています" >&2; exit 1; }
+(( $(stat -f %z kobito/icon.svg) <= 262144 )) || { echo "kobito/icon.svg is larger than 256 KB" >&2; exit 1; }
 
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
