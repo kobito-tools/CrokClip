@@ -4,6 +4,6 @@ cd "${0:A:h}" || exit 1
 zsh ./setup.sh "$@"
 result=$?
 print
-read -rs "?Enter キーを押すと閉じます。"
+read -rs "?Press Enter to close."
 print
 exit $result
