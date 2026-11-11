@@ -10,13 +10,12 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 ./build.sh                                 # フォルダ直下に CorkClip.app（ユニバーサルバイナリ）を作成
 ./tests/run.sh                             # 取得から書き戻し・検索・タグ・変換・文字認識・数式・シリーズの約束（起動情報・カード・目印）までのテスト
 ./scripts/preview.sh [書き出す先]          # パネル・設定の画面・メニューバーのアイコンを、アプリを起動せずに PNG に書き出す（既定 .build/preview）
-./scripts/package-release.sh               # Releases 用の dist/CorkClip_<版>.dmg と dist/CorkClip_<版>_universal.zip を作成
-python3 scripts/make-images.py             # 絵を描き直す（アイコン・パネルの小人・dmg の背景。SVG と PNG を書き出す）
+python3 scripts/make-images.py             # 絵を描き直す（アイコン・パネルの小人。SVG と PNG を書き出す）
 ./scripts/social-preview.sh <フォント>     # GitHub の紹介画像（assets/social-preview.png）を作り直す（Google Chrome と Noto Sans JP を使う）
 ./scripts/demo.sh [コマ/秒]                # README のデモ（docs/images/demo.gif）を作り直す（Google Chrome・Node.js 22 以降・ffmpeg を使う）
 ```
 
-版番号は `build.sh` の `VERSION` で指定し、`kobito-app.json` の `version` も同じにします（`tests/run.sh` が確かめます）。ソースから使う人向けの入口は `setup.sh` です（同じアプリIDのリポジトリが別の場所に記されていないかの確かめ・ビルド・アプリケーションフォルダの `kobito-tools` フォルダへ移すかの確認・起動情報の書き出し・PC 固有領域の `repos/corkclip` へのリンク・許可と起動の案内。`--yes`・`--dry-run`・`--help` を受け付けます）。引数の読み方・表示・尋ね方は、シリーズ共通の `docs/kobito-spec/setup.zsh` を読み込んで使います。`Setup.command` は `setup.sh` を Finder から動かすための入口です。移すと答えたときだけ、`/Applications/kobito-tools` を用意します（無ければ作ってアイコンを付ける。アイコンの無い同名のフォルダがあれば、別のアプリの物とみなして止まる）。`/Applications` の直下の古い `CorkClip.app` には触りません（残っていれば知らせるだけ）。試すときは `KOBITO_APPLICATIONS_DIR`・`KOBITO_CONFIG_DIR` に一時フォルダを指すと、実際のアプリケーションフォルダと PC 固有領域に触れません。
+版番号は `build.sh` の `VERSION` で指定し、`kobito-app.json` の `version` も同じにします（`tests/run.sh` が確かめます）。ソースから使う人向けの入口は `setup.sh` です（同じアプリIDのリポジトリが別の場所に記されていないかの確かめ・ビルド・アプリケーションフォルダの `kobito-tools` フォルダへ移すかの確認・起動情報の書き出し・PC 固有領域の `repos/corkclip` へのリンク・許可と起動の案内。`--yes`・`--dry-run`・`--help` を受け付けます）。引数の読み方・表示・尋ね方は、シリーズ共通の `docs/kobito-spec/setup.zsh` を読み込んで使います。入れ方は「ソースを入手して `./setup.sh` を実行する」形だけで、Releases でビルドしたもの（dmg・zip）は配りません。移すと答えたときだけ、`/Applications/kobito-tools` を用意します（無ければ作ってアイコンを付ける。アイコンの無い同名のフォルダがあれば、別のアプリの物とみなして止まる）。`/Applications` の直下の古い `CorkClip.app` には触りません（残っていれば知らせるだけ）。試すときは `KOBITO_APPLICATIONS_DIR`・`KOBITO_CONFIG_DIR` に一時フォルダを指すと、実際のアプリケーションフォルダと PC 固有領域に触れません。
 
 ### 絵とアイコン
 
@@ -24,12 +23,9 @@ python3 scripts/make-images.py             # 絵を描き直す（アイコン�
 |---|---|
 | `kobito/icon.svg`・`kobito/icon-1024.png` | アイコンの元と、その 1024px の書き出し（シリーズの決まった場所）。`build.sh` が、`.app` のアイコン（`AppIcon.icns`）を `icon-1024.png` から作り、`icon.svg` を `.app` の `Contents/Resources/kobito/icon.svg` に入れる |
 | `assets/kobito-cling.svg` → `Resources/kobito-cling.png` | パネルの縁にしがみつく小人 |
-| `assets/dmg/` | dmg を開いたときの背景（`background.svg` と、その PNG・2倍の PNG） |
 | `assets/social-preview.png` | GitHub のリポジトリの紹介画像（1280×640） |
 
-`scripts/make-images.py` が、アイコン・小人・dmg の背景の SVG を描き、`scripts/render-svg.swift`（macOS の SVG 描画）で PNG にします。
-
-`package-release.sh` の dmg は、アプリ・Applications へのリンク・背景（`assets/dmg/`）を置き、窓の並べ方を Finder に頼んでから圧縮します。初回は「Finder を操作する許可」を求められることがあります。許可しないと、背景なし（並べ方なし）の dmg になります。
+`scripts/make-images.py` が、アイコン・小人の SVG を描き、`scripts/render-svg.swift`（macOS の SVG 描画）で PNG にします。
 
 `tests/run.sh` は名前付きの NSPasteboard と一時フォルダを使い、`KOBITO_CONFIG_DIR` も一時フォルダに向けるので、実際のクリップボード・履歴・基準パス・シリーズの設定には触れません。数式のテストは同梱の KaTeX を画面外の WKWebView で動かします。`scripts/preview.sh` も同じく一時フォルダに見本の履歴を作り、画面外のウィンドウで描いて書き出すので、`CorkClip.app` を起動せずに見た目を確かめられます。
 
@@ -63,10 +59,10 @@ python3 scripts/make-images.py             # 絵を描き直す（アイコン�
 | `schema/` | 履歴のDBの作成と更新（ファイル名順に、まだの物だけ適用） |
 | `schema/kept/` | 基準パスの、カードに残したクリップのDBの作成と更新 |
 | `kobito-app.json`・`kobito/` | kobito シリーズの目印とアイコン（下の「目印と名乗り」） |
-| `setup.sh`・`Setup.command` | 初期設定と、それを Finder から動かす入口 |
+| `setup.sh` | 初期設定（入れ方はこれだけ） |
 | `docs/kobito-spec/` | シリーズの規格の文書と共通の手順 `setup.zsh` の写し（手で書き換えない） |
 | `tests/` | `run.sh` とハーネス（`harness/main.swift`） |
-| `scripts/` | 見た目を書き出す `preview.sh`（`preview/main.swift`）、配る物・絵・デモを作る道具（上の「ビルド」） |
+| `scripts/` | 見た目を書き出す `preview.sh`（`preview/main.swift`）、絵・デモを作る道具（上の「ビルド」） |
 
 ## 保存の仕組み
 
