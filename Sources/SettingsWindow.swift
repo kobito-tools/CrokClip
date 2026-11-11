@@ -95,6 +95,10 @@ struct SettingsView: View {
     private var general: some View {
         Form {
             Section {
+                Text("CorkClip は Dock には出ず、メニューバーのコルクボードのアイコンにいます。コピーした物は \(model.settings.openPanelHotKey.display) で呼び出せます。この画面は、アイコンの「設定…」でまた開けます。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section {
                 PermissionRow(title: "アクセシビリティ", detail: "選んだ項目を、元のアプリに貼り付けるのに使います（⌘V を送ります）。無いときは、クリップボードに戻すだけになります。",
                               granted: { Paster.isTrusted(prompt: false) }) { Paster.openAccessibilitySettings() }
                 PermissionRow(title: "入力監視", detail: "ペーストスタックで、⌘V が押されたことだけを見て次の項目に入れ替えるのに使います。スタックを使わなければいりません。",
