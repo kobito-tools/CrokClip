@@ -45,6 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var cleanupTimer: Timer?
     private var pendingURLs: [URL] = []
     private var launched = false
+    /// ログイン時の自動起動か（そのときは起動しても設定画面を出さない）。
+    private var launchedAsLoginItem = false
     private var ocrRunning = false
     /// 保存・整理・タグの同期・書き出しは裏の1本のキューで順に行う。
     private let storeQueue = DispatchQueue(label: "io.github.kobito-tools.corkclip.store", qos: .utility)
@@ -57,9 +59,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSAppleEventManager.shared().setEventHandler(self, andSelector: #selector(handleGetURL(_:withReply:)),
                                                      forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL))
+        launchedAsLoginItem = LaunchKind.isLoginItemLaunch(NSAppleEventManager.shared().currentAppleEvent)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if LaunchKind.isLoginItemLaunch(NSAppleEventManager.shared().currentAppleEvent) { launchedAsLoginItem = true }
         let directory = ClipStore.defaultDirectory
         settingsURL = directory.appendingPathComponent("settings.json")
         settings = Settings.load(from: settingsURL)
@@ -113,8 +117,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refreshCards()
 
         launched = true
+        // 手で開いたときは設定画面を出す（メニューバーに常駐するだけでは、起動したことに気づきにくい）。
+        if LaunchKind.shouldOpenSettingsOnLaunch(launchedAsLoginItem: launchedAsLoginItem, hasPendingURL: !pendingURLs.isEmpty) { openSettings() }
         pendingURLs.forEach(handle)
         pendingURLs.removeAll()
+    }
+
+    /// 起動したまま、Finder や Spotlight からもう一度開かれたときも、設定画面を出す。
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if launched { openSettings() }
+        return false
     }
 
     // MARK: - 取得したコピー
