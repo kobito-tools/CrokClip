@@ -100,6 +100,8 @@ workspace の「見つかったアプリ」から登録するときは、workspa
 
 ## 3. 共通の手順 `setup.zsh`
 
+画面（ターミナル）に出す文言は、すべて英語にします（共通部品 0.6.2 から）。各アプリの `setup.sh` が足す手順・問い・案内も英語で書きます。コメントは日本語のままでかまいません。
+
 `--yes`・`--dry-run`・`--help` の読み方、表示、尋ね方、uv を確かめて入れる、`uv sync`、起動情報の書き出しは、どのアプリも同じです。これを共通部品の `setup.zsh` にまとめました。各アプリの `setup.sh` は、これを読み込んで、自分だけの手順を足すだけにします。
 
 ### Python のアプリの `setup.sh` の見本
@@ -108,11 +110,11 @@ workspace の「見つかったアプリ」から登録するときは、workspa
 #!/bin/zsh
 # Sample を、この PC で使える状態にする（macOS だけ）。決まりは sample_app/kobito_kit/docs/SETUP.md。
 source "${0:A:h}/sample_app/kobito_kit/setup.zsh" || exit 1
-kobito_steps+=("ログインしたときに起動するかを尋ねる（--yes では登録しない）")   # 使い方に出す、このアプリだけの手順
+kobito_steps+=("Ask whether to start at login (--yes does not register it)")   # 使い方に出す、このアプリだけの手順
 kobito_setup "Sample" "$@"       # 引数を読み、macOS かを確かめ、リポジトリの直下に移る
 kobito_python_app                # 0〜5：アプリIDのかぶりを確かめる・uv を確かめる（無ければ入れるかを尋ねる）・uv sync・launch.py --write-launch-info・repos/ へのリンク
-kobito_step "ログインしたときの起動"
-if kobito_ask "ログインしたときに起動しますか？" n; then
+kobito_step "Start at login"
+if kobito_ask "Start Sample when you log in?" n; then
   kobito_run launchctl bootstrap "gui/$UID" "$HOME/Library/LaunchAgents/com.example.sample.plist"
 fi
 kobito_finish                    # 起動のしかた（cd … と uv run launch.py）を表示して、終了コード 0 で終わる
@@ -125,24 +127,24 @@ kobito_finish                    # 起動のしかた（cd … と uv run launch
 ```zsh
 #!/bin/zsh
 source "${0:A:h}/docs/kobito-spec/setup.zsh" || exit 1
-kobito_steps=("Xcode Command Line Tools があるかを確かめる" "Swift でビルドする" "起動情報を書き出す"
-              "このリポジトリの場所を PC 固有領域の repos/ に記す（シンボリックリンク）" "アプリケーションフォルダの kobito-tools フォルダへ移すかを尋ねる")
+kobito_steps=("Check that the Xcode Command Line Tools are installed" "Build with Swift" "Write the launch info"
+              "Record this repository's location in repos/ in the per-Mac folder (a symbolic link)" "Ask whether to move the app to the kobito-tools folder in the Applications folder")
 kobito_setup "Sample Native" "$@"
 kobito_check_repository          # 0：アプリIDのかぶりを確かめる。ビルド・起動情報より前に呼ぶ（かぶっていれば何も変えずに止まる）
-kobito_step "必要な道具を確かめます"
-kobito_need xcrun "ターミナルで xcode-select --install を実行して入れてから、もう一度動かしてください。"
-kobito_step "ビルドします"
-kobito_run ./build.sh || kobito_fail "ビルドできませんでした。"
+kobito_step "Checking the required tools"
+kobito_need xcrun "Run xcode-select --install in Terminal to install them, then run this again."
+kobito_step "Building"
+kobito_run ./build.sh || kobito_fail "Could not build the app."
 app="SampleNative.app"
-kobito_step "アプリケーションフォルダへ移すか"
-if kobito_ask "/Applications/kobito-tools へ移しますか？" n; then
+kobito_step "Moving to the Applications folder"
+if kobito_ask "Move the app to /Applications/kobito-tools?" n; then
   kobito_applications_folder     # /Applications/kobito-tools を用意する（無ければ作ってアイコンを付ける）。場所は $kobito_applications
   kobito_run rm -rf "$kobito_applications/SampleNative.app"
-  kobito_run ditto SampleNative.app "$kobito_applications/SampleNative.app" || kobito_fail "移せませんでした。"
+  kobito_run ditto SampleNative.app "$kobito_applications/SampleNative.app" || kobito_fail "Could not move the app."
   app="$kobito_applications/SampleNative.app"
 fi
-kobito_step "起動情報を書き出します"            # .app の場所を含むので、移したあとに書く
-kobito_run "$app/Contents/MacOS/SampleNative" --write-launch-info || kobito_fail "起動情報を書き出せませんでした。"
+kobito_step "Writing the launch info"           # .app の場所を含むので、移したあとに書く
+kobito_run "$app/Contents/MacOS/SampleNative" --write-launch-info || kobito_fail "Could not write the launch info."
 kobito_link_repository           # repos/<アプリID> に、このリポジトリへのリンクを作る（起動情報のあと）
 kobito_finish "open \"$app\""
 ```
@@ -153,10 +155,10 @@ kobito_finish "open \"$app\""
 
 | 部品 | すること |
 |---|---|
-| `kobito_steps` | 使い方（`--help`）に出す手順の配列。既定は Python のアプリの手順。`+=` で足すか、`=` で置き換える。最後の「起動のしかたを表示する」は自動で足す |
+| `kobito_steps` | 使い方（`--help`）に出す手順の配列。既定は Python のアプリの手順。`+=` で足すか、`=` で置き換える。最後の「Show how to start it」は自動で足す |
 | `kobito_setup <表示名> "$@"` | 引数を読む（`--help` は使い方を出して 0、知らない引数は 2）。macOS でなければ止まる。`setup.sh` のあるフォルダに移る。`~/.local/bin` を `PATH` に足す |
-| `kobito_step`・`kobito_info`・`kobito_fail` | 表示（`▶ 手順`・字下げの説明・`✖` を出して終了コード 1） |
-| `kobito_ask <問い> <y か n>` | 尋ねる。`--yes` なら既定の答え。答えを読めない（端末が無い）ときは「いいえ」 |
+| `kobito_step`・`kobito_info`・`kobito_fail` | 表示（`▶ 手順`・字下げの説明・`✖` を出して終了コード 1）。文言は英語 |
+| `kobito_ask <問い> <y か n>` | 尋ねる。`--yes` なら既定の答え。答えを読めない（端末が無い）ときは「いいえ」。`y`・`yes`（と前の版の「はい」）を、はいとして受け付ける |
 | `kobito_run <コマンド…>` | 動かすコマンドを表示して動かす。`--dry-run` なら表示するだけ |
 | `kobito_need <コマンド> <入れ方>` | 無ければ入れ方を出して止まる（sudo が要る道具の案内に使う） |
 | `kobito_ensure_uv`・`kobito_uv_sync`・`kobito_write_launch_info` | uv の確かめ（`$KOBITO_UV`）・`uv sync`・`uv run launch.py --write-launch-info` |

@@ -51,6 +51,7 @@ uv run scripts/vendor_kit.py --check --docs-only ../SampleNative/docs/kobito-spe
 | `kit.llm` | `chat_json`・`load_config`・`save_config`・`LlmError` | ローカルLLM（OpenAI 互換 API、このPCのものだけ） |
 | `kit.paths` | `series_directory`・`app_directory`・`Settings`・`write_json_atomic` | PC 固有領域（`kobito-tools/<App>/`） |
 | `kit.popup` | `install_accessory`・`check_accessory`・`show`・`hide`・`keep_open` | 常駐プロセスや埋め込みのプロセスから、フォーカスを奪わない小さなウインドウを出す（pywebview 6.2.1 で確認。使うアプリは版を固定する） |
+| `kit.window_frame` | `options`・`remember`・`fit`・`capture`・`screens_of`・`guard_moves` | ウインドウの大きさと位置を覚えて、次の起動で今の画面に収まるように開く。画面の外の位置で pywebview が起動の途中に落ちるのを防ぐ（[下の節](#ウインドウの大きさと位置を覚える)。pywebview 6.2.1 で確認） |
 | `kit.lifecycle` | `on_terminate`・`wake_python_regularly` | macOS で pywebview の画面を出している間も、SIGTERM で終われるようにする |
 | `kit.web/kobito-theme.css` | `--kobito-*` の CSS 変数 | シリーズ共通の配色（`/kobito/kobito-theme.css` で配る。ライト・ナイトは OS に合わせる）。アプリの色は `--kobito-app-<名前>`（8色）。色の地に乗せる文字は、白ではなく `--kobito-on-accent`・`--kobito-on-warn`・`--kobito-on-ok`・`--kobito-on-app`（ナイトでは暗い色。どの組み合わせもコントラスト比 4.5:1 以上） |
 
@@ -155,6 +156,38 @@ const [folder] = await kobito.pick("folder");
 window.addEventListener("kobito:dropped", (event) => console.log(event.detail.paths));
 kobito.listen("changed", (payload) => reload(payload));
 ```
+
+## ウインドウの大きさと位置を覚える
+
+pywebview のウインドウを開く Python のアプリは、覚えた大きさと位置を `kit.window_frame` で扱います（共通部品 0.7.0 から）。自分で `x`・`y` を `create_window` に渡したり、`window.x` などをそのまま保存したりしません。
+
+```python
+from .kobito_kit import window_frame
+
+frame = window_frame.options(settings.get("window"), webview, default=(1280, 820), min_size=(900, 560))
+window = webview.create_window(APP.name, url, **frame, text_select=True)
+window.events.closing += lambda: window_frame.remember(settings, window)
+```
+
+| 部品 | すること |
+|---|---|
+| `options(覚えた値, webview, default=…, min_size=…)` | `create_window` に渡す `width`・`height`・`x`・`y`・`min_size`・`screen` を返します。`min_size` はここで渡すので、`create_window` には重ねて書きません |
+| `remember(settings, window, key="window")` | 閉じる前の大きさと位置を覚えます。最小化・全画面のとき、値を読めないときは覚えず、前の値を残します。失敗しても例外を出しません |
+| `fit(覚えた値, 画面の並び, …)` | 値を今の画面に収めます（下の表）。画面に触れないので、テストで使えます |
+| `capture(window)`・`screens_of(webview)` | 閉じる前の値を読む・今の画面を読む（主画面の左上が 0、下向きが +） |
+| `guard_moves(webview)` | macOS：窓がどの画面にも乗っていないときに、pywebview の `windowDidMove_` が落ちないようにします。`options` が呼ぶので、ふつうは呼ばなくてよい |
+
+`fit` の決まり：
+
+| 覚えた値 | 開き方 |
+|---|---|
+| 題名の帯が、どこかの画面に横 100 ピクセル以上乗っている | その画面の中に、窓全体が収まるように寄せる |
+| どの画面にも乗らない（画面を外した・並べ方を変えた・値がずれた） | 位置を捨てて、主画面の中央に出す |
+| 画面より大きい（前の画面の全画面のときの値など） | 画面の大きさまで縮める |
+| `min_size` より小さい・数でない・無い | `min_size` まで広げる・`default` を使う |
+| 画面を読めない | 大きさだけを使い、位置は pywebview に任せる |
+
+なぜ基準を主画面にするか：pywebview の位置は、`create_window` の `screen` に渡した画面が基準です。渡さないと、作るときにキーボードの入力先がある画面が基準になり、起動のたびに変わります。Cocoa では、読むときの `x` は全体の座標、置くときの `x` は基準の画面からの差なので、基準が主画面でないと、覚えて開くたびに位置がその画面のぶんだけずれていきます。どの画面にも乗らなくなると、`NSWindow.screen()` が `None` になり、`webview.start()` が `AttributeError: 'NoneType' object has no attribute 'frame'` で落ちます。`options` は、いつも主画面を `screen` に渡します。そのため、覚えた位置が無いときは、主画面の中央に開きます。
 
 ## 見せ方と操作を名乗る
 
