@@ -29,25 +29,54 @@ CorkClip is part of [kobito-tools](https://github.com/kobito-tools), a series of
 - macOS 13 or later (Apple Silicon or Intel)
 - The app’s screens are in Japanese only. This guide gives the Japanese labels in quotes where you need to find them.
 
-## Download and install
+## Install
 
-1. Download `CorkClip_x.y.z.dmg` from the [latest release](../../releases/latest). `x.y.z` is the version number. A zip (`CorkClip_x.y.z_universal.zip`) is also available. Both run on Apple Silicon and Intel Macs.
-2. Open the `.dmg` and drag `CorkClip` into the `Applications` folder. For the zip, move the unpacked `CorkClip.app` into the Applications folder.
-3. Launch CorkClip from the Applications folder. It does not appear in the Dock. A corkboard icon appears in the menu bar instead.
+CorkClip is installed by building it on your Mac from the source code. A script, `setup.sh`, does the build for you.
 
-You can eject the dmg with “⏏” in the Finder sidebar and then move it to the Trash.
+### What you need
 
-You can also build the app yourself from the source code. A self-built app does not show the warning below. See [Build from source](#build-from-source).
+| Item | How to get it |
+|---|---|
+| Xcode Command Line Tools | Run `xcode-select --install` in Terminal (an administrator password is required). If they are missing, `setup.sh` tells you so and stops |
 
-### First launch: the “unidentified developer” warning
+### Steps
 
-CorkClip is not notarized by Apple, so the first launch shows a warning such as “cannot verify the developer”. Close the warning, open **System Settings → Privacy & Security**, and click **Open Anyway** near the bottom. After that, it opens normally.
+1. Get the source code, in one of these ways:
+   - In Terminal, run:
 
-If macOS says the app “is damaged and can’t be opened”, run this in Terminal and launch it again:
+     ```bash
+     git clone https://github.com/kobito-tools/CorkClip.git
+     ```
 
-```bash
-xattr -dr com.apple.quarantine "/Applications/CorkClip.app"
-```
+   - Or, on this page on GitHub, click **Code → Download ZIP** and double-click the downloaded zip to unpack it.
+2. In Terminal, go into the folder you got, and run `setup.sh`:
+
+   ```bash
+   cd CorkClip
+   ```
+
+   ```bash
+   ./setup.sh
+   ```
+
+   If you downloaded the ZIP, the folder is named something like `CorkClip-main`. You can type `cd ` (with a space) and drag the folder from Finder into Terminal.
+3. `setup.sh` builds `CorkClip.app`, then asks whether to move it into the `kobito-tools` folder in Applications (`/Applications/kobito-tools/`). If you answer no, `CorkClip.app` stays in the source folder.
+4. Launch CorkClip as `setup.sh` shows at the end. It does not appear in the Dock. A corkboard icon appears in the menu bar instead.
+
+To update CorkClip later, run `./setup.sh` again with the new source code. Your history and settings are kept.
+
+| If you got it with | To update |
+|---|---|
+| `git clone` | In the same folder, run `git pull`, then `./setup.sh` |
+| Download ZIP | Move the old source folder to the Trash first. Then download and unpack the new ZIP, and run `./setup.sh` in the new folder. If the old folder is still there, `setup.sh` stops and tells you so |
+
+More about `setup.sh`:
+
+- `./setup.sh --dry-run` shows what it would do without changing anything. `./setup.sh --yes` picks the default answers without asking. It is safe to run more than once.
+- If the `kobito-tools` folder does not exist, it creates it and gives it the series icon. If `CorkClip.app` is already there, it asks before replacing it.
+- An older `CorkClip.app` directly in `/Applications` is left alone. If you no longer use it, move it to the Trash yourself.
+- At the end, it writes the launch info (see [Working with other apps](#working-with-other-apps)) and records where the source folder is, as a symbolic link at `kobito-tools/repos/corkclip` under `~/Library/Application Support/`. If another CorkClip source folder is already recorded there, it stops before building and changes nothing.
+- After running it again, remove CorkClip from the Accessibility and Input Monitoring lists with **−** and add it again. Each build has a new signature, so the old permission no longer applies.
 
 ### Allow Accessibility
 
@@ -263,7 +292,7 @@ Another app may use the same shortcut. Change the shortcut in the “一般” (
 ## Uninstall
 
 1. Quit CorkClip from the menu bar icon.
-2. Move `CorkClip.app` from the Applications folder to the Trash. If you installed it with `setup.sh`, it is inside the `kobito-tools` folder.
+2. Move `CorkClip.app` to the Trash. It is in the `kobito-tools` folder in Applications, or in the source folder if you did not move it. You can then delete the source folder too.
 3. In **System Settings → Privacy & Security**, select CorkClip in the **Accessibility** and **Input Monitoring** lists and remove it with **−**.
 
 To remove the history as well, delete this folder:
@@ -287,18 +316,9 @@ To also remove the launch info file (see [Working with other apps](#working-with
 
 ## For developers
 
-### Build from source
+### Build details
 
-To install without the warning on first launch, clone this repository and run `./setup.sh` in Terminal (or double-click `Setup.command` in Finder). An app you build yourself has no quarantine flag from a download, so the warning does not appear.
-
-- You need Xcode Command Line Tools. If they are missing, it shows how to install them (`xcode-select --install`) and stops.
-- After the build, it asks whether to move `CorkClip.app` into the `kobito-tools` folder in Applications (`/Applications/kobito-tools/`). The default is not to move it. If the folder does not exist, it creates it and gives it the series icon. If `CorkClip.app` is already there, it asks before replacing it.
-- An older `CorkClip.app` directly in `/Applications` is left alone. If you no longer use it, move it to the Trash yourself.
-- At the end, it writes the launch info using the placed `CorkClip.app` (see [Working with other apps](#working-with-other-apps)), and records the repository location as a symbolic link at `kobito-tools/repos/corkclip` under `~/Library/Application Support/`. If another repository with the same app ID is already recorded there, it stops before building and changes nothing.
-- `./setup.sh --dry-run` shows what it would do without changing anything. `--yes` picks the default answers without asking. It is safe to run more than once, and it never touches your history or settings.
-- After a rebuild, remove CorkClip from the Accessibility and Input Monitoring lists with **−** and add it again. Each build has a new signature, so the old permission no longer applies.
-
-For build details and the source layout, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). For the feature requirements, see [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md). Both are in Japanese.
+To install, see [Install](#install). For build details and the source layout, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). For the feature requirements, see [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md). Both are in Japanese.
 
 ### Working with other apps
 
