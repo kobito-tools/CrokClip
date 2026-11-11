@@ -606,5 +606,19 @@ check(history?["v"] as? Int == 1 && historyItems.filter { $0["path"] as? String 
 check(historyItems.first?["app"] as? String == "corkclip" && historyItems.first?["id"] as? String == "テスト" && historyItems.contains { $0["app"] as? String == "another" }, "自分の1件を先頭に足し、ほかのアプリの分は残す")
 check(Series.datasetCandidates().map(\.path) == [base, otherBase], "最後に開いた順に並べる")
 
+// 20. 起動のしかた（手で開いたときだけ設定画面を出す）
+func openAppEvent(launchedAsLoginItem: Bool) -> NSAppleEventDescriptor {
+    let event = NSAppleEventDescriptor(eventClass: AEEventClass(kCoreEventClass), eventID: AEEventID(kAEOpenApplication),
+                                       targetDescriptor: nil, returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID))
+    if launchedAsLoginItem { event.setParam(NSAppleEventDescriptor(enumCode: OSType(keyAELaunchedAsLogInItem)), forKeyword: AEKeyword(keyAEPropData)) }
+    return event
+}
+check(LaunchKind.isLoginItemLaunch(openAppEvent(launchedAsLoginItem: true)), "ログイン項目としての起動を見分ける")
+check(!LaunchKind.isLoginItemLaunch(openAppEvent(launchedAsLoginItem: false)), "ふつうの起動はログイン時の起動としない")
+check(!LaunchKind.isLoginItemLaunch(nil), "起動の Apple Event が無いときは、ログイン時の起動としない")
+check(LaunchKind.shouldOpenSettingsOnLaunch(launchedAsLoginItem: false, hasPendingURL: false), "手で開いたときは設定画面を出す")
+check(!LaunchKind.shouldOpenSettingsOnLaunch(launchedAsLoginItem: true, hasPendingURL: false), "ログイン時の起動では設定画面を出さない")
+check(!LaunchKind.shouldOpenSettingsOnLaunch(launchedAsLoginItem: false, hasPendingURL: true), "URL で起動されたときは、その操作を優先して設定画面を出さない")
+
 print(failures == 0 ? "すべて成功" : "\(failures) 件失敗")
 exit(failures == 0 ? 0 : 1)

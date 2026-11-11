@@ -11,13 +11,13 @@ EXEC_NAME="CorkClip"
 APPLICATIONS_DIR="${KOBITO_APPLICATIONS_DIR:-/Applications}"
 
 kobito_steps=(
-  "Check that no other repository with the same app id is recorded elsewhere (if one is, stop without changing anything)"
-  "Check for Xcode Command Line Tools (if missing, show how to install them and stop)"
-  "Build $APP_NAME.app"
-  "Ask whether to move it into the kobito-tools folder in Applications (--yes does not move it)"
-  "Write the launch info, pointing at the .app where it was placed"
-  "Record this repository's location in repos/ in the per-Mac area (a symbolic link)"
-  "Show how to grant the permissions (Accessibility, Input Monitoring)"
+  "Check that no repository with the same app ID is recorded in another location (if one is, stop without changing anything)"
+  "Check that the Xcode Command Line Tools are installed (if not, show how to install them and stop)"
+  "Build $APP_NAME.app (takes a minute or two)"
+  "Ask whether to move it to the kobito-tools folder in the Applications folder (--yes does not move it)"
+  "Write the launch info using the .app where it was placed"
+  "Record this repository's location in repos/ in the per-Mac folder (a symbolic link)"
+  "Show how to grant the Accessibility and Input Monitoring permissions"
 )
 kobito_setup "$APP_NAME" "$@"
 # 同じアプリIDのリポジトリが別の場所に記されていれば、ビルドや起動情報の書き出しより前に、何も変えずに止まる。
@@ -27,19 +27,19 @@ kobito_step "Checking the required tools"
 if ! xcode-select -p >/dev/null 2>&1 || ! xcrun --find swiftc >/dev/null 2>&1; then
   kobito_fail "Xcode Command Line Tools (swiftc) not found. Run xcode-select --install in Terminal to install them (an administrator password is required), then run this again."
 fi
-kobito_info "Xcode Command Line Tools: found ($(xcrun --find swiftc))"
+kobito_info "Xcode Command Line Tools: found"
 
 # ソースが新しくなっていることがあるので、毎回作り直す。
-kobito_step "Building $APP_NAME.app"
+# 時間のかかるコンパイル（2 回、それぞれ数十秒）は、build.sh が段階ごとの行と経過秒数を出す。
+kobito_step "Building $APP_NAME.app (takes a minute or two)"
 built="$kobito_here/$APP_NAME.app"
-kobito_run zsh ./build.sh || kobito_fail "The build failed."
-(( kobito_dry_run )) || kobito_info "Because the app was rebuilt, you may need to grant Accessibility and Input Monitoring again, even if you granted them before."
+kobito_run zsh ./build.sh || kobito_fail "Could not build the app. Check the output above."
 
 # 起動情報は .app の場所を含むので、移すかどうかを決めてから書き出す。
 # 置き先は直下ではなく kobito-tools フォルダの下（docs/kobito-spec/SETUP.md §1）。
-kobito_step "Deciding whether to move $APP_NAME.app into Applications"
+kobito_step "Deciding whether to move $APP_NAME.app to the Applications folder"
 placed="$built"
-if kobito_ask "Move $APP_NAME.app to $APPLICATIONS_DIR/kobito-tools?" n; then
+if kobito_ask "Move $APP_NAME.app to the kobito-tools folder in the Applications folder?" n; then
   kobito_applications_folder
   target="$kobito_applications/$APP_NAME.app"
   move=1
@@ -75,8 +75,11 @@ kobito_run "$placed/Contents/MacOS/$EXEC_NAME" --write-launch-info || kobito_fai
 kobito_link_repository
 
 kobito_step "About permissions"
-kobito_info "Pasting needs the Accessibility permission. You will be prompted the first time you paste;"
-kobito_info "turn on $APP_NAME in System Settings > Privacy & Security > Accessibility."
-kobito_info "To use the paste stack, also turn it on under Input Monitoring in the same place."
+kobito_info "$APP_NAME needs the Accessibility permission to paste (you are asked the first time you paste)."
+kobito_info "  1. Open System Settings > Privacy & Security > Accessibility"
+kobito_info "  2. Turn on $APP_NAME (if it is not in the list, add it with \"+\")"
+kobito_info "  3. To use the paste stack, also turn it on under Input Monitoring in the same place"
+kobito_info "Each build changes the signature, so after rebuilding, remove $APP_NAME from these lists with \"-\" and add it again."
+[[ $placed == $built ]] && kobito_info "Moving the app to the Applications folder before starting it makes the permissions more likely to stick."
 
 kobito_finish "open \"$placed\"" "Once launched, it stays in the menu bar. Press Option-Command-V to open the history."
