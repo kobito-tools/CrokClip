@@ -260,7 +260,7 @@ class TemporaryTestCase(IsolatedTestCase):
 
 | # | すること |
 |---|---|
-| 1 | kobito-workspace で `uv run scripts/vendor_kit.py <アプリのパッケージ>` を動かし、共通部品 0.6.1 を写し直す（ネイティブのアプリは `--docs-only <リポジトリ>/docs/kobito-spec`） |
+| 1 | kobito-workspace で `uv run scripts/vendor_kit.py <アプリのパッケージ>` を動かし、共通部品 0.7.0 を写し直す（ネイティブのアプリは `--docs-only <リポジトリ>/docs/kobito-spec`） |
 | 2 | `kobito/` を作り、アイコンを `kobito/icon.svg`・`kobito/icon-1024.png` に移す（`assets/icon.svg`・`web/icon.svg` などから）。紹介のカードの画像があれば `kobito/screenshot.png` |
 | 3 | 起動情報④の `icon` を `package.icon_record(<リポジトリ>, <1文字>)` にする |
 | 4 | `kobito-app.json` に `package: 1`・`version`・`tagline`・`tagline_en` を足す |
