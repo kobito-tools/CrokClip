@@ -59,6 +59,9 @@ run_long() {
   if (( rc )); then
     print -ru2 -- "  [$number/$STAGES] $label: failed (exit code $rc)"
     cat "$log" >&2
+    # set -e で止まるときは EXIT の trap が動かないので、ここで消す。
+    rm -f "$log"
+    build_log=""
     return $rc
   fi
   stage "$number" "$label: done in $(( EPOCHSECONDS - started ))s"
