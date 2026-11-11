@@ -69,6 +69,7 @@ assert all(len(marker[key]) <= 80 and "\n" not in marker[key] for key in ("tagli
 build = open("build.sh", encoding="utf-8").read()
 assert f"<key>CFBundleIdentifier</key><string>{marker['bundle_id']}</string>" in build, "bundle_id が build.sh と違う"
 assert f'VERSION="{marker["version"]}"' in build, "version が build.sh の VERSION と違う"
-assert all(os.path.isfile(name) for name in ("kobito/icon.svg", "kobito/icon-1024.png", "Setup.command")), "kobito/ のアイコンか Setup.command が無い"
+assert all(os.path.isfile(name) for name in ("kobito/icon.svg", "kobito/icon-1024.png")), "kobito/ のアイコンが無い"
+assert not os.path.exists("Setup.command"), "やめた入口 Setup.command が残っている"
 print("ok - 目印（kobito-app.json）の形が決まりどおり（native・launch.py なし・バンドルIDと版が build.sh と同じ）")
 PY

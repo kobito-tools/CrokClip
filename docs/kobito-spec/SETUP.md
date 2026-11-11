@@ -7,7 +7,6 @@ kobito シリーズの各アプリを、新しい PC で使える状態にする
 | `kobito-app.json` | 各アプリのリポジトリの直下 | 「kobito シリーズのアプリ」と名乗る目印（[APP_PACKAGE.md](APP_PACKAGE.md)） |
 | `launch.py` | Python のアプリのリポジトリの直下 | ただ1つの入口。引数の形は全アプリ同じ（[APP_PACKAGE.md](APP_PACKAGE.md)） |
 | `setup.sh` | 各アプリのリポジトリの直下 | そのアプリを、この PC で使える状態にする |
-| `Setup.command` | 各アプリのリポジトリの直下 | `setup.sh` を Finder からダブルクリックで動かす入口。どのアプリも同じ名前（`<アプリ>-Setup.command` はやめる）。git で実行できる設定（100755） |
 | `setup.zsh` | 共通部品の中（Python のアプリは `<パッケージ>/kobito_kit/setup.zsh`、ネイティブのアプリは `docs/kobito-spec/setup.zsh`） | `setup.sh` の共通の手順。`setup.sh` が読み込む（§3） |
 | `assets/` | `setup.zsh` と同じ階層 | `setup.zsh` が使う画像（アプリケーションフォルダの `kobito-tools` フォルダのアイコン）。写しにも入る |
 | `repos/<アプリID>` | PC 固有領域（`~/Library/Application Support/kobito-tools/repos/`） | `setup.sh` が作る、自分のリポジトリへのシンボリックリンク。workspace はここからもアプリを探す（§1「リポジトリの場所」） |
@@ -15,7 +14,18 @@ kobito シリーズの各アプリを、新しい PC で使える状態にする
 
 アプリの一覧は、どのファイルにも書きません。`install.sh` は、GitHub の topic `kobito-app` が付いたリポジトリと、その `kobito-app.json` から一覧を作ります（[APP_PACKAGE.md §8](APP_PACKAGE.md)）。各アプリの `setup.sh` は、ほかのアプリを名指ししません（[CONTRACTS.md](CONTRACTS.md) の名指ししない規則）。
 
-1つのアプリだけを設定し直すときは、そのアプリのフォルダで `./setup.sh` を動かすか、`Setup.command` をダブルクリックします。
+1つのアプリだけを設定し直すときは、そのアプリのフォルダで `./setup.sh` を動かします。
+
+### 入れ方
+
+シリーズのアプリの入れ方は、**ソースを入手して `./setup.sh` を動かす**ことだけです（共通部品 0.8.0 から）。
+
+1. リポジトリを `git clone` する（または GitHub の「Code → Download ZIP」で入手して展開する）
+2. そのフォルダで、ターミナルから `./setup.sh` を動かす
+
+- GitHub の Releases で、ビルドしたもの（dmg・zip）は配りません。リリースを作る道具（`package-release.sh`・リリース用の workflow など）も置きません。
+- Finder から開く入口（`Setup.command`）は置きません。Gatekeeper に止められるためです。
+- 自分でビルドしたアプリには quarantine 属性が付かないので、`xattr` で外す案内も要りません。各アプリの README の入れ方も、この形で書きます。
 
 ## 1. setup.sh の決まり
 
@@ -171,4 +181,3 @@ kobito_finish "open \"$app\""
 | `$kobito_kit_here` | `setup.zsh` のあるフォルダ（隣に `assets/` がある） |
 
 - `setup.zsh` は写しなので、直接書き換えません。直すときは kobito-workspace の `kobito_workspace/kit/setup.zsh` を直して写し直します。
-- `Setup.command` は、どのアプリも同じ中身でかまいません（`cd "${0:A:h}" && zsh ./setup.sh "$@"` のあと、Enter を待って閉じる）。
