@@ -21,7 +21,6 @@ kobito シリーズのどのリポジトリも、**同じ名前のファイル�
     screenshot.png     紹介のカードの画像（任意）
   launch.py            入口（Python のアプリ）。ネイティブのアプリは .app
   setup.sh             初期設定（共通の手順は setup.zsh を読み込む）
-  Setup.command        Finder から開く入口（どのアプリも同じ名前）
   README.md  LICENSE
   docs/  scripts/  tests/
 ```
@@ -35,13 +34,13 @@ kobito シリーズのどのリポジトリも、**同じ名前のファイル�
 | `launch.py` | 必須 | — | ただ1つの入口（§3）。ネイティブのアプリは `.app` で配る（§5） |
 | `pyproject.toml` | 必須 | — | `[project].version` は目印の `version` とそろえる |
 | `setup.sh` | 必須 | 必須 | 初期設定（[SETUP.md](SETUP.md)）。git で実行できる設定（100755） |
-| `Setup.command` | 必須 | 必須 | `setup.sh` を Finder から動かす入口。git で実行できる設定（100755）。`<アプリ名>-Setup.command` はやめる |
 | `README.md`・`LICENSE` | 必須 | 必須 | 公開のリポジトリなので置く |
 | `tests/test_*.py` | 必須 | 任意 | テスト（§10）。ネイティブのアプリは、自分の言語のやり方でよい |
 | `docs/` | 任意 | 任意 | 設計などの文書。ネイティブのアプリは、規格の写しを `docs/kobito-spec/` に置く |
 | `scripts/` | 任意 | 任意 | 開発用の道具。画面を確かめる起動は `launch.py --dev` を使い、`scripts/dev_server.py` は置かない |
 | 共通部品の写し | `<パッケージ>/kobito_kit/` | `docs/kobito-spec/`（文書と `setup.zsh`） | `vendor_kit.py` で写す。手で書き換えない |
 
+- `Setup.command`（と古い `<アプリ名>-Setup.command`）は置きません（共通部品 0.8.0 から）。Finder から開く `.command` は Gatekeeper に止められるためです。入れ方は [SETUP.md](SETUP.md) の「入れ方」のとおり、ソースを入手して `./setup.sh` を動かすことだけです。
 - `kobito/` には、上の決まった名前のファイルだけを置きます。画像のパスは、目印にも起動情報にも書きません（決まった名前で探す）。
 - 外から読んでよいのは、**`kobito-app.json` と `kobito/` と、`launch.py` の決まった引数だけ**です。並べる側は、リポジトリのほかのファイル（アプリのパッケージ・設定・データ）を読みません。オブジェクト指向で、公開のインタフェースだけを使い、中身に触らないのと同じです。
 - 形を守っているかは、kobito-workspace で `uv run scripts/check_package.py <リポジトリ>` を動かすと分かります（§12）。
@@ -260,11 +259,11 @@ class TemporaryTestCase(IsolatedTestCase):
 
 | # | すること |
 |---|---|
-| 1 | kobito-workspace で `uv run scripts/vendor_kit.py <アプリのパッケージ>` を動かし、共通部品 0.6.1 を写し直す（ネイティブのアプリは `--docs-only <リポジトリ>/docs/kobito-spec`） |
+| 1 | kobito-workspace で `uv run scripts/vendor_kit.py <アプリのパッケージ>` を動かし、共通部品 0.8.0 を写し直す（ネイティブのアプリは `--docs-only <リポジトリ>/docs/kobito-spec`） |
 | 2 | `kobito/` を作り、アイコンを `kobito/icon.svg`・`kobito/icon-1024.png` に移す（`assets/icon.svg`・`web/icon.svg` などから）。紹介のカードの画像があれば `kobito/screenshot.png` |
 | 3 | 起動情報④の `icon` を `package.icon_record(<リポジトリ>, <1文字>)` にする |
 | 4 | `kobito-app.json` に `package: 1`・`version`・`tagline`・`tagline_en` を足す |
-| 5 | `<アプリ名>-Setup.command` を `git mv` で `Setup.command` にする（100755 のまま） |
+| 5 | `Setup.command`（古い `<アプリ名>-Setup.command` も）を `git rm` で消す。リリース（dmg・zip）を作る道具と、それを案内する README の記述も消す（共通部品 0.8.0 から） |
 | 6 | `setup.sh` を、`setup.zsh` を読み込む短い形にする（[SETUP.md](SETUP.md) の見本）。自分だけの手順（常駐の登録など）は残す。Python のアプリは `kobito_python_app` が `repos/` へのリンクも作る。ネイティブのアプリは、ビルドと起動情報より前に `kobito_check_repository` を、起動情報のあとに `kobito_link_repository` を呼び、`.app` を移すときは `kobito_applications_folder` で用意した `/Applications/kobito-tools/` の下に置く（共通部品 0.6.1 から） |
 | 7 | `scripts/dev_server.py` をやめ、`cli.run(…, dev=…)` に開発用の起動を渡す（`launch.py --dev`） |
 | 8 | テストを `tests/test_*.py` にそろえ、`uv run python -m unittest discover -s tests -t tests` で全部動くようにする。土台は `kit.testing.IsolatedTestCase` |
@@ -350,10 +349,10 @@ uv run scripts/check_package.py --json ../Sample          # 結果を JSON で
 
 | 調べること | 内容 |
 |---|---|
-| 必須のファイル | §0 の表の「必須」がそろっているか。古い `<アプリ名>-Setup.command` が残っていないか |
+| 必須のファイル | §0 の表の「必須」がそろっているか。やめた入口 `Setup.command`・`<アプリ名>-Setup.command` が残っていないか |
 | `kobito-app.json` | 形が正しいか。`package`・`version`・`tagline` があるか。画像のパスを書いていないか。`version` が `pyproject.toml` とそろっているか |
 | `kobito/` | `icon.svg` が `viewBox` を持つ SVG で、`script` を含まず 256 KB までか。`icon-1024.png` が 1024×1024 の PNG か。`screenshot.png` が PNG か。決まっていないファイルが無いか |
-| 実行できる設定 | `Setup.command`・`setup.sh` が git で 100755 か |
+| 実行できる設定 | `setup.sh` が git で 100755 か |
 | 共通部品の写し | `<パッケージ>/kobito_kit/`（ネイティブのアプリは `docs/kobito-spec/`）が、元と同じか（手で書き換えていないか・古くないか） |
 | テスト | Python のアプリに `tests/test_*.py` があるか |
 | `setup.sh` を動かす | `--help` が使い方を出して 0、知らない引数で 2、`--dry-run --yes` が 0 で終わり、何も書かないか |
