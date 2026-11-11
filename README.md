@@ -61,7 +61,7 @@ CorkClip is installed by building it on your Mac from the source code. A script,
 
    If you downloaded the ZIP, the folder is named something like `CorkClip-main`. You can type `cd ` (with a space) and drag the folder from Finder into Terminal.
 3. `setup.sh` builds `CorkClip.app`, then asks whether to move it into the `kobito-tools` folder in Applications (`/Applications/kobito-tools/`). If you answer no, `CorkClip.app` stays in the source folder.
-4. Launch CorkClip as `setup.sh` shows at the end. It does not appear in the Dock. A corkboard icon appears in the menu bar instead.
+4. Launch CorkClip as `setup.sh` shows at the end. It does not appear in the Dock. A corkboard icon appears in the menu bar instead. When you open CorkClip yourself, its settings window opens, so you can tell it is running. It stays closed when CorkClip starts at login or from a `corkclip://` link.
 
 To update CorkClip later, run `./setup.sh` again with the new source code. Your history and settings are kept.
 
