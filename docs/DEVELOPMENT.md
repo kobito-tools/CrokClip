@@ -1,6 +1,6 @@
 # 開発について
 
-CorkClip のビルド方法とソースコードの構成をまとめます。利用方法は [README](../README.md)、機能の要件は [REQUIREMENTS.md](REQUIREMENTS.md) を参照してください。
+CorkClip のビルド方法とソースコードの構成をまとめます。利用方法は [README](../README.ja.md)、機能の要件は [REQUIREMENTS.md](REQUIREMENTS.md) を参照してください。
 
 ## ビルド
 
