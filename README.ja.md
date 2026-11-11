@@ -29,25 +29,49 @@ CorkClip は、小さな Mac アプリのシリーズ [kobito-tools](https://git
 - macOS 13 以降（Apple Silicon / Intel）
 - アプリの画面は日本語だけです。
 
-## ダウンロードとインストール
+## インストール
 
-1. [最新のリリース](../../releases/latest)から `CorkClip_x.y.z.dmg` をダウンロードします。`x.y.z` はバージョン番号です（`CorkClip_x.y.z_universal.zip` もあります）。どちらも Apple Silicon と Intel の Mac で動きます。
-2. `.dmg` を開き、`CorkClip` を `Applications` フォルダへドラッグします（zip のときは、展開した `CorkClip.app` を Applications フォルダへ移します）。
-3. Applications フォルダから CorkClip を起動します。Dock には出ず、メニューバーにコルクボードのアイコンが出ます。
+CorkClip は、ソースコードからこの Mac でビルドして入れます。ビルドは `setup.sh` が行います。
 
-dmg は、Finder のサイドバーの「⏏」で取り出してから、ゴミ箱に入れて構いません。
+### 必要なもの
 
-ソースコードから自分で作ることもできます。自分で作ったアプリには、下の警告が出ません。[ソースから作る](#ソースから作る)を見てください。
+| もの | 入れ方 |
+|---|---|
+| Xcode Command Line Tools | ターミナルで `xcode-select --install` を実行する（管理者のパスワードが要る）。無いときは、`setup.sh` がそう伝えて止まる |
 
-### 初めて起動するとき：「開発元を確認できません」
+### 手順
 
-CorkClip は Apple の公証を受けていないため、初めて起動すると「開発元を確認できません」などの警告が出ます。警告を閉じ、「システム設定」→「プライバシーとセキュリティ」を開いて、下のほうの「このまま開く」をクリックしてください。2回目からは、ふつうに起動できます。
+1. ソースコードを、次のどちらかで手に入れます。
+   - ターミナルで次を実行する。
 
-「壊れているため開けません」と出るときは、ターミナルで次を実行してから、もう一度起動してください。
+     ```bash
+     git clone https://github.com/kobito-tools/CorkClip.git
+     ```
 
-```bash
-xattr -dr com.apple.quarantine "/Applications/CorkClip.app"
-```
+   - または、GitHub のこのページで **Code → Download ZIP** をクリックし、ダウンロードした zip をダブルクリックして展開する。
+2. ターミナルで、手に入れたフォルダに移り、`setup.sh` を実行します。
+
+   ```bash
+   cd CorkClip
+   ```
+
+   ```bash
+   ./setup.sh
+   ```
+
+   ZIP で手に入れたときは、フォルダの名前が `CorkClip-main` のようになります。`cd ` （後ろに空白）と打ってから、Finder のフォルダをターミナルへドラッグしても移れます。
+3. `setup.sh` が `CorkClip.app` を作り、Applications フォルダの `kobito-tools` フォルダ（`/Applications/kobito-tools/`）へ移すかを尋ねます。移さないと答えたときは、`CorkClip.app` はソースのフォルダに残ります。
+4. 最後に `setup.sh` が示すとおりに、CorkClip を起動します。Dock には出ず、メニューバーにコルクボードのアイコンが出ます。
+
+あとで新しくするときは、新しいソースコードを手に入れて（フォルダで `git pull`、または ZIP をもう一度ダウンロード）、もう一度 `./setup.sh` を実行します。履歴と設定はそのまま残ります。
+
+`setup.sh` について、もう少し：
+
+- `./setup.sh --dry-run` で、何をするかだけを確かめられます。`./setup.sh --yes` は、尋ねずに既定の答えを選びます。何度動かしても大丈夫です。
+- `kobito-tools` フォルダが無ければ、シリーズのアイコンを付けて作ります。同じ名前のアプリがすでにあるときは、置き換えてよいかを尋ねます。
+- `/Applications` の直下に前の `CorkClip.app` が残っていても、消しません。使わなければ、自分でゴミ箱に入れてください。
+- 最後に、起動情報を書き（[ほかのアプリとのつながり](#ほかのアプリとのつながり)）、ソースのフォルダの場所を `~/Library/Application Support/` の下の `kobito-tools/repos/corkclip` にシンボリックリンクで記します。別の CorkClip のソースのフォルダがすでに記されているときは、ビルドの前に止まり、何も変えません。
+- もう一度実行したあとは、アクセシビリティと入力監視の一覧から CorkClip を「－」で外し、もう一度加えてください。ビルドごとに署名が変わるので、前の許可が効かなくなります。
 
 ### アクセシビリティを許可する
 
@@ -263,7 +287,7 @@ URL はほかのアプリやウェブページからも開けます。そのた�
 ## アンインストール
 
 1. メニューバーのアイコンから CorkClip を終了します。
-2. Applications フォルダの `CorkClip.app` をゴミ箱へ移します。`setup.sh` で入れたときは、`kobito-tools` フォルダの中にあります。
+2. `CorkClip.app` をゴミ箱へ移します。Applications フォルダの `kobito-tools` フォルダの中か、移さなかったときはソースのフォルダの中にあります。ソースのフォルダも消して構いません。
 3. 「システム設定」→「プライバシーとセキュリティ」の「アクセシビリティ」と「入力監視」の一覧から CorkClip を選び、「－」で外します。
 
 履歴も消すときは、次のフォルダを消してください。
@@ -287,18 +311,9 @@ URL はほかのアプリやウェブページからも開けます。そのた�
 
 ## 開発者向け
 
-### ソースから作る
+### ビルドの詳しい方法
 
-初めて起動するときの警告を出さずに入れるには、このリポジトリをクローンして、ターミナルで `./setup.sh` を実行します（Finder からは `Setup.command` をダブルクリック）。自分で作ったアプリには、ダウンロードの印が付かないので、警告が出ません。
-
-- Xcode Command Line Tools が要ります。無いときは入れ方（`xcode-select --install`）を表示して止まります。
-- ビルドしたあと、`CorkClip.app` を Applications フォルダの `kobito-tools` フォルダ（`/Applications/kobito-tools/`）へ移すかを尋ねます（既定は移さない）。フォルダが無ければ、シリーズのアイコンを付けて作ります。同じ名前のアプリがすでにあるときは、置き換えてよいかも尋ねます。
-- `/Applications` の直下に前の `CorkClip.app` が残っていても、消しません。使わなければ、自分でゴミ箱に入れてください。
-- 最後に、置いた `CorkClip.app` で起動情報を書き（[ほかのアプリとのつながり](#ほかのアプリとのつながり)）、このリポジトリの場所を `~/Library/Application Support/` の下の `kobito-tools/repos/corkclip` にシンボリックリンクで記します。同じアプリ ID の別のリポジトリがすでに記されているときは、ビルドの前に止まり、何も変えません。
-- `./setup.sh --dry-run` で何をするかだけを確かめられます。`--yes` を付けると、尋ねずに既定の答えを選びます。何度動かしても大丈夫で、履歴と設定には触れません。
-- 作り直したあとは、アクセシビリティと入力監視の一覧から CorkClip を「－」で外し、もう一度加えてください。ビルドごとに署名が変わるので、前の許可が効かなくなります。
-
-ビルドの詳しい方法とソースの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を見てください。
+入れ方は [インストール](#インストール) を見てください。ビルドの詳しい方法とソースの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を見てください。
 
 ### ほかのアプリとのつながり
 
