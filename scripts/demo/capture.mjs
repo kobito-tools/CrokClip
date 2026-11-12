@@ -1,4 +1,5 @@
 // demo.html をコマ撮りして PNG を並べる。使い方: node capture.mjs <出力フォルダ> [コマ/秒（既定 15）] [時刻…（指定するとその時刻だけ撮る）]
+// 環境変数 DEMO_LANG=ja で日本語の絵を撮る（既定は英語）。
 // Google Chrome を DevTools のプロトコルで動かす（追加のパッケージは要らない。Node 22 以降の WebSocket を使う）。
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -30,7 +31,7 @@ try {
   const evaluate = async expression => (await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true })).result.value;
 
   await send("Emulation.setDeviceMetricsOverride", { width: 960, height: 600, deviceScaleFactor: 2, mobile: false });
-  const page = pathToFileURL(join(dirname(fileURLToPath(import.meta.url)), "demo.html")).href;
+  const page = pathToFileURL(join(dirname(fileURLToPath(import.meta.url)), "demo.html")).href + `?lang=${process.env.DEMO_LANG === "ja" ? "ja" : "en"}`;
   await send("Page.navigate", { url: page });
   for (let i = 0; i < 50 && await evaluate("document.readyState").catch(() => "") !== "complete"; i++) await new Promise(r => setTimeout(r, 100));
   await evaluate("document.fonts.ready.then(() => true)");

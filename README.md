@@ -346,7 +346,7 @@ Apps in the series can open CorkClip with these `kobito://` URLs. Pass them to t
 
 ### Rebuild the demo
 
-The README demo (`docs/images/demo.gif`) is a drawn mock-up of the board in `scripts/demo/demo.html`, captured frame by frame with `scripts/demo.sh`. It needs Google Chrome, Node.js 22 or later, and ffmpeg.
+The README demos (`docs/images/demo.gif` in English, `docs/images/demo.ja.gif` in Japanese) are a drawn mock-up of the board in `scripts/demo/demo.html`, captured frame by frame with `scripts/demo.sh`. It needs Google Chrome, Node.js 22 or later, and ffmpeg.
 
 ### Issues
 

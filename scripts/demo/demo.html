@@ -1,8 +1,9 @@
 <!doctype html>
-<!-- README のデモ（docs/images/demo.gif）の元になる絵。render(秒) でその時刻の画面を描く。scripts/demo.sh がコマ撮りする。
+<!-- README のデモ（docs/images/demo.gif・demo.ja.gif）の元になる絵。render(秒) でその時刻の画面を描く。scripts/demo.sh がコマ撮りする。
      ボードの見た目は Sources/Panel/Theme.swift・Corkboard.swift・PanelView.swift・ModeViews.swift に合わせて描く（実機のパネルは自動では撮れないため）。
-     映すのは架空の内容だけにする（実在の人のパスや履歴を入れない）。字幕は README の既定に合わせて英語、ボードの中はアプリと同じ日本語。 -->
-<html lang="ja"><head><meta charset="utf-8">
+     映すのは架空の内容だけにする（実在の人のパスや履歴を入れない）。
+     ?lang=en（既定）は英語の README 用で、字幕・ボード・例文をすべて英語にする。?lang=ja は日本語の README 用で、すべて日本語。 -->
+<html><head><meta charset="utf-8">
 <style>
 :root{--accent:#4F6C84;--paper:#F7F1E3;--card:#FFFDF7;--cardBorder:#E3D7BF;--well:#FCF9F1;--wellBorder:#DCCFB5;--ink:#3B4441;--subtle:#76716A;--keycap:#EDE5D3;--frame:#8B5E3A;--frameHi:#B07E52;--shade:rgba(91,62,34,.28)}
 *{box-sizing:border-box}
@@ -24,6 +25,8 @@ body{font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-
 .pdf{padding:26px 34px;font-family:"Hiragino Mincho ProN",serif;font-size:14px;line-height:1.9;color:#222}
 .pdf h3{font-family:-apple-system,"Hiragino Sans",sans-serif;font-size:14px;margin:0 0 8px}
 .gl{height:9px;border-radius:4px;background:#E6E4DF;margin:12px 0}
+body.en .pdf{font-family:"Times New Roman",Times,serif;font-size:15px}
+body.en .tf .names{width:150px}body.en .tf .out{font-size:11.5px}
 .sel{background:#B4D5FE}.inactive .sel{background:#DCDCDC}
 
 /* ボード：論理の大きさ 410×660 で描き、0.85 倍に縮めて置く。 */
@@ -122,16 +125,16 @@ table.tb{border-collapse:collapse;font-size:12px;margin-top:2px;white-space:norm
 table.tb td{border:1px solid #D9D6CE;padding:3px 10px;background:#fff}
 table.tb tr:first-child td{background:#EEF2EA;font-weight:600}
 </style></head><body>
-<div class="menubar"><div class="dot"></div><b id="appname">プレビュー</b><span>ファイル</span><span>編集</span><span>表示</span>
-  <div class="right"><div class="mbicon" id="mbicon"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="1.75" y="3.25" width="14.5" height="11.5" rx="2.2" fill="none" stroke="#3B4441" stroke-width="1.5"/><g fill="#3B4441"><circle cx="12.6" cy="7" r=".6"/><circle cx="13.2" cy="11.6" r=".6"/><circle cx="10.9" cy="12.4" r=".6"/><rect x="4.4" y="7.2" width="6" height="5.4" transform="rotate(-7 7.4 9.6)"/></g><circle cx="7.3" cy="7" r="2.4" fill="#F6F4EE"/><circle cx="7.3" cy="7" r="1.65" fill="#3B4441"/></svg></div><span>9月30日(水) 10:24</span></div></div>
+<div class="menubar"><div class="dot"></div><b id="appname"></b><span id="m1"></span><span id="m2"></span><span id="m3"></span>
+  <div class="right"><div class="mbicon" id="mbicon"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="1.75" y="3.25" width="14.5" height="11.5" rx="2.2" fill="none" stroke="#3B4441" stroke-width="1.5"/><g fill="#3B4441"><circle cx="12.6" cy="7" r=".6"/><circle cx="13.2" cy="11.6" r=".6"/><circle cx="10.9" cy="12.4" r=".6"/><rect x="4.4" y="7.2" width="6" height="5.4" transform="rotate(-7 7.4 9.6)"/></g><circle cx="7.3" cy="7" r="2.4" fill="#F6F4EE"/><circle cx="7.3" cy="7" r="1.65" fill="#3B4441"/></svg></div><span id="clock"></span></div></div>
 
 <div class="win" id="docwin" style="left:36px;top:62px;width:500px;height:430px">
-  <div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span>ゼミの準備.txt</span></div>
-  <div class="doc"><h2>9月30日 ゼミの準備</h2>・先行研究のまとめ<br><span id="paste"></span><span class="caret" id="caret"></span></div>
+  <div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span id="doctitle"></span></div>
+  <div class="doc"><h2 id="dochead"></h2><span id="docline"></span><br><span id="paste"></span><span class="caret" id="caret"></span></div>
 </div>
 <div class="win" id="pdfwin" style="left:250px;top:84px;width:520px;height:400px">
-  <div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span>論文.pdf</span></div>
-  <div class="pdf"><h3>1　はじめに</h3><div id="pdflines"></div>
+  <div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span id="pdftitle"></span></div>
+  <div class="pdf"><h3 id="pdfhead"></h3><div id="pdflines"></div>
     <div class="gl" style="width:92%"></div><div class="gl" style="width:86%"></div><div class="gl" style="width:90%"></div><div class="gl" style="width:60%"></div></div>
 </div>
 
@@ -141,6 +144,15 @@ table.tb tr:first-child td{background:#EEF2EA;font-weight:600}
 <div class="fly" id="fly">📋</div>
 
 <script>
+// 言語。?lang=ja なら日本語、それ以外は英語。L(日本語, 英語) で文言を選ぶ。
+const EN = new URLSearchParams(location.search).get("lang") !== "ja";
+const L = (ja, en) => EN ? en : ja;
+document.documentElement.lang = L("ja", "en");
+document.body.classList.toggle("en", EN);
+for (const [id, ja, en] of [["m1", "ファイル", "File"], ["m2", "編集", "Edit"], ["m3", "表示", "View"], ["clock", "9月30日(水) 10:24", "Wed Sep 30 10:24"],
+  ["doctitle", "ゼミの準備.txt", "meeting-notes.txt"], ["dochead", "9月30日 ゼミの準備", "Sep 30 — Reading group"], ["docline", "・先行研究のまとめ", "• Summary of related work"],
+  ["pdftitle", "論文.pdf", "paper.pdf"], ["pdfhead", "1　はじめに", "1  Introduction"]]) document.getElementById(id).textContent = L(ja, en);
+
 // ボードの置き方（論理の大きさと縮め方）。
 const PW = 410, PH = 660, SCALE = 0.85, PX = 960 - Math.round(PW * SCALE) - 18, PY = 30;
 
@@ -167,8 +179,10 @@ const corkTile = (() => {
 document.getElementById("panel").style.backgroundImage = `url(${corkTile})`;
 document.getElementById("panel").style.backgroundSize = "140px 140px";
 
-const PDF_LINES = ["大規模言語モデルは、少数の例を示すだけ", "で新しいタスクに適応できることが知られ", "ている。本研究では、その仕組みを注意機", "構の観点から分析する。"];
-const PDF_TEXT = PDF_LINES.join("\n"), JOINED = PDF_LINES.join("");
+const PDF_LINES = L(["大規模言語モデルは、少数の例を示すだけ", "で新しいタスクに適応できることが知られ", "ている。本研究では、その仕組みを注意機", "構の観点から分析する。"],
+  ["Large language models can learn new", "tasks from just a few examples. In this", "paper, we study how this works through", "the lens of attention."]);
+// 改行を消す：日本語はそのままつなぎ、英語は半角スペースでつなぐ（LineJoiner.swift と同じ）。
+const PDF_TEXT = PDF_LINES.join("\n"), JOINED = PDF_LINES.join(L("", " "));
 const WESTERN = s => s.replace(/、/g, "，").replace(/。/g, "．");
 document.getElementById("pdflines").innerHTML = PDF_LINES.map((l, i) => `<div><span id="pl${i}">${l}</span></div>`).join("");
 
@@ -204,46 +218,58 @@ const SYM = {
 };
 const CHART = w => `<svg width="${w}" height="${Math.round(w * .62)}" viewBox="0 0 100 62"><rect width="100" height="62" fill="#fff"/><path d="M12 6v48h82" stroke="#9AA" fill="none" stroke-width=".8"/>
   <rect x="20" y="30" width="14" height="24" fill="#8FA2B3"/><rect x="42" y="18" width="14" height="36" fill="#5F7A90"/><rect x="64" y="10" width="14" height="44" fill="#C75543"/>
-  <text x="50" y="7" font-size="5.5" text-anchor="middle" fill="#444" font-family="sans-serif">精度の比較</text></svg>`;
+  <text x="50" y="7" font-size="5.5" text-anchor="middle" fill="#444" font-family="sans-serif">${L("精度の比較", "Accuracy")}</text></svg>`;
 const APPS = {
-  "com.apple.Preview": ["プレビュー", "#3E8EE8", "P"], "com.apple.screencaptureui": ["スクリーンショット", "#6B7479", "S"],
+  "com.apple.Preview": [L("プレビュー", "Preview"), "#3E8EE8", "P"], "com.apple.screencaptureui": [L("スクリーンショット", "Screenshot"), "#6B7479", "S"],
   "com.microsoft.Excel": ["Microsoft Excel", "#1F7A45", "X"], "com.apple.finder": ["Finder", "#3C9BF0", "F"],
   "io.github.kobito-tools.corkclip": ["CorkClip", "#8B5E3A", "C"], "com.apple.Safari": ["Safari", "#2F86E8", "S"],
 };
 const appIcon = b => `<span class="appi" style="background:${APPS[b][1]}">${APPS[b][2]}</span>`;
 
 // 履歴（架空の内容）。styles は PasteStyle.swift と同じ並び。
-const MORE = ["ほかの変換…", "more"];
+const MORE = [L("ほかの変換…", "More transforms…"), "more"];
+const TAG_PAPER = L("論文", "paper");
+// 日付・回数・大きさの一行。
+const FOOT = (date, copies, pastes, size, chars) => EN
+  ? `${date} · copied ${copies}× · pasted ${pastes}× · ${size}${chars ? ` · ${chars} chars` : ""}`
+  : `${date}・コピー${copies}回・貼り付け${pastes}回・${size}${chars ? `・${chars}文字` : ""}`;
+const PDF_BYTES = new TextEncoder().encode(PDF_TEXT).length;
 const CLIPS = [
-  { id: "pdf", kind: "text", kindLabel: "テキスト", bundle: "com.apple.Preview", time: "10 秒前", tags: ["論文"], display: JOINED,
-    styles: [["そのまま", "text"], ["改行を消す", "joinLines"], ["「，．」に", "abc"], MORE],
-    body: () => esc(PDF_TEXT), result: [null, JOINED, WESTERN(PDF_TEXT)], foot: "2026/09/30 10:24・コピー1回・貼り付け0回・232 bytes・76文字" },
-  { id: "graph", kind: "photo", kindLabel: "画像", bundle: "com.apple.screencaptureui", time: "3 分前", tags: [], display: "画像 1280×800",
-    styles: [["画像", "photo"], ["画像の文字", "search"], MORE],
-    body: () => `<div style="display:flex;justify-content:center">${CHART(180)}</div><div style="font-size:11px;color:#8E8A83;margin-top:4px">画像の文字：精度の比較</div>`,
-    foot: "2026/09/30 10:21・コピー1回・貼り付け0回・184 KB" },
-  { id: "table", kind: "table", kindLabel: "書式付き", bundle: "com.microsoft.Excel", time: "12 分前", tags: ["実験"], display: "条件　精度　時間",
-    styles: [["書式付き", "table"], ["プレーン", "abc"], ["表 → LaTeX", "table"], ["表 → Markdown", "table"], ["表 → CSV", "table"], MORE],
-    body: () => `<table class="tb"><tr><td>条件</td><td>精度</td><td>時間</td></tr><tr><td>手法A</td><td>0.82</td><td>1.4s</td></tr><tr><td>手法B</td><td>0.87</td><td>2.1s</td></tr><tr><td>手法C</td><td>0.91</td><td>3.0s</td></tr></table>`,
-    foot: "2026/09/30 10:12・コピー2回・貼り付け1回・6 KB・48文字" },
-  { id: "file", kind: "file", kindLabel: "ファイル", bundle: "com.apple.finder", time: "1 時間前", tags: [], display: "実験データ.csv",
-    styles: [["ファイル", "file"], ["パス", "file"], ["~ のパス", "file"], ["ファイル名", "text"], ["file://", "link"]],
-    body: () => `<div style="display:flex;gap:8px;align-items:flex-start;white-space:normal"><span style="color:#5C668F">${SYM.file(28)}</span><div><div>実験データ.csv</div><div style="font-size:11px;color:#8E8A83">~/Research/2026</div></div></div>`,
-    foot: "2026/09/30 09:20・コピー1回・貼り付け0回・1 KB" },
-  { id: "formula", kind: "formula", kindLabel: "数式", bundle: "io.github.kobito-tools.corkclip", time: "1 日前", tags: ["論文"], display: "\\int_0^1 f(x)\\,dx = F(1) - F(0)",
-    styles: [["数式画像", "formula"], ["LaTeX の式", "text"], MORE],
+  { id: "pdf", kind: "text", kindLabel: L("テキスト", "Text"), bundle: "com.apple.Preview", time: L("10 秒前", "10 sec ago"), tags: [TAG_PAPER], display: JOINED,
+    // 英語の文には「，．」の貼り方が出ない（PasteStyle.swift と同じ）。
+    styles: EN ? [["As is", "text"], ["Join lines", "joinLines"], MORE] : [["そのまま", "text"], ["改行を消す", "joinLines"], ["「，．」に", "abc"], MORE],
+    body: () => esc(PDF_TEXT), result: [null, JOINED, WESTERN(PDF_TEXT)], foot: FOOT("2026/09/30 10:24", 1, 0, `${PDF_BYTES} bytes`, [...JOINED].length) },
+  { id: "graph", kind: "photo", kindLabel: L("画像", "Image"), bundle: "com.apple.screencaptureui", time: L("3 分前", "3 min ago"), tags: [], display: L("画像 1280×800", "Image 1280×800"),
+    styles: [[L("画像", "Image"), "photo"], [L("画像の文字", "Text in image"), "search"], MORE],
+    body: () => `<div style="display:flex;justify-content:center">${CHART(180)}</div><div style="font-size:11px;color:#8E8A83;margin-top:4px">${L("画像の文字：精度の比較", "Text in image: Accuracy")}</div>`,
+    foot: FOOT("2026/09/30 10:21", 1, 0, "184 KB") },
+  { id: "table", kind: "table", kindLabel: L("書式付き", "Rich text"), bundle: "com.microsoft.Excel", time: L("12 分前", "12 min ago"), tags: [L("実験", "experiment")], display: L("条件　精度　時間", "Method  Accuracy  Time"),
+    styles: [[L("書式付き", "Rich text"), "table"], [L("プレーン", "Plain"), "abc"], [L("表 → LaTeX", "Table → LaTeX"), "table"], [L("表 → Markdown", "Table → Markdown"), "table"], [L("表 → CSV", "Table → CSV"), "table"], MORE],
+    body: () => `<table class="tb"><tr><td>${L("条件", "Method")}</td><td>${L("精度", "Accuracy")}</td><td>${L("時間", "Time")}</td></tr><tr><td>${L("手法A", "Method A")}</td><td>0.82</td><td>1.4s</td></tr><tr><td>${L("手法B", "Method B")}</td><td>0.87</td><td>2.1s</td></tr><tr><td>${L("手法C", "Method C")}</td><td>0.91</td><td>3.0s</td></tr></table>`,
+    foot: FOOT("2026/09/30 10:12", 2, 1, "6 KB", 48) },
+  { id: "file", kind: "file", kindLabel: L("ファイル", "File"), bundle: "com.apple.finder", time: L("1 時間前", "1 hr ago"), tags: [], display: L("実験データ.csv", "results.csv"),
+    styles: [[L("ファイル", "File"), "file"], [L("パス", "Path"), "file"], [L("~ のパス", "~ path"), "file"], [L("ファイル名", "File name"), "text"], ["file://", "link"]],
+    body: () => `<div style="display:flex;gap:8px;align-items:flex-start;white-space:normal"><span style="color:#5C668F">${SYM.file(28)}</span><div><div>${L("実験データ.csv", "results.csv")}</div><div style="font-size:11px;color:#8E8A83">~/Research/2026</div></div></div>`,
+    foot: FOOT("2026/09/30 09:20", 1, 0, "1 KB") },
+  { id: "formula", kind: "formula", kindLabel: L("数式", "Formula"), bundle: "io.github.kobito-tools.corkclip", time: L("1 日前", "1 day ago"), tags: [TAG_PAPER], display: "\\int_0^1 f(x)\\,dx = F(1) - F(0)",
+    styles: [[L("数式画像", "Formula image"), "formula"], [L("LaTeX の式", "LaTeX source"), "text"], MORE],
     body: () => `<div class="mathimg">∫<sub style="font-size:14px">0</sub><sup style="font-size:14px">1</sup> f(x) dx = F(1) − F(0)</div><div style="font:11px Menlo,monospace;color:#8E8A83">\\int_0^1 f(x)\\,dx = F(1) - F(0)</div>`,
-    foot: "2026/09/29 17:05・コピー1回・貼り付け3回・38 KB" },
-  { id: "link", kind: "link", kindLabel: "リンク", bundle: "com.apple.Safari", time: "1 日前", tags: ["論文"], display: "https://example.org/papers/attention-2026",
-    styles: [["そのまま", "link"], MORE],
-    body: () => "https://example.org/papers/attention-2026", foot: "2026/09/29 16:40・コピー1回・貼り付け0回・41 bytes・41文字" },
+    foot: FOOT("2026/09/29 17:05", 1, 3, "38 KB") },
+  { id: "link", kind: "link", kindLabel: L("リンク", "Link"), bundle: "com.apple.Safari", time: L("1 日前", "1 day ago"), tags: [TAG_PAPER], display: "https://example.org/papers/attention-2026",
+    styles: [[L("そのまま", "As is"), "link"], MORE],
+    body: () => "https://example.org/papers/attention-2026", foot: FOOT("2026/09/29 16:40", 1, 0, "41 bytes", 41) },
 ];
 // → の画面（ModeViews.swift のほかの変換と、PanelModel.swift のできること）。
-const TRANSFORMS = ["改行を消す", "句読点を「，．」に", "句読点を「、。」に", "英数字・記号を半角に", "半角カタカナを全角に", "余分な空白を消す", "大文字に", "小文字に", "文の先頭だけ大文字に",
-  "表を LaTeX の tabular に", "表を Markdown に", "表を CSV に", "引用（> ）にする", "箇条書き（- ）にする", "箇条書き（・）にする", "番号付き（1. ）にする", "数式画像にする"];
+const TRANSFORMS = EN
+  ? ["Join lines", "Punctuation to ，．", "Punctuation to 、。", "Full-width to half-width", "Kana to full-width", "Remove extra spaces", "UPPERCASE", "lowercase", "Sentence case",
+    "Table to LaTeX tabular", "Table to Markdown", "Table to CSV", "Quote (> )", "Bullets (- )", "Bullets (・)", "Numbered (1. )", "Formula image"]
+  : ["改行を消す", "句読点を「，．」に", "句読点を「、。」に", "英数字・記号を半角に", "半角カタカナを全角に", "余分な空白を消す", "大文字に", "小文字に", "文の先頭だけ大文字に",
+    "表を LaTeX の tabular に", "表を Markdown に", "表を CSV に", "引用（> ）にする", "箇条書き（- ）にする", "箇条書き（・）にする", "番号付き（1. ）にする", "数式画像にする"];
+// 英語の文では句読点の変換は何も変えない。
 const TF_RESULT = [JOINED, WESTERN(PDF_TEXT), PDF_TEXT];
-const ACTIONS = [["T", "tag", "タグを付ける・外す", "⌘T"], ["P", "pin", "ピン留めする", "⌘P"], ["E", "pencil", "編集してから貼る", "⌘E"], ["L", "formula", "数式画像を作る", "⌘L"],
-  ["K", "stack", "ペーストスタックに積む", ""], ["S", "calPlus", "カードに残す", "⌘S"], ["D", "trash", "履歴から削除", "⌘⌫"]];
+const ACTIONS = [["T", "tag", L("タグを付ける・外す", "Add or remove tags"), "⌘T"], ["P", "pin", L("ピン留めする", "Pin"), "⌘P"], ["E", "pencil", L("編集してから貼る", "Edit, then paste"), "⌘E"],
+  ["L", "formula", L("数式画像を作る", "Make a formula image"), "⌘L"], ["K", "stack", L("ペーストスタックに積む", "Add to the paste stack"), ""], ["S", "calPlus", L("カードに残す", "Keep as a card"), "⌘S"],
+  ["D", "trash", L("履歴から削除", "Delete from history"), "⌘⌫"]];
 
 function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -253,14 +279,14 @@ const pressed = (t, at, len = .2) => t >= at && t < at + len;
 
 // 何秒に何が起きるか：[出す, 消す, キー, 字幕, キーを押す時刻]
 const CAPTIONS = [
-  [1.2, 3.1, ["⌘", "C"], "Copy as usual. CorkClip keeps it as it is", 1.6],
-  [3.3, 4.9, ["⌥", "⌘", "V"], "Bring up the board from the screen edge", 3.7],
-  [5.0, 8.2, ["↑", "↓"], "Pick an item to see it up close", 5.4],
-  [8.3, 10.7, ["⇥"], "Choose how to paste, and check the result first", 8.9],
-  [10.8, 12.3, ["Enter"], "Paste", 11.0],
-  [12.4, 14.9, ["#論文"], "Filter by #tag, type: or app:", 13.2],
-  [15.0, 18.0, ["→"], "Other transforms, and what you can do", 15.3],
-  [18.1, 20.0, ["S"], "One letter runs an action: keep it as a card", 18.5],
+  [1.2, 3.1, ["⌘", "C"], L("いつもどおりコピー。CorkClip がそのまま残します", "Copy as usual. CorkClip keeps it as it is"), 1.6],
+  [3.3, 4.9, ["⌥", "⌘", "V"], L("画面の端からボードを出す", "Bring up the board from the screen edge"), 3.7],
+  [5.0, 8.2, ["↑", "↓"], L("項目を選んで、中身を大きく見る", "Pick an item to see it up close"), 5.4],
+  [8.3, 10.7, ["⇥"], L("貼り方を選び、結果を先に確かめる", "Choose how to paste, and check the result first"), 8.9],
+  [10.8, 12.3, ["Enter"], L("貼る", "Paste"), 11.0],
+  [12.4, 14.9, ["#" + TAG_PAPER], L("#タグ・type:・app: で絞り込む", "Filter by #tag, type: or app:"), 13.2],
+  [15.0, 18.0, ["→"], L("ほかの変換と、この項目にできること", "Other transforms, and what you can do"), 15.3],
+  [18.1, 20.0, ["S"], L("英字1つで操作：カードに残す", "One letter runs an action: keep it as a card"), 18.5],
 ];
 const DOWNS = [5.4, 6.0, 6.6], UPS = [7.3, 7.55, 7.8];
 const TAB_AT = 8.9, ENTER_AT = 11.0, RIGHT_AT = 15.3, TF_DOWN = [16.3, 17.1], S_AT = 18.5;
@@ -282,7 +308,7 @@ function render(t) {
   const docFront = t >= 3.3;
   $("docwin").style.zIndex = docFront ? 2 : 1; $("pdfwin").style.zIndex = docFront ? 1 : 2;
   $("docwin").classList.toggle("inactive", !docFront); $("pdfwin").classList.toggle("inactive", docFront);
-  $("appname").textContent = docFront ? "テキストエディット" : "プレビュー";
+  $("appname").textContent = docFront ? L("テキストエディット", "TextEdit") : L("プレビュー", "Preview");
   // PDF の文を選ぶ。
   const selP = clamp((t - 0.3) / 1.0) * PDF_LINES.length;
   PDF_LINES.forEach((_, i) => $("pl" + i).className = selP > i + 0.2 ? "sel" : "");
@@ -328,8 +354,9 @@ const keycap = (k, down = false, small = false) => `<span class="kc${small ? " s
 function panelHTML(t) {
   const second = t >= 12.4;
   // 検索
-  const typed = !second ? "" : t < 13.2 ? "" : t < 13.5 ? "#" : t < 13.8 ? "#論" : "#論文";
-  const rows = typed === "#論文" ? CLIPS.filter(c => c.tags.includes("論文")) : CLIPS;
+  const full = "#" + TAG_PAPER, half = full.slice(0, Math.ceil(full.length / 2));
+  const typed = !second ? "" : t < 13.2 ? "" : t < 13.5 ? "#" : t < 13.8 ? half : full;
+  const rows = typed === full ? CLIPS.filter(c => c.tags.includes(TAG_PAPER)) : CLIPS;
   // 選択と貼り方
   let sel = 0;
   if (!second) sel = DOWNS.filter(d => t >= d).length - UPS.filter(d => t >= d).length;
@@ -337,23 +364,23 @@ function panelHTML(t) {
   const styleIndex = !second && t >= TAB_AT ? 1 : 0;
   const mode = second && t >= RIGHT_AT && t < S_AT + 0.1 ? "transform" : "list";
   const tfIndex = TF_DOWN.filter(d => t >= d).length;
-  const toast = second && t >= S_AT + 0.1 ? "カードに残しました（9月30日のクリップ・1件）" : null;
-  const lastMethod = second ? "改行を消す" : null; // 1回目に「改行を消す」で貼ったので
+  const toast = second && t >= S_AT + 0.1 ? L("カードに残しました（9月30日のクリップ・1件）", "Kept as a card (Clips for Sep 30 · 1 item)") : null;
+  const lastMethod = second ? L("改行を消す", "Join lines") : null; // 1回目に「改行を消す」で貼ったので
 
   let h = `<div class="header strip"><div class="field">${SYM.search(15)}`
-    + (typed ? `<span class="q">${typed}</span><span class="caret" style="height:15px;visibility:${Math.floor(t * 2) % 2 ? "hidden" : "visible"}"></span>` : `<span class="ph">検索（#タグ type:画像 app:Word …）</span>`)
+    + (typed ? `<span class="q">${typed}</span><span class="caret" style="height:15px;visibility:${Math.floor(t * 2) % 2 ? "hidden" : "visible"}"></span>` : `<span class="ph">${L("検索（#タグ type:画像 app:Word …）", "Search (#tag type:image app:Word …)")}</span>`)
     + `</div>${SYM.sort(16)}${SYM.gear(16)}</div>`;
 
   if (mode === "transform") {
     h += `<div class="well" style="height:250px">${pin("l")}${pin("r")}<div class="mode" style="height:100%">`
-      + `<div class="mtitle">${SYM.wand(17)}ほかの変換<span class="r">space でつなげる</span></div>`
+      + `<div class="mtitle">${SYM.wand(17)}${L("ほかの変換", "More transforms")}<span class="r">${L("space でつなげる", "space to chain")}</span></div>`
       + `<div class="tf"><div class="names">${TRANSFORMS.map((x, i) => `<div class="${i === tfIndex ? "on" : ""}">${x}</div>`).join("")}</div>`
       + `<div class="out">${esc(TF_RESULT[tfIndex])}</div></div></div></div>`;
     const sDown = pressed(t, S_AT, .2);
-    h += `<div class="well" style="flex:1;min-height:0">${pin("l")}${pin("r")}<div class="mode" style="gap:6px"><div class="mtitle">${SYM.bolt(17)}この項目にできること</div><div style="display:flex;flex-direction:column;gap:1px">`
+    h += `<div class="well" style="flex:1;min-height:0">${pin("l")}${pin("r")}<div class="mode" style="gap:6px"><div class="mtitle">${SYM.bolt(17)}${L("この項目にできること", "What you can do with this item")}</div><div style="display:flex;flex-direction:column;gap:1px">`
       + ACTIONS.map(([k, sy, l, s]) => `<div class="act${k === "S" && sDown ? " on" : ""}"><span class="k${k === "S" && sDown ? " down" : ""}">${k}</span><span class="sy">${SYM[sy](16)}</span>${l}<span class="sc">${s}</span></div>`).join("")
       + `</div></div></div>`;
-    h += `<div class="hints strip">${[["⏎", "変換して貼る"], ["英字", "できること"], ["⇥", "切り替え"], ["esc", "戻る"]].map(([k, x]) => `<span>${keycap(k, false, true)}${x}</span>`).join("")}</div>`;
+    h += `<div class="hints strip">${(EN ? [["⏎", "Paste"], ["A–Z", "Actions"], ["⇥", "Switch"], ["esc", "Back"]] : [["⏎", "変換して貼る"], ["英字", "できること"], ["⇥", "切り替え"], ["esc", "戻る"]]).map(([k, x]) => `<span>${keycap(k, false, true)}${x}</span>`).join("")}</div>`;
     return h;
   }
 
@@ -361,14 +388,14 @@ function panelHTML(t) {
   const [style] = clip.styles[styleIndex];
   const b = APPS[clip.bundle];
   let body = clip.body();
-  if (styleIndex > 0) body = `<div class="styled">${SYM[clip.styles[styleIndex][1]](12)}「${style}」で貼られる内容</div>${esc(clip.result[styleIndex])}`;
-  h += `<div class="well" style="height:248px">${pin("l")}${pin("r")}<div class="wtitle">プレビュー</div>`
+  if (styleIndex > 0) body = `<div class="styled">${SYM[clip.styles[styleIndex][1]](12)}${L(`「${style}」で貼られる内容`, `What “${style}” will paste`)}</div>${esc(clip.result[styleIndex])}`;
+  h += `<div class="well" style="height:248px">${pin("l")}${pin("r")}<div class="wtitle">${L("プレビュー", "Preview")}</div>`
     + `<div class="pvhead">${appIcon(clip.bundle)}${b[0]}<span class="tags">${clip.tags.map(x => "#" + x).join(" ")}</span><span class="kind">${SYM[clip.kind](13)}${clip.kindLabel}</span></div>`
     + `<div class="pvbody">${body}</div><div class="pvfoot">${clip.foot}</div>`
-    + `<div class="styles"><span class="lbl">貼り方</span><div class="chips">${clip.styles.map(([s, sy], i) => `<span class="chip${i === styleIndex ? " on" : ""}">${SYM[sy](13)}${s}</span>`).join("")}</div></div></div>`;
+    + `<div class="styles"><span class="lbl">${L("貼り方", "Paste as")}</span><div class="chips">${clip.styles.map(([s, sy], i) => `<span class="chip${i === styleIndex ? " on" : ""}">${SYM[sy](13)}${s}</span>`).join("")}</div></div></div>`;
 
   // 履歴のカード
-  h += `<div class="list"><div class="inner"><div class="section strip">${SYM.clock(10)} ${typed === "#論文" ? "見つかった履歴" : "履歴"} <span class="count">${rows.length}</span></div>`;
+  h += `<div class="list"><div class="inner"><div class="section strip">${SYM.clock(10)} ${typed === full ? L("見つかった履歴", "Matches") : L("履歴", "History")} <span class="count">${rows.length}</span></div>`;
   rows.forEach((c, i) => {
     const tint = color(c.bundle);
     const lead = c.kind === "photo" ? CHART(42) : SYM[c.kind](19);
@@ -380,16 +407,16 @@ function panelHTML(t) {
   if (toast) h += `<div class="toast">${SYM.check(15)}${toast}</div>`;
 
   // 主なキー（PanelView.swift の ShortcutGuide）
-  const enter = styleIndex === 0 ? "そのまま貼る" : `「${style}」で貼る`;
-  const last = lastMethod ? `前回の「${lastMethod}」で貼る` : "前回の貼り方で貼る";
+  const enter = styleIndex === 0 ? L("そのまま貼る", "Paste as is") : L(`「${style}」で貼る`, `Paste as “${style}”`);
+  const last = lastMethod ? L(`前回の「${lastMethod}」で貼る`, `Last style: “${lastMethod}”`) : L("前回の貼り方で貼る", "Paste with the last style");
   const enterDown = !second && pressed(t, ENTER_AT), tabDown = !second && pressed(t, TAB_AT), rightDown = second && pressed(t, RIGHT_AT);
   const guideRows = [
     [[keycap("⏎ Enter", enterDown)], enter, styleIndex > 0],
-    [[keycap("⇧ Shift"), keycap("⏎ Enter")], "書式を除いて貼る"],
+    [[keycap("⇧ Shift"), keycap("⏎ Enter")], L("書式を除いて貼る", "Paste without formatting")],
     [[keycap("⌃ Ctrl"), keycap("⏎ Enter")], last],
-    [[keycap("→", rightDown)], "ほかの変換・できること"],
+    [[keycap("→", rightDown)], L("ほかの変換・できること", "More transforms & actions")],
   ];
-  h += `<div class="guide strip"><div class="top"><b>主なキー</b>${keycap("⇥", tabDown, true)}貼り方を切り替え<span style="width:4px"></span>${keycap("⌘/", false, true)}キーの一覧</div><div class="grid">`
+  h += `<div class="guide strip"><div class="top"><b>${L("主なキー", "Main keys")}</b>${keycap("⇥", tabDown, true)}${L("貼り方を切り替え", "Switch style")}<span style="width:4px"></span>${keycap("⌘/", false, true)}${L("キーの一覧", "All keys")}</div><div class="grid">`
     + guideRows.map(([keys, text, hot]) => `<div class="keys">${keys.join('<span class="plus">+</span>')}</div><div class="tx${hot ? " hot" : ""}">${text}</div>`).join("")
     + `</div></div>`;
   return h;
