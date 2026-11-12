@@ -352,10 +352,6 @@ The README demo (`docs/images/demo.gif`) is a drawn mock-up of the board in `scr
 
 Bug reports and requests are welcome in [Issues](../../issues).
 
-### How this was made
-
-CorkClip was developed with the help of ChatGPT (OpenAI) and Claude (Anthropic). This is a personal project and is not affiliated with OpenAI or Anthropic.
-
 ### License
 
 CorkClip is released under the [MIT License](LICENSE). It bundles [KaTeX](https://katex.org/) (MIT License, `Resources/katex/LICENSE`) to draw formulas.
