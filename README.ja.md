@@ -352,10 +352,6 @@ README のデモ（`docs/images/demo.gif`）は、`scripts/demo/demo.html` に�
 
 不具合の報告や要望は [Issues](../../issues) で受け付けています。
 
-### 作り方について
-
-CorkClip の開発には、ChatGPT（OpenAI）と Claude（Anthropic）を使っています。個人のプロジェクトで、OpenAI・Anthropic とは関係ありません。
-
 ### ライセンス
 
 CorkClip は [MIT License](LICENSE) で公開しています。数式の描画に [KaTeX](https://katex.org/)（MIT License、`Resources/katex/LICENSE`）を同梱しています。
