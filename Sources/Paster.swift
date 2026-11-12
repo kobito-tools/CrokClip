@@ -113,6 +113,12 @@ final class Paster {
         return AXIsProcessTrustedWithOptions(options)
     }
 
+    /// アクセシビリティの許可を頼み（一覧に CorkClip を載せる）、システム設定のその画面を開く。
+    static func openAccessibilitySettings() {
+        _ = isTrusted(prompt: true)
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+    }
+
     /// ⌘V を送る。9 は ANSI・JIS 配列の V のキー。
     static func sendCommandV() {
         let source = CGEventSource(stateID: .combinedSessionState)

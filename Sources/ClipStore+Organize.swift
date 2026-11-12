@@ -333,6 +333,13 @@ extension ClipStore {
         }
     }
 
+    /// カードから外した（F-17）。
+    func clearExported(_ ids: [Int]) throws {
+        try locked {
+            try database.transaction { for id in ids { try database.run("UPDATE clips SET exported_at = NULL WHERE id = ?", id) } }
+        }
+    }
+
     func exportedAt(_ id: Int) throws -> Date? {
         try locked { (try database.first("SELECT exported_at FROM clips WHERE id = ?", id)?["exported_at"] as? Double).map(Date.init(timeIntervalSince1970:)) }
     }

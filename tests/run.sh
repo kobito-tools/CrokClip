@@ -12,8 +12,8 @@ if ! xcrun swiftc -o "$work/harness" $sources tests/harness/main.swift \
   -framework Cocoa -framework SwiftUI -framework Carbon -framework WebKit -framework PDFKit -framework Vision -framework Quartz -framework ServiceManagement -lsqlite3 > "$work/build.log" 2>&1; then
   cat "$work/build.log"; exit 1
 fi
-# kobito シリーズの PC 固有領域と受け渡しのフォルダも一時フォルダにする（実際の設定に触れない）。
-export KOBITO_CONFIG_DIR="$work/kobito-tools" KOBITO_SHARE_DIR="$work/kobito-share"
+# kobito シリーズの PC 固有領域も一時フォルダにする（実際の設定に触れない）。
+export KOBITO_CONFIG_DIR="$work/kobito-tools"
 "$work/harness" "$work" schema Resources/katex | tee "$work/harness.log"
 grep -q "すべて成功" "$work/harness.log"
 
@@ -69,6 +69,7 @@ assert all(len(marker[key]) <= 80 and "\n" not in marker[key] for key in ("tagli
 build = open("build.sh", encoding="utf-8").read()
 assert f"<key>CFBundleIdentifier</key><string>{marker['bundle_id']}</string>" in build, "bundle_id が build.sh と違う"
 assert f'VERSION="{marker["version"]}"' in build, "version が build.sh の VERSION と違う"
-assert all(os.path.isfile(name) for name in ("kobito/icon.svg", "kobito/icon-1024.png", "Setup.command")), "kobito/ のアイコンか Setup.command が無い"
+assert all(os.path.isfile(name) for name in ("kobito/icon.svg", "kobito/icon-1024.png")), "kobito/ のアイコンが無い"
+assert not os.path.exists("Setup.command"), "やめた入口 Setup.command が残っている"
 print("ok - 目印（kobito-app.json）の形が決まりどおり（native・launch.py なし・バンドルIDと版が build.sh と同じ）")
 PY

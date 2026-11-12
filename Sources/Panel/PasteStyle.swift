@@ -93,6 +93,36 @@ struct PasteStyle: Identifiable, Equatable {
     }
 }
 
+/// 最後に使った貼り方（⌃⏎ で使う）。⏎ がいつも「そのまま」から始まるので、それ以外の貼り方だけを覚える。
+enum PasteMethod: Codable, Equatable {
+    case plainText, joinLines
+    case transform([TransformKind])
+
+    /// 貼り方の帯・変換の一覧で選んだ物から作る（覚えない物は nil）。
+    init?(_ action: PasteStyle.Action) {
+        switch action {
+        case .mode(.plainText): self = .plainText
+        case .mode(.joinLines): self = .joinLines
+        case .transform(let steps): self.init(steps: steps)
+        case .mode(.original), .latexImage, .moreTransforms: return nil
+        }
+    }
+
+    /// 数式画像は画面を開くだけなので覚えない。
+    init?(steps: [TransformKind]) {
+        guard !steps.isEmpty, !steps.contains(.latexImage) else { return nil }
+        self = .transform(steps)
+    }
+
+    var label: String {
+        switch self {
+        case .plainText: "書式なし"
+        case .joinLines: "改行を消す"
+        case .transform(let steps): steps.map(\.label).joined(separator: " → ")
+        }
+    }
+}
+
 /// 項目にできること。→ か ⌘K で開く一覧に、1文字のキーと一緒に並べる。
 struct PanelAction: Identifiable {
     let id: String

@@ -86,6 +86,11 @@ MainActor.assumeIsolated {
     let watcher = PasteboardWatcher(pasteboard: source, excludedBundleIDs: { [] }) { captured.append($0) }
     watcher.check()
     check(captured.isEmpty, "パスワード管理アプリの印が付いた物は取らない")
+    for marker in ["de.petermaurer.TransientPasteboardType", "com.agilebits.onepassword", "net.antelle.keeweb"] {
+        put([[("public.utf8-plain-text", Data("secret".utf8)), (marker, Data())]], on: source)
+        watcher.check()
+    }
+    check(captured.isEmpty, "nspasteboard.org より前から使われている「保存しないで」の印でも取らない")
     put([[("public.utf8-plain-text", Data("ふつうの文字".utf8))]], on: source)
     watcher.check()
     check(captured.count == 1 && captured[0].plainText == "ふつうの文字", "ふつうのコピーは取る")
@@ -120,15 +125,29 @@ check(try store.recent(query: "PowerPoint").count >= 1, "コピー元のアプ�
 let blobCount = { (try? FileManager.default.subpathsOfDirectory(atPath: store.directory.appendingPathComponent("blobs").path).filter { $0.hasSuffix(".bin") }.count) ?? 0 }
 let beforeBlobs = blobCount()
 var settings = Settings()
+check(ClipKind.allCases.allSatisfy { settings.retention(for: $0) == 30 }, "期限の初期値は、文字も含めてどの種類も30日")
+let olderSettings = try JSONDecoder().decode(Settings.self, from: Data(#"{"retentionDays": {"image": 30, "office": 30, "file": 90}}"#.utf8))
+check(olderSettings.retention(for: .text) == 30 && olderSettings.retention(for: .file) == 90, "以前の設定に無い種類（文字など）は30日、選んであった日数はそのまま")
+settings.retentionDays = Dictionary(uniqueKeysWithValues: ClipKind.allCases.map { ($0.rawValue, $0 == .office ? 30 : 0) })
 let future = Date().addingTimeInterval(40 * 86_400)
 let report = try store.cleanup(settings: settings, now: future)
 check(report.removedClips == 1, "30日を過ぎた office の項目を消す（\(report.removedClips)件）")
 check(try store.recent().allSatisfy { $0.kind != .office }, "消した項目は一覧から消える")
 check(blobCount() < beforeBlobs, "使われなくなった生データを消す")
-check(try store.recent().contains { $0.kind == .text }, "テキストは無期限")
-settings.maxItems = 1
+check(try store.recent().contains { $0.kind == .text }, "0日にした種類は無期限")
+check((try? JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(settings)))?.retention(for: .text) == 0, "無期限（0日）を選んだことは設定のファイルに残る")
+settings.maxItems = 2
 try store.cleanup(settings: settings)
-check(try store.usage().count == 1, "件数の上限を超えた分を古い順に消す")
+check(try store.usage().count == 2, "件数の上限を超えた分を古い順に消す")
+try store.cleanup(settings: Settings(), now: future)
+check(try store.usage().count == 0, "初期値のままなら、30日を過ぎた文字も消す")
+
+check(try store.database.first("PRAGMA secure_delete")?["secure_delete"] as? Int == 1, "消した行は 0 で上書きする（secure_delete）")
+
+// HTML だけのコピーは、WebKit を通さずにタグを外して文字にする（中の画像を読みに行かない）。
+check(Capture.plainText(fromHTML: "<html><head><style>p{}</style></head><body><p>一行目&amp;<img src=\"https://example.com/x.png\"></p><p>二&#x884C;目<br>三行目 &lt;b&gt;</p><script>alert(1)</script></body></html>") == "一行目&\n二行目\n三行目 <b>",
+      "HTML からタグ・スクリプト・CSS を外して文字にする")
+check(Capture.plainText(fromHTML: "<b>太字</b>&nbsp;だけ&unknown;") == "太字 だけ&unknown;" && Capture.plainText(fromHTML: "<p></p>") == nil, "文字の参照を戻し、知らない名前は残す。文字が無ければ nil")
 
 // 8. 改行を消す
 let dictionary: (String) -> Bool = { ["international", "email"].contains($0) }
@@ -239,6 +258,11 @@ check(LatexSource.renamedMarkers.allSatisfy { LatexSource(embedded: latex.embedd
 check(Capture.renamedLatexTypes.allSatisfy { Capture(items: [[Representation(type: $0, data: Data(latex.json.utf8))]]).kind == .formula }, "以前の名前（Pastephant・InGoodPaste）の数式の型も数式として扱う")
 check(LatexSource.looksLikeLatex("$x^2$") && LatexSource.looksLikeLatex("\\frac{1}{2}") && !LatexSource.looksLikeLatex("ふつうの文章"), "LaTeX らしい文字を見分ける")
 check(LatexSource.stripDelimiters("\\[ x \\]") == "x" && LatexSource.stripDelimiters("$$y$$") == "y", "囲みを外す")
+let crafted = LatexSource(json: #"{"source": "x", "options": {"color": "red; background: url(https://example.com/a)", "background": "url(https://example.com/b)", "fontSize": 1e9, "padding": -5}}"#)
+check(crafted?.options.color == "#000000" && crafted?.options.background == nil && crafted?.options.fontSize == 144 && crafted?.options.padding == 0,
+      "クリップボードから読んだ描き方は、#RRGGBB 以外の色（url(…) など）を捨て、大きさと余白を範囲に収める")
+check({ var options = LatexOptions(); options.background = "url(x)"; options.color = "#12ab3"; return options.sanitized }() == LatexOptions(), "入力途中の色も、描くときには初期値にする")
+check((try? String(contentsOf: katex.appendingPathComponent("render.html"), encoding: .utf8))?.contains("default-src 'none'") == true, "描画のページは CSP で外部を読まない")
 _ = NSApplication.shared
 var rendered: Result<LatexImage, Error>?
 Task { @MainActor in
@@ -302,7 +326,7 @@ func entry(_ id: Int, text: String, tags: [Tag], image: Data? = nil) -> KeptCard
     KeptCards.Entry(clipID: id, copiedAt: keepTime, appName: "Safari", tagNames: tags.map(\.name), tagIDs: tags.map(\.id), text: text, latex: nil, filePaths: [], ocrText: nil, image: image)
 }
 try KeptCards.keep([entry(safariID, text: "https://arxiv.org/abs/1234", tags: [exportTag], image: makePNG(width: 10, height: 10))], basePath: base, schemaDirectory: keptSchema, now: keepTime)
-try KeptCards.keep([entry(wordID, text: "2件目", tags: [exportTag]), entry(safariID, text: "https://arxiv.org/abs/1234 直した", tags: [exportTag])], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(1))
+try KeptCards.keep([entry(wordID, text: "2件目", tags: [exportTag]), entry(safariID, text: "https://arxiv.org/abs/1234 直した", tags: [exportTag], image: makePNG(width: 12, height: 12))], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(1))
 try store2.markExported([wordID], at: keepTime)
 let cardLines = (try? String(contentsOf: KeptCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").map(String.init) ?? []
 let cardList = cardLines.compactMap { (try? JSONSerialization.jsonObject(with: Data($0.utf8))) as? [String: Any] }
@@ -316,7 +340,7 @@ check((todayCard["text"] as? String).map { $0.contains("直した") && $0.contai
 check((todayCard["updated"] as? String).map { Dataset.parseTimestamp($0) != nil && $0.range(of: "(Z|[+-]\\d{2}:\\d{2})$", options: .regularExpression) != nil } == true, "更新日時は時差付き")
 check(cardList.first?["tags"] as? [String] == ["tag-old"] && (cardList.first?["text"] as? String)?.contains("以前に残した文字") == true, "以前の書き出し先のメモを、文字とタグごと移す")
 let uploads = (try? FileManager.default.contentsOfDirectory(atPath: Dataset.uploadsDirectory(base).path)) ?? []
-check(uploads.count == 1 && uploads[0].hasSuffix(".png"), "画像は PNG で uploads/ に保存する（カードには入れない）")
+check(uploads.count == 1 && uploads[0].hasSuffix(".png"), "画像は PNG で uploads/ に保存する（カードには入れない。残し直したら前の画像は消す）")
 check(cardLines.allSatisfy { !$0.contains("base64") && !$0.contains("\\/") }, "カードは1行1件の JSON")
 let longText = String(repeating: "あ", count: 2500)
 try KeptCards.keep([entry(snippetID, text: longText, tags: [])], basePath: base, schemaDirectory: keptSchema, now: keepTime.addingTimeInterval(2))
@@ -326,6 +350,25 @@ try KeptCards.refresh(basePath: base, schemaDirectory: keptSchema)
 check(((try? String(contentsOf: KeptCards.cardsFile(base), encoding: .utf8))?.split(separator: "\n").count) == 2, "書き直しても移し替えは一度だけ")
 check(try store2.recent(query: "kept:\(today)").map(\.id) == [wordID] && (try store2.recent(query: "exported:\(today)").map(\.id)) == [wordID] && (try store2.recent(query: "kept:2000-01-01")).isEmpty, "kept: でその日に残した物を絞り込む（カードから開くとき）")
 check(!FileManager.default.fileExists(atPath: Dataset.directory(base).appendingPathComponent("lock.json").path), "残し終えたら使用中の印を外す")
+// カードから外す：このMacで残した物を消し、画像も消してカードを書き直す。
+try KeptCards.remove(clipIDs: [safariID], basePath: base, schemaDirectory: keptSchema)
+let afterRemove = (try? String(contentsOf: KeptCards.cardsFile(base), encoding: .utf8)) ?? ""
+check(!afterRemove.contains("直した") && afterRemove.contains("2件目"), "カードから外した物はカードに出さない（ほかの物は残す）")
+check(((try? FileManager.default.contentsOfDirectory(atPath: Dataset.uploadsDirectory(base).path)) ?? ["?"]).isEmpty, "カードから外したら、残した画像も消す")
+try store2.clearExported([wordID])
+check(try store2.exportedAt(wordID) == nil, "外したら、残した印も消す")
+try store2.markExported([wordID], at: keepTime)
+// 使用中の印にはホスト名を書かず、どのMacかは machineId で見分ける。
+let lockFile = Dataset.directory(base).appendingPathComponent("lock.json")
+let heldLock = DatasetLock(basePath: base)
+try heldLock.acquire()
+let lockJSON = (try? JSONSerialization.jsonObject(with: Data(contentsOf: lockFile))) as? [String: Any]
+check(lockJSON?["machineId"] as? String == DatasetLock.machineId && lockJSON?["hostname"] == nil, "使用中の印にホスト名を書かない")
+heldLock.release()
+try Dataset.writeJSON(["app": "corkclip", "machineId": "corkclip-other", "pid": 1, "heartbeatAt": Dataset.timestamp()], to: lockFile)
+do { try DatasetLock(basePath: base).acquire(); check(false, "別のMacの印があれば使わない") }
+catch { check((error as? StoreError)?.message.contains("別のMac") == true, "別のMacの印があれば使わない（machineId で見分ける）") }
+try FileManager.default.removeItem(at: lockFile)
 // 以前の名前（Pastephant・InGoodPaste）で書き出したフォルダとDBは、新しい名前へ移す。
 for (oldName, oldDatabase) in [("Pastephant", "pastephant.sqlite3"), ("InGoodPaste", "ingoodpaste.sqlite3")] {
     let oldBase = work.appendingPathComponent("renamed-base-\(oldName)").path
@@ -422,6 +465,84 @@ MainActor.assumeIsolated {
     model.selectStyle(model.styles.firstIndex { $0.id == "joinLines" }!)
     model.pasteSelected()
     if case .paste(let ids, let mode)? = commands.last { check(ids == [textID] && mode == .joinLines, "⇥ で選んだ貼り方で貼る") } else { check(false, "⇥ で選んだ貼り方で貼る") }
+    // アクセシビリティの許可の案内は、許可が無いときだけ出し、許可したら消える。
+    var granted = false
+    model.accessibilityGranted = { granted }
+    model.prepareForShow()
+    check(model.needsAccessibility, "許可が無ければ、開いたときに案内を出す")
+    granted = true
+    model.refreshAccessibility()
+    check(!model.needsAccessibility, "許可したら、開いている間に案内が消える")
+    granted = false
+    model.prepareForShow()
+    granted = true
+    model.prepareForShow()
+    check(!model.needsAccessibility, "許可していれば、開いても案内は出ない")
+    // ⌃⏎：最後に使った「そのまま」以外の貼り方で貼る（覚えた物は設定に残す）。
+    var remembered: [PasteMethod] = []
+    model.onPasteMethodChange = { remembered.append($0) }
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .joinLines; return settings }
+    model.prepareForShow()
+    model.selection = textID
+    check(model.lastPasteMethod == .joinLines, "開いたときに、前回の貼り方を設定から読む")
+    model.pasteSelected()
+    check(model.lastPasteMethod == .joinLines && remembered.isEmpty, "「そのまま」で貼っても、前回の貼り方は変えない")
+    model.pasteWithLastMethod()
+    if case .paste(let ids, let mode)? = commands.last { check(ids == [textID] && mode == .joinLines, "⌃⏎ は前回の貼り方で貼る") } else { check(false, "⌃⏎ は前回の貼り方で貼る") }
+    model.paste(.plainText)
+    check(model.lastPasteMethod == .plainText && remembered == [.plainText], "⇧⏎ で貼ると、書式なしを前回の貼り方として覚える")
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .transform([.quote]); return settings }
+    model.prepareForShow()
+    model.selection = textID
+    model.pasteWithLastMethod()
+    if case .pasteText(let text, let copyOnly)? = commands.last {
+        check(!copyOnly && text == TextTransforms.apply([.quote], to: TransformContext(text: "一行目\n二行目")), "前回の貼り方が変換なら、変換してから貼る")
+    } else { check(false, "前回の貼り方が変換なら、変換してから貼る") }
+    model.settings = { var settings = Settings(); settings.lastPasteMethod = .transform([.pathAbsolute]); return settings }
+    model.prepareForShow()
+    model.selection = textID
+    let before = commands.count
+    model.pasteWithLastMethod()
+    check(commands.count == before && model.message != nil, "前回の貼り方がこの項目に使えなければ、貼らずに知らせる")
+    model.settings = { Settings() }
+    model.prepareForShow()
+    model.selection = textID
+    model.pasteWithLastMethod()
+    check(commands.count == before && model.message != nil, "前回の貼り方がまだ無ければ、貼らずに知らせる")
+    // 文字の無い画像では、書式なし・改行を消すは貼らずに知らせ、前回の貼り方も変えない。
+    for method in [PasteMethod.plainText, .joinLines] {
+        model.settings = { var settings = Settings(); settings.lastPasteMethod = method; return settings }
+        model.prepareForShow()
+        model.selection = heavyID
+        model.message = nil
+        model.pasteWithLastMethod()
+        check(commands.count == before && model.message != nil, "前回の貼り方が「\(method.label)」でも、文字の無い画像には貼らずに知らせる")
+    }
+    remembered = []
+    model.message = nil
+    model.paste(.plainText)
+    check(commands.count == before && model.message != nil && remembered.isEmpty && model.lastPasteMethod == .joinLines, "文字の無い画像で ⇧⏎ を押しても、貼らず、前回の貼り方も変えない")
+    model.settings = { Settings() }
+    model.prepareForShow()
+    check(PasteMethod(.transform([.joinLines, .latexImage])) == nil && PasteMethod(.mode(.original)) == nil && PasteMethod(.moreTransforms) == nil, "そのまま・数式画像・ほかの変換は覚えない")
+    var savedSettings = Settings()
+    savedSettings.lastPasteMethod = .transform([.joinLines, .quote])
+    check((try? JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(savedSettings)))?.lastPasteMethod == .transform([.joinLines, .quote]), "前回の貼り方は設定のファイルに残る")
+    // →：上にほかの変換、下にこの項目にできること。
+    model.beginActions()
+    check(model.mode == .transform && !model.transformEntries.isEmpty && model.moreFocus == .transforms, "→ で、ほかの変換の一覧を開き、↑↓ は変換に効く")
+    let actionIDs = Set(model.actions.map(\.id))
+    check(!actionIDs.isEmpty && actionIDs.isDisjoint(with: ["copy", "transform", "share", "quicklook", "snippet", "help"]), "できることには、コピーだけ・変換を選ぶ・Quick Look・新しい定型文・キーの一覧を並べない（送るは無い）")
+    check(actionIDs.isSuperset(of: ["tags", "pin", "edit", "latex", "stack", "delete"]), "できることには、タグ・ピン・編集・数式・スタック・削除を並べる")
+    model.toggleMoreFocus()
+    check(model.moreFocus == .actions, "⇥ で、できることの一覧に移る")
+    model.endMode()
+    model.multi = [textID, heavyID]
+    model.selection = textID
+    model.beginActions()
+    check(model.mode == .transform && model.transformEntries.isEmpty && model.moreFocus == .actions && model.actions.contains { $0.id == "merge" }, "複数選んで → を押すと、変換は出さず、できることに効く")
+    model.endMode()
+    model.multi = []
 }
 
 // 18. kobito シリーズの約束：④ 起動情報と、受け付ける URL
@@ -430,7 +551,6 @@ try Series.writeLaunchInfo(bundleID: "io.github.kobito-tools.corkclip")
 let launchJSON = (try? JSONSerialization.jsonObject(with: Data(contentsOf: Series.appsDirectory.appendingPathComponent("corkclip.json")))) as? [String: Any]
 check(launchJSON?["app"] as? String == "corkclip" && launchJSON?["name"] as? String == "CorkClip" && launchJSON?["command"] as? [String] == ["/usr/bin/open", "-b", "io.github.kobito-tools.corkclip"], "起動情報を書き出す（open -b <バンドルID>）")
 check(launchJSON?["embed"] == nil && launchJSON?["receive"] == nil, "起動情報に embed・receive は持たない")
-check(Series.launchInfos().map(\.app) == ["corkclip"], "書いた起動情報を約束どおりに読める")
 // --metadata（シリーズの決まり：APP_PACKAGE.md）は、起動情報と同じものを出すだけで、何も書かない。
 let metadataJSON = (try? JSONSerialization.jsonObject(with: Series.metadataJSON(bundleID: "io.github.kobito-tools.corkclip"))) as? NSDictionary
 check(metadataJSON != nil && metadataJSON == launchJSON.map { $0 as NSDictionary }, "--metadata の名乗りは、書き出す起動情報と同じ")
@@ -486,44 +606,19 @@ check(history?["v"] as? Int == 1 && historyItems.filter { $0["path"] as? String 
 check(historyItems.first?["app"] as? String == "corkclip" && historyItems.first?["id"] as? String == "テスト" && historyItems.contains { $0["app"] as? String == "another" }, "自分の1件を先頭に足し、ほかのアプリの分は残す")
 check(Series.datasetCandidates().map(\.path) == [base, otherBase], "最後に開いた順に並べる")
 
-// 20. ⑦ 送る：送り先は起動情報の receive から作る
-try Series.writeJSON(["app": "another", "name": "別のアプリ", "command": ["/usr/bin/true"], "receive": [
-    ["id": "new", "label": "新しく作る", "accepts": ["text", "image", "file"], "url": "kobito://another/import?mode=new&file={file}"],
-    ["id": "pictures", "label": "画像だけ", "accepts": ["image"], "url": "kobito://another/import?mode=image&file={file}"],
-    ["id": "broken", "label": "形が違う", "accepts": ["text"], "url": "https://example.com/{file}"]]], to: Series.appsDirectory.appendingPathComponent("another.json"))
-try Series.writeJSON(["app": "mismatch", "name": "名前違い", "command": ["/usr/bin/true"], "receive": [["id": "x", "label": "x", "accepts": ["text"], "url": "kobito://mismatch/x?file={file}"]]],
-                     to: Series.appsDirectory.appendingPathComponent("wrong-name.json"))
-check(Share.targets(for: ["text"]).map(\.title) == ["別のアプリ：新しく作る"], "文字を受け取れる口だけを並べる（形の違う口・ファイル名とIDの違う起動情報は捨てる）")
-check(Share.targets(for: ["image"]).map(\.key) == ["another/pictures", "another/new"] || Share.targets(for: ["image"]).map(\.key) == ["another/new", "another/pictures"], "画像なら画像を受け取れる口を全部並べる")
-check(Share.targets(for: ["text"], launchInfos: [Series.LaunchInfo(app: "corkclip", name: "CorkClip", command: ["/x"], receive: [Series.Receive(id: "a", label: "a", accepts: ["text"], url: "kobito://corkclip/a?file={file}")])]).isEmpty, "自分の口は並べない")
-var launched: [String] = []
-let sharePayload = Share.Payload(text: "送る文字", images: [Share.Image(name: "クリップ1.png", mimeType: "image/png", data: makePNG(width: 4, height: 4))], files: [Share.File(path: "/tmp/ある ファイル.pdf", name: "ある ファイル.pdf")])
-let target = Share.targets(for: sharePayload.kinds).first { $0.receive.id == "new" }!
-try Share.send(sharePayload, to: target) { launched = $0 }
-check(launched.dropLast() == ["/usr/bin/true"] && launched.last?.hasPrefix("kobito://another/import?mode=new&file=") == true, "起動情報の command の最後に URL を足して起動する")
-let sentPath = URLComponents(string: launched.last ?? "")?.queryItems?.first { $0.name == "file" }?.value ?? ""
-check(URL(fileURLWithPath: sentPath).deletingLastPathComponent().path == Share.directory.path && !(launched.last ?? "").contains("/kobito-share/"), "受け渡しファイルのパスは URL エンコードして kobito-share/ に置く")
-let shareAttributes = try? FileManager.default.attributesOfItem(atPath: sentPath)
-let directoryAttributes = try? FileManager.default.attributesOfItem(atPath: Share.directory.path)
-check((shareAttributes?[.posixPermissions] as? Int) == 0o600 && (directoryAttributes?[.posixPermissions] as? Int) == 0o700, "受け渡しファイルは 600、フォルダは 700")
-let shared = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: sentPath)))) as? [String: Any]
-check(shared?["kobito"] as? Int == 1 && shared?["type"] as? String == "share" && shared?["from"] as? String == "corkclip" && shared?["created"] is String, "約束⑦の形（kobito・type・from・created）")
-check(shared?["text"] as? String == "送る文字" && ((shared?["images"] as? [[String: Any]])?.first?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == sharePayload.images[0].data
-      && (shared?["files"] as? [[String: String]]) == [["path": "/tmp/ある ファイル.pdf", "name": "ある ファイル.pdf"]], "文字・画像・ファイルを入れる")
-let imageTarget = Share.targets(for: ["image"]).first { $0.receive.id == "pictures" }!
-try Share.send(sharePayload, to: imageTarget) { launched = $0 }
-let imageOnly = (try? JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: URLComponents(string: launched.last!)!.queryItems!.first { $0.name == "file" }!.value!)))) as? [String: Any]
-check(imageOnly?["images"] != nil && imageOnly?["text"] == nil && imageOnly?["files"] == nil, "口が受け取れる種類だけを送る")
-struct LaunchFailed: Error {}
-let before = (try? FileManager.default.contentsOfDirectory(atPath: Share.directory.path).count) ?? 0
-do { try Share.send(sharePayload, to: target) { _ in throw LaunchFailed() }; check(false, "起動できなければエラーにする") }
-catch { check((try? FileManager.default.contentsOfDirectory(atPath: Share.directory.path).count) == before, "起動できなければ書いたファイルを消す") }
-let old = Share.directory.appendingPathComponent("old.json")
-try Data("{}".utf8).write(to: old)
-try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(-25 * 3600)], ofItemAtPath: old.path)
-Share.cleanup()
-check(!FileManager.default.fileExists(atPath: old.path), "24時間より古い受け渡しファイルを消す")
-print("SHARE_FILE=\(sentPath)")
+// 20. 起動のしかた（手で開いたときだけ設定画面を出す）
+func openAppEvent(launchedAsLoginItem: Bool) -> NSAppleEventDescriptor {
+    let event = NSAppleEventDescriptor(eventClass: AEEventClass(kCoreEventClass), eventID: AEEventID(kAEOpenApplication),
+                                       targetDescriptor: nil, returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID))
+    if launchedAsLoginItem { event.setParam(NSAppleEventDescriptor(enumCode: OSType(keyAELaunchedAsLogInItem)), forKeyword: AEKeyword(keyAEPropData)) }
+    return event
+}
+check(LaunchKind.isLoginItemLaunch(openAppEvent(launchedAsLoginItem: true)), "ログイン項目としての起動を見分ける")
+check(!LaunchKind.isLoginItemLaunch(openAppEvent(launchedAsLoginItem: false)), "ふつうの起動はログイン時の起動としない")
+check(!LaunchKind.isLoginItemLaunch(nil), "起動の Apple Event が無いときは、ログイン時の起動としない")
+check(LaunchKind.shouldOpenSettingsOnLaunch(launchedAsLoginItem: false, hasPendingURL: false), "手で開いたときは設定画面を出す")
+check(!LaunchKind.shouldOpenSettingsOnLaunch(launchedAsLoginItem: true, hasPendingURL: false), "ログイン時の起動では設定画面を出さない")
+check(!LaunchKind.shouldOpenSettingsOnLaunch(launchedAsLoginItem: false, hasPendingURL: true), "URL で起動されたときは、その操作を優先して設定画面を出さない")
 
 print(failures == 0 ? "すべて成功" : "\(failures) 件失敗")
 exit(failures == 0 ? 0 : 1)

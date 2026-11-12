@@ -9,7 +9,6 @@ struct ModeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             switch model.mode {
-            case .actions: actionsList
             case .tags: tags
             case .edit: edit
             case .transform: transform
@@ -25,43 +24,7 @@ struct ModeView: View {
     }
 
     private func title(_ text: String, _ symbol: String) -> some View {
-        Label(text, systemImage: symbol).font(.system(size: 13, weight: .semibold))
-    }
-
-    // MARK: - 操作の一覧
-
-    private var actionsList: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            title(model.actionsTitle ?? (model.targets.count > 1 ? "\(model.targets.count)件にできること" : "この項目にできること"), model.actionsTitle == nil ? "bolt" : "paperplane")
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 1) {
-                        ForEach(Array(model.actions.enumerated()), id: \.element.id) { index, action in
-                            HStack(spacing: 10) {
-                                Text(String(action.key).uppercased())
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                                    .frame(width: 22, height: 22)
-                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.08)))
-                                Image(systemName: action.symbol).frame(width: 18).foregroundStyle(.secondary)
-                                Text(action.label).font(.system(size: 13))
-                                Spacer()
-                                if let shortcut = action.shortcut {
-                                    Text(shortcut).font(.system(size: 11)).foregroundStyle(.tertiary)
-                                }
-                            }
-                            .padding(.horizontal, 6).padding(.vertical, 4)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(index == model.actionIndex ? Theme.accent.opacity(0.25) : Color.clear))
-                            .contentShape(Rectangle())
-                            .id(action.id)
-                            .onTapGesture { action.run() }
-                        }
-                    }
-                }
-                .onChange(of: model.actionIndex) { index in
-                    if model.actions.indices.contains(index) { proxy.scrollTo(model.actions[index].id) }
-                }
-            }
-        }
+        modeTitle(text, symbol)
     }
 
     // MARK: - タグ（F-04）
@@ -111,7 +74,25 @@ struct ModeView: View {
 
     private var transform: some View {
         VStack(alignment: .leading, spacing: 8) {
-            title("変換してから貼る", "wand.and.stars")
+            HStack {
+                title("ほかの変換", "wand.and.stars")
+                Spacer()
+                if !model.transformEntries.isEmpty {
+                    Text("space でつなげる").font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            }
+            if model.transformEntries.isEmpty {
+                Text(model.targets.count > 1 ? "複数の項目には、変換はかけられません。⇥ の貼り方で、つないで貼れます。" : "この項目にかけられる変換はありません。")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            } else {
+                transformBody
+            }
+        }
+    }
+
+    private var transformBody: some View {
+        VStack(alignment: .leading, spacing: 8) {
             if !model.chain.isEmpty {
                 Text("つなげた変換：" + model.chain.map(\.label).joined(separator: " → "))
                     .font(.system(size: 11)).foregroundStyle(Theme.accent).lineLimit(2)
@@ -126,10 +107,11 @@ struct ModeView: View {
                                     .lineLimit(1)
                                     .padding(.horizontal, 6).padding(.vertical, 3)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(RoundedRectangle(cornerRadius: 5).fill(index == model.transformIndex ? Theme.accent.opacity(0.25) : Color.clear))
+                                    .background(RoundedRectangle(cornerRadius: 5).fill(index == model.transformIndex ? Theme.accent.opacity(model.moreFocus == .transforms ? 0.25 : 0.1) : Color.clear))
                                     .contentShape(Rectangle())
                                     .id(entry.id)
                                     .onTapGesture {
+                                        model.moreFocus = .transforms
                                         model.transformIndex = index
                                         if clickCount >= 2 { model.commitTransform(copyOnly: false) }
                                     }
@@ -295,15 +277,64 @@ struct ModeView: View {
     }
 
     private static let helpRows: [(String, String)] = [
-        ("⏎", "いまの貼り方で貼る（⌘⏎ はコピーだけ）"), ("⇥ ⇧⇥", "貼り方を切り替える（貼られる内容がプレビューに出る）"),
-        ("→ ⌘K", "この項目にできること（1文字で選ぶ。右クリックでも）"),
+        ("⏎", "いまの貼り方で貼る（初めは「そのまま」。⌘⏎ はコピーだけ）"), ("⇧⏎", "書式を除いて貼る"),
+        ("⌃⏎", "前回の貼り方（そのまま以外で最後に使った物）で貼る"),
+        ("→ ⌘K", "ほかの変換（上）と、この項目にできること（下。1文字で選ぶ。右クリックでも）"),
+        ("⇥ ⇧⇥", "貼り方を切り替える（貼られる内容がプレビューに出る）"),
         ("↑↓", "選択を動かす（⇧ で複数選択。⌘クリック・⇧クリックも）"), ("⌘1〜9", "上から N 番目を貼る"),
         ("", "── 覚えると速いキー ──"),
-        ("⇧⏎ ⌥⏎", "プレーンで貼る・改行を消して貼る"), ("⌃1〜9", "保存した変換の組み合わせで貼る"),
+        ("⌥⏎", "改行を消して貼る"), ("⌃1〜9", "保存した変換の組み合わせで貼る"),
         ("⌘T ⌘E ⌘P", "タグ・編集してから貼る・ピン留め"), ("⌘L ⌘M ⌘N", "数式画像・まとめる・新しい定型文"),
-        ("⌘S ⇧⌘N", "カードに残す・送る"), ("⌥⌘↑↓", "ピンの並べ替え"), ("⌘Y ⌘⌫", "Quick Look・削除"),
-        ("⌘, esc", "設定・戻る"), ("ドラッグ", "ほかのアプリへ取り出す"),
+        ("⌘S", "カードに残す"), ("⌥⌘↑↓", "ピンの並べ替え"),
+        ("⌘Y", "Quick Look（検索が空のときは space でも）"), ("⌘⌫", "履歴から削除"),
+        ("⌘/ ⌘, esc", "キーの一覧・設定・戻る"), ("ドラッグ", "ほかのアプリへ取り出す"),
     ]
+}
+
+/// 作業の画面の見出し。
+func modeTitle(_ text: String, _ symbol: String) -> some View {
+    Label(text, systemImage: symbol).font(.system(size: 13, weight: .semibold))
+}
+
+/// この項目にできること。1文字で選べ、クリックでも行う。
+/// active でないとき（→ の画面で変換を動かしているとき）は、選んでいる行を薄く出す。
+struct ActionList: View {
+    @ObservedObject var model: PanelModel
+    let active: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            modeTitle(model.targets.count > 1 ? "\(model.targets.count)件にできること" : "この項目にできること", "bolt")
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 1) {
+                        ForEach(Array(model.actions.enumerated()), id: \.element.id) { index, action in
+                            HStack(spacing: 10) {
+                                Text(String(action.key).uppercased())
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .frame(width: 22, height: 22)
+                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.08)))
+                                Image(systemName: action.symbol).frame(width: 18).foregroundStyle(.secondary)
+                                Text(action.label).font(.system(size: 13))
+                                Spacer()
+                                if let shortcut = action.shortcut {
+                                    Text(shortcut).font(.system(size: 11)).foregroundStyle(.tertiary)
+                                }
+                            }
+                            .padding(.horizontal, 6).padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(index == model.actionIndex && active ? Theme.accent.opacity(0.25) : Color.clear))
+                            .contentShape(Rectangle())
+                            .id(action.id)
+                            .onTapGesture { action.run() }
+                        }
+                    }
+                }
+                .onChange(of: model.actionIndex) { index in
+                    if model.actions.indices.contains(index) { proxy.scrollTo(model.actions[index].id) }
+                }
+            }
+        }
+    }
 }
 
 /// 付いているタグ（× で外す）。

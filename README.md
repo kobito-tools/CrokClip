@@ -1,263 +1,359 @@
 # CorkClip
 
+English | [日本語](README.ja.md)
+
 <img src="kobito/icon-1024.png" width="96" align="right" alt="">
 
-CorkClip は、コピーした物をコルクボードにピンで留めるように取っておける、macOS 用クリップボード履歴アプリです。
+CorkClip is a clipboard history app for macOS that keeps what you copy like notes pinned to a corkboard.
 
-`⌘C` でコピーした文字・画像・表・ファイル・パワポの図形などを元の形のまま覚えておき、`⌥⌘V` で画面の端から呼び出して貼れます。貼る前に「改行を消す」「表 → LaTeX」などの貼り方を選んで、貼られる内容を先に確かめられます。タグ、定型文、数式画像、画像の文字認識、順番に貼るペーストスタックもそろっています。
+It remembers the text, images, tables, files, slide shapes and more that you copy with `⌘C`, in their original form. Press `⌥⌘V` to bring up the board from the edge of the screen, pick an item and press `Enter` to paste it. Before pasting, you can choose a paste method such as “remove line breaks” or “table → LaTeX” and see exactly what will be pasted.
 
-kobito シリーズの1つです。ほかのアプリとは、約束（`docs/kobito-spec/CONTRACTS.md`）のデータの形だけでつながります。シリーズについては [kobito-tools](https://github.com/kobito-tools) を参照してください。
+CorkClip is part of [kobito-tools](https://github.com/kobito-tools), a series of small Mac apps.
 
-![デモ](docs/images/demo.gif)
+![Demo](docs/images/demo.gif)
 
-## 動作環境
+## What it can do
 
-- macOS 13 以降（Apple Silicon / Intel）
-
-## ダウンロード
-
-[Releases](../../releases/latest) ページから、次のどちらかをダウンロードしてください。どちらも Apple Silicon と Intel の Mac で動きます。
-
-| 形式 | ファイル |
+| Feature | What it does |
 |---|---|
-| dmg（おすすめ） | `CorkClip_x.y.z.dmg` |
-| zip | `CorkClip_x.y.z_universal.zip` |
+| History | Keeps what you copy in its original form. Search it, and filter by tag, type or app |
+| Paste methods | “Remove line breaks”, “without formatting”, “table → LaTeX” and more. You see the result before pasting. See [Choose a paste method](#choose-a-paste-method) |
+| Other transforms | Chain transforms such as punctuation, half-width characters and bullet lists. Save a chain to reuse it |
+| Snippets and pins | Keep text you use often. Snippets can insert the date or time |
+| Formula images | Turn a LaTeX formula into an image that pastes cleanly into PowerPoint or Keynote |
+| Paste stack | Copy several items in a row, then paste them one by one with each `⌘V` |
+| Keep as cards | Keep chosen items as a “clips of the day” card that other apps in the series can show |
 
-`x.y.z` にはバージョン番号が入ります。
+## Requirements
 
-## インストール
+- macOS 13 or later (Apple Silicon or Intel)
+- The app’s screens are in Japanese only. This guide gives the Japanese labels in quotes where you need to find them.
 
-1. ダウンロードした `.dmg` ファイルを開き、表示された `CorkClip` を右の `Applications` フォルダにドラッグします（zip の場合は、展開された `CorkClip.app` を Applications フォルダに移動します）。
-2. アプリケーションフォルダから CorkClip を起動します。Dock には出ず、メニューバーにコルクボードのアイコンが出ます。
-3. dmg は Finder のサイドバーの「⏏」で取り出して、ゴミ箱に入れて構いません。
+## Install
 
-本アプリは Apple の公証を受けていないため、初回起動時に「開発元を確認できません」などの警告が表示されます。その場合は警告を閉じ、「システム設定」→「プライバシーとセキュリティ」を開いて、画面下部の「このまま開く」をクリックしてください。2 回目以降は通常どおり起動できます。
+CorkClip is installed by building it on your Mac from the source code. A script, `setup.sh`, does the build for you.
 
-「壊れているため開けません」と表示される場合は、ターミナルで次のコマンドを実行してから、再度起動してください。
+### What you need
 
-```bash
-xattr -dr com.apple.quarantine "/Applications/CorkClip.app"
-```
-
-#### Pastephant から乗り換える場合
-
-CorkClip は以前 Pastephant という名前でした。初めて起動すると、Pastephant の履歴と設定（`~/Library/Application Support/Pastephant/`）を `CorkClip/` へ移して、そのまま使えます。基準パスに残したクリップ（`.kobito-tools/Pastephant/`）も、次に開くときに `.kobito-tools/CorkClip/` へ移します。
-
-- Pastephant を終了してから `Pastephant.app` をゴミ箱に入れ、アクセシビリティ・入力監視の一覧からも「－」で削除してください。CorkClip には改めて許可が必要です。
-- ログイン時に開く設定も、CorkClip の設定でオンにし直してください。
-- URL は `pastephant://` から `corkclip://` に変わりました。ランチャーなどに登録している場合は登録し直してください。
-
-ソースから作る場合は、このリポジトリをクローンして `./setup.sh` を実行します（Finder からは `Setup.command` をダブルクリック）。ビルドして、アプリケーションフォルダへ移すかを尋ね（既定は移さない。同じ名前のアプリがすでにあるときは、置き換えてよいかも尋ねる）、起動のしかたを表示します。何度動かしても大丈夫で、履歴と設定には触れません。`./setup.sh --dry-run` で何をするかだけを確かめられ、`--yes` を付けると尋ねずに既定の答えを選びます。Xcode Command Line Tools が必要で、無いときは入れ方（`xcode-select --install`）を表示して止まります。詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
-
-#### アクセシビリティの許可
-
-選んだ項目を前のアプリに貼り込むために、アクセシビリティの許可を使います。初めて貼るときに求められるので、「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で CorkClip をオンにしてください。許可が無い間は、選んだ項目をクリップボードに戻すだけになります（自分で `⌘V` を押せば貼れます）。
-
-#### 入力監視の許可
-
-ペーストスタックを初めて使うときに求められます。`⌘V` が押されたことだけを見て、積んだ次の項目に入れ替えます。
-
-どちらの許可も、設定（メニューバーのアイコン →「設定…」）の「一般」の一番上で状態を確かめられます。
-
-## 使い方
-
-コピーすると自動で履歴に入ります。`⌥⌘V` を押すと、画面の右端（設定で左端にも変えられます）からパネルが出てきます。貼り先のアプリのフォーカスはそのままなので、選んで `⏎` を押すだけで貼れます。
-
-パネルは、木の枠のコルクボードです。上から、検索欄、画びょうで留めた「プレビュー」の紙（選んでいる項目の中身と、その下に貼り方）、履歴のカード、いま使えるキーの案内が並びます。履歴の1件ずつが画びょうで留めたメモ用紙で、選んでいる紙は少し持ち上がります。画びょうの色は、ピン留めした物が赤、定型文が緑、ほかは真鍮色です。カードの左の色の帯はコピー元のアプリごとの色（シリーズ共通のタグの色と同じ決め方）で、設定で種類ごと・タグごとにも変えられます。明るい画面と暗い画面のどちらでも読めます。パネルの縁には、小人がしがみついています（設定で隠せます）。
-
-### 基本操作
-
-覚えるキーは3つだけです。画面の下にも、いま使えるキーがいつも出ています。
-
-| 操作 | 動作 |
+| Item | How to get it |
 |---|---|
-| `⌥⌘V` | パネルを出す（もう一度押すか `esc` で閉じる） |
-| `↑` `↓` | 項目を選ぶ。プレビューに中身が大きく出ます |
-| `⏎` | いま選んでいる貼り方で貼る（ダブルクリックでも） |
-| `⇥` / `⇧⇥` | 貼り方を切り替える |
-| `→`（`⌘K`・右クリック） | この項目にできることを開く |
+| Xcode Command Line Tools | Run `xcode-select --install` in Terminal (an administrator password is required). If they are missing, `setup.sh` tells you so and stops |
 
-### 貼り方を選ぶ
+### Steps
 
-プレビューの下に、選んだ項目に合う貼り方だけが並びます。`⇥` で切り替えると、プレビューには実際に貼られる内容が出ます。ほかの項目に移っても、その項目に同じ貼り方があれば続けて使います（パネルを開き直すと「そのまま」に戻ります）。
+1. Get the source code, in one of these ways:
+   - In Terminal, run:
 
-| 項目 | 並ぶ貼り方 |
+     ```bash
+     git clone https://github.com/kobito-tools/CorkClip.git
+     ```
+
+   - Or, on this page on GitHub, click **Code → Download ZIP** and double-click the downloaded zip to unpack it.
+2. In Terminal, go into the folder you got, and run `setup.sh`:
+
+   ```bash
+   cd CorkClip
+   ```
+
+   ```bash
+   ./setup.sh
+   ```
+
+   If you downloaded the ZIP, the folder is named something like `CorkClip-main`. You can type `cd ` (with a space) and drag the folder from Finder into Terminal.
+3. `setup.sh` builds `CorkClip.app`, then asks whether to move it into the `kobito-tools` folder in Applications (`/Applications/kobito-tools/`). If you answer no, `CorkClip.app` stays in the source folder.
+4. Launch CorkClip as `setup.sh` shows at the end. It does not appear in the Dock. A corkboard icon appears in the menu bar instead. When you open CorkClip yourself, its settings window opens, so you can tell it is running. It stays closed when CorkClip starts at login or from a `corkclip://` link.
+
+To update CorkClip later, run `./setup.sh` again with the new source code. Your history and settings are kept.
+
+| If you got it with | To update |
 |---|---|
-| 文章 | そのまま・改行を消す・「，．」に（「、。」に）・半角英数に・数式画像に・★保存した組み合わせ |
-| Excel などの表 | 書式付き・プレーン・表 → LaTeX・表 → Markdown・表 → CSV |
-| ファイル | ファイル・パス・~ のパス・基準パスから・ファイル名・file:// |
-| 画像 | 画像・画像の文字 |
-| 数式 | 数式画像・LaTeX の式 |
-| 複数選んだとき | そのまま・プレーン・改行を消す（文字をつないで貼る） |
+| `git clone` | In the same folder, run `git pull`, then `./setup.sh` |
+| Download ZIP | Move the old source folder to the Trash first. Then download and unpack the new ZIP, and run `./setup.sh` in the new folder. If the old folder is still there, `setup.sh` stops and tells you so |
 
-最後の「ほかの変換…」を選んで `⏎` を押すと、全ての変換から選べます（下の「変換」）。
+More about `setup.sh`:
 
-### できることは1文字で
+- `./setup.sh --dry-run` shows what it would do without changing anything. `./setup.sh --yes` picks the default answers without asking. It is safe to run more than once.
+- If the `kobito-tools` folder does not exist, it creates it and gives it the series icon. If `CorkClip.app` is already there, it asks before replacing it.
+- An older `CorkClip.app` directly in `/Applications` is left alone. If you no longer use it, move it to the Trash yourself.
+- At the end, it writes the launch info (see [Working with other apps](#working-with-other-apps)) and records where the source folder is, as a symbolic link at `kobito-tools/repos/corkclip` under `~/Library/Application Support/`. If another CorkClip source folder is already recorded there, it stops before building and changes nothing.
+- After running it again, remove CorkClip from the Accessibility and Input Monitoring lists with **−** and add it again. Each build has a new signature, so the old permission no longer applies.
 
-`→` を押すと、その項目にできることが一覧で出ます。各行の左の文字を押すだけで実行します。行の右に出ている `⌘` のショートカットを覚えれば、一覧を開かずにも使えます。
+### Allow Accessibility
 
-| 文字 | 動作 | ショートカット |
+CorkClip needs Accessibility permission to paste the chosen item into the app you were using.
+
+1. Until you allow it, a guide is pinned at the top of the board. Click its “システム設定を開く” (Open System Settings) button. You are also asked the first time you paste.
+2. In **Privacy & Security → Accessibility**, turn on CorkClip.
+
+Without this permission, CorkClip only puts the chosen item back on the clipboard. You can still paste it yourself with `⌘V`.
+
+### Allow Input Monitoring
+
+You are asked for this the first time you use the paste stack. CorkClip only watches for `⌘V` and swaps in the next stacked item. If you do not use the paste stack, you do not need it.
+
+You can check both permissions at the top of the “一般” (General) tab in the settings (menu bar icon → “設定…”).
+
+## How to use
+
+Everything you copy goes into the history automatically. Press `⌥⌘V` and the board slides in from the right edge of the screen (you can change it to the left edge in the settings). The app you are pasting into keeps its focus, so just pick an item and press `Enter`.
+
+### The board
+
+| Part | What it shows |
+|---|---|
+| Top strip | Search box, sort order and settings |
+| Preview note | The selected item in full, with its paste methods below |
+| History cards | One note per item, held by a pushpin. The selected note lifts up a little |
+| Main keys | The strip at the bottom shows the paste keys large, with their names. Clicking a row does the same thing |
+
+- Pushpins are red for pinned items, green for snippets, and brass for everything else.
+- The color bar on the left of a card shows the app it was copied from. In the settings you can color by type or by tag instead.
+- The board works in both light and dark mode. A little kobito clings to its edge (you can hide it in the settings).
+
+### Main keys
+
+There are four keys for pasting. You do not need to remember them: they are shown at the bottom of the board.
+
+| Keys | What happens |
+|---|---|
+| `Enter` | Pastes as is (double-clicking does too). If you chose a paste method with `⇥`, pastes that way |
+| `Shift` + `Enter` | Pastes without formatting |
+| `Ctrl` + `Enter` | Pastes with the method you used last (the last one other than “as is”; its name is shown at the bottom of the board) |
+| `→` | Opens the other transforms and what you can do with this item (`⌘K` also works) |
+
+Other basic keys:
+
+| Keys | What happens |
+|---|---|
+| `⌥⌘V` | Shows the board. Press it again or `esc` to close |
+| `↑` `↓` | Selects an item. Its content is shown large in the preview |
+| `⇥` / `⇧⇥` | Switches the paste method |
+| Right-click | Menu of what you can do with the item |
+| `⌘/` | List of all keys |
+
+### Choose a paste method
+
+Below the preview, only the paste methods that fit the selected item are shown. Switch with `⇥` and the preview shows exactly what will be pasted. When you move to another item, the same method stays selected if that item has it. Reopening the board goes back to “as is”.
+
+| Item | Paste methods shown |
+|---|---|
+| Text | As is, remove line breaks, “，．” punctuation (or “、。”), half-width letters and digits, formula image, ★ saved chains |
+| Tables from Excel and others | With formatting, plain, table → LaTeX, table → Markdown, table → CSV |
+| Files | File, path, `~` path, path from the base folder, file name, `file://` |
+| Images | Image, text in the image |
+| Formulas | Formula image, LaTeX source |
+| Several items selected | As is, plain, remove line breaks (joins the text) |
+
+Choose the last one, “ほかの変換…” (Other transforms), and press `Enter`, or press `→`, to pick from all transforms.
+
+### The → screen: other transforms and actions
+
+Press `→` and the board shows “ほかの変換” (Other transforms) in the upper half and “この項目にできること” (What you can do with this item) in the lower half. Press `←` or `esc` to go back.
+
+**Other transforms:** pick one with `↑` `↓` and the result is shown on the right. `Enter` transforms and pastes. Press `space` to chain transforms, for example “remove line breaks” → “，．” punctuation. Save a chain with `⌘S`, and you can then use it from the list with just `⌃1` to `⌃9`.
+
+- Remove line breaks, punctuation (`、。` ↔ `，．`), half-width letters and digits, full-width katakana, remove extra spaces, upper case, lower case, sentence case
+- Tables (copied from Excel and others) to LaTeX `tabular`, Markdown or CSV
+- Quote (`> `), bullet list (`- ` or `・`), numbered list
+- Formula image
+
+**What you can do with this item:** press the letter on the left of a row to run it (or move to the list with `⇥` and press `Enter`). Once you know the `⌘` shortcut on the right, you can use it without opening the list.
+
+| Letter | What happens | Shortcut |
 |---|---|---|
-| `C` | コピーだけ（貼らない） | `⌘⏎` |
-| `T` | タグを付ける・外す | `⌘T` |
-| `P` | ピン留めする | `⌘P` |
-| `E` | 編集してから貼る | `⌘E` |
-| `M` | 複数の項目を1つにまとめる | `⌘M` |
-| `R` | 変換を選ぶ（つなげる・保存する） | |
-| `L` | 数式画像を作る | `⌘L` |
-| `K` | ペーストスタックに積む | |
-| `S` | カードに残す | `⌘S` |
-| `N` | 送る…（送り先を選ぶ。最後に使った送り先へは `⌥⇧⌘N`） | `⇧⌘N` |
-| `Q` | Quick Look | `⌘Y` |
-| `D` | 履歴から削除 | `⌘⌫` |
+| `T` | Add or remove tags | `⌘T` |
+| `P` | Pin | `⌘P` |
+| `E` | Edit, then paste | `⌘E` |
+| `M` | Merge several items into one (when several are selected) | `⌘M` |
+| `L` | Make a formula image | `⌘L` |
+| `K` | Add to the paste stack | |
+| `S` | Keep as a card | `⌘S` |
+| `U` | Remove from the card (only for items kept as a card) | |
+| `D` | Delete from the history | `⌘⌫` |
 
-### そのほかのキー
+### Other keys
 
-| キー | 内容 |
+| Keys | What happens |
 |---|---|
-| 文字の入力 | 検索（本文・画像の文字・タグ・ファイル名・コピー元のアプリ名。空白で区切ると全てを含む物） |
-| `⌃N` `⌃P` | 選択を移動（`⇧` を押しながらで複数選択。`⌘クリック`・`⇧クリック` も） |
-| `⌘1`〜`⌘9` | 上から N 番目を貼る |
-| `⇧⏎` / `⌥⏎` | 貼り方を切り替えずに、プレーンで / 改行を消して貼る |
-| `⌃1`〜`⌃9` | 保存した変換の組み合わせ N で貼る |
-| `⌥⌘↑` `⌥⌘↓` | ピンの並べ替え |
-| `⌘N` | 新しい定型文 |
-| 検索が空のときの `space` | Quick Look |
-| `⌘/` `⌘,` | キーの一覧・設定 |
-| `esc` | 戻る／検索を消す／閉じる |
-| ドラッグ | ほかのアプリへドロップして取り出す |
+| Typing | Searches text, text in images, tags, file names and source app names. Separate words with spaces to find items containing all of them |
+| `⌃N` `⌃P` | Moves the selection. Hold `⇧` to select several. `⌘`-click and `⇧`-click also work |
+| `⌘1` to `⌘9` | Pastes the Nth item from the top |
+| `⌘Enter` | Copies only (does not paste) |
+| `⌥Enter` | Pastes with line breaks removed, without switching the paste method |
+| `⌃1` to `⌃9` | Pastes with saved transform chain N |
+| `⌥⌘↑` `⌥⌘↓` | Reorders pins |
+| `⌘N` | New snippet |
+| `⌘Y` (or `space` when the search box is empty) | Quick Look |
+| `⌘,` | Settings |
+| `esc` | Goes back, clears the search, or closes |
+| Drag | Drop the item into another app |
 
-### 検索と絞り込み
+### Search and filter
 
-検索欄では、ふつうの語に加えて次の書き方で絞り込めます。右上のボタンで並べ替え（最後に使った順・コピーした順・使った回数順・種類ごと・コピー元のアプリごと）も選べます。
+Besides plain words, you can filter in the search box like this. The button at the top right sets the sort order: last used, copied, most used, by type, or by source app.
 
-| 書き方 | 絞り込み |
+| Write | Filters by |
 |---|---|
-| `#論文` | タグ |
-| `type:画像`・`type:image`・`type:snippet` | 種類（テキスト・書式付き・画像・ファイル・リンク・色・オブジェクト・数式・定型文） |
-| `app:Word` | コピー元のアプリ |
-| `is:pinned` | ピン留めした物 |
-| `after:2026-09-01`・`before:2026-09-30` | コピーした日 |
-| `kept:2026-09-28` | その日にカードに残した物 |
-| `id:123` | その項目だけ |
+| `#paper` | Tag |
+| `type:image`, `type:snippet` (Japanese names such as `type:画像` work too) | Type: text, styled text, image, file, link, color, object, formula, snippet |
+| `app:Word` | Source app |
+| `is:pinned` | Pinned items |
+| `after:2026-09-01`, `before:2026-09-30` | Date copied |
+| `kept:2026-09-28` | Items kept as a card on that day |
+| `id:123` | That item only |
 
-### タグ
+### Tags
 
-`⌘T` で付けます。候補を `↑↓` で選んで `⏎`、候補が無ければ `⏎` で新しいタグを作ります。`⌫` で最後のタグを外します。
+Press `⌘T`. Pick a suggestion with `↑` `↓` and press `Enter`. If nothing matches, `Enter` creates a new tag. `⌫` removes the last tag.
 
-- 設定の「連携」で基準パス（kobito シリーズで共有するフォルダ）を選ぶと、タグはシリーズのアプリと共有されます（`.kobito-tools/Tags/tags.json`）。
-- 設定の「取得とタグ」で、コピー元のアプリ（例：TeXShop → `#latex`）やリンクのドメイン（例：arxiv.org → `#論文`）で自動でタグを付ける規則も作れます。
+- Choose a base folder (a folder shared by the apps in the series) in the “連携” (Connections) tab of the settings, and your tags are shared with the other apps in the series.
+- In the “取得とタグ” (Capture and tags) tab, you can make rules that tag items automatically by source app (for example TeXShop → `#latex`) or by link domain (for example arxiv.org → `#paper`).
 
-### 変換
+### Snippets and pins
 
-「ほかの変換…」か `→` の `R` で、全ての変換から選んでかけてから貼ります。右側に結果が出ます。`space` で変換をつなげ（例：改行を消す → 句読点を「，．」に）、`⌘S` でその組み合わせを保存すると、一覧で `⌃1`〜`⌃9` を押すだけで使えます。
+Items pinned with `⌘P` and snippets made with `⌘N` are listed under “ピン・定型文” (Pins and snippets) at the top of the list. They never expire. Snippets can contain:
 
-- 改行を消す・句読点（`、。` ↔ `，．`）・英数字を半角に・半角カタカナを全角に・余分な空白を消す・大文字／小文字／文の先頭だけ大文字
-- 表（Excel などのコピー）を LaTeX の `tabular`・Markdown・CSV に
-- 引用（`> `）・箇条書き（`- `・`・`）・番号付き
-- 画像の文字をテキストで
-- ファイルをパスで（絶対パス・`~` から・基準パスから・ファイル名だけ・`file://`）
-- 数式画像にする
-
-### 定型文とピン
-
-`⌘P` でピン留めした項目と、`⌘N` で作った定型文は、一覧の上の「ピン・定型文」に並び、期限で消えません。定型文には次の書き方を使えます。
-
-| 書き方 | 貼るときに入る物 |
+| Write | Inserted when pasting |
 |---|---|
-| `{date}`・`{date:yyyy年M月d日}` | 今日の日付 |
-| `{time}` | 今の時刻 |
-| `{clipboard}` | 今のクリップボード |
-| `{cursor}` | 貼ったあとのカーソルの位置 |
+| `{date}`, `{date:yyyy-MM-dd}` | Today’s date |
+| `{time}` | The current time |
+| `{clipboard}` | The current clipboard |
+| `{cursor}` | Where the cursor ends up after pasting |
 
-### 数式画像（`⌘L`）
+### Formula images (`⌘L`)
 
-LaTeX の式を書くと、その場でプレビューが出ます。`⏎` で画像にして貼ります（`⇧⏎` で改行）。PDF（拡大しても粗くならない）と PNG・TIFF をまとめて載せるので、PowerPoint や Keynote にはきれいな形で、ほかのアプリには画像で貼れます。
+Type a LaTeX formula and a preview appears right away. `Enter` turns it into an image and pastes it (`Shift` + `Enter` adds a line break). The image is pasted as PDF (stays sharp when enlarged) together with PNG and TIFF, so it pastes cleanly into PowerPoint and Keynote, and as a picture elsewhere.
 
-- 文字の大きさ、ディスプレイ／文中、文字色、背景（透明・白・黒）を選べ、よく使う描き方はプリセット（「暗いスライド用（白文字）」など）にできます。
-- 元の式を画像に埋め込むので、履歴の数式を選んで `⌘L` を押すと、式を開き直して直せます。
-- 設定の「数式」で、全ての式の前に付けるマクロ（`\newcommand` など）を登録できます。
+- Choose the size, display or inline style, text color and background (transparent, white or black). Save the styles you use often as presets, such as “for dark slides (white text)”.
+- The source formula is embedded in the image. Select a formula in the history and press `⌘L` to open it again and edit it.
+- In the “数式” (Formulas) tab of the settings, you can add macros (such as `\newcommand`) that go before every formula.
 
-### ペーストスタック（`⌃⌘C`）
+### Paste stack (`⌃⌘C`)
 
-始めてから順にコピーすると、画面の上に「スタック N 件」と出て積まれます。あとは `⌘V` を押すたびに、積んだ順に1つずつ貼られます。パネルで選んで `→` の `K` でも積めます。最後まで貼るか、もう一度 `⌃⌘C` を押すと終わります（設定で新しい物から順にもできます）。
+Start it and copy items one after another. “スタック N 件” (N items in the stack) appears at the top of the screen. Then each `⌘V` pastes the next item, in the order you copied them. You can also add an item from the board with `→` then `K`. The stack ends when everything is pasted or when you press `⌃⌘C` again. In the settings, you can paste the newest first instead.
 
-### カードに残す・送る
+### Keep as cards
 
-- `⌘S` で選んだ項目を、基準パスに残します。その日の分は「9月28日のクリップ」という1枚のカード（約束③）になり、カードを読めるシリーズのアプリに並びます。設定で「このタグが付いたら自動で残す」こともでき、使わなければ設定で隠せます。
-- `⇧⌘N` で、選んだ項目（文字・画像・ファイル）を受け取れるアプリの一覧が出ます。送り先は、このMacで起動したことのあるアプリから自動で並びます。
+- `⌘S` keeps the chosen items in the base folder. Each day’s items become one card, such as “9月28日のクリップ” (clips of September 28), which other apps in the series that read cards can show.
+- In the settings, you can keep items automatically when they get a certain tag. If you do not use cards, you can hide this feature in the settings.
+- To remove a kept item from the base folder, use `→` then `U` (remove from the card).
+- If your base folder is synced, for example with Google Drive, kept items are also stored in the cloud. Do not keep passwords or other secrets.
 
-### ランチャーから開く
+### Open from a launcher or a URL
 
-ランチャーには `CorkClip.app` を登録します。URL にも対応しています。
+Register `CorkClip.app` in your launcher. You can also use these URLs:
 
-| URL | 動作 |
+| URL | What happens |
 |---|---|
-| `corkclip://open` | 履歴を開く（`?tag=論文`・`?query=…` で絞り込んで開く） |
-| `corkclip://latex` | 数式画像の画面を開く |
-| `corkclip://snippet` | 新しい定型文 |
-| `corkclip://stack/toggle`（`start`・`stop`） | ペーストスタックを始める・終える |
-| `corkclip://pause`（`?minutes=15`）・`corkclip://resume` | 取得を一時停止・再開 |
-| `corkclip://settings` | 設定を開く |
-| `kobito://corkclip/day/2026-09-28` | その日に残した項目で履歴を開く（カードから） |
-| `kobito://corkclip/open/123` | その項目を選んで履歴を開く |
-| `kobito://corkclip/panel` | 履歴を開く |
-| `kobito://corkclip/snippet`・`latex`・`settings` | 新しい定型文・数式画像の画面・設定を開く |
+| `corkclip://open` | Opens the history (`?tag=paper` or `?query=…` opens it filtered) |
+| `corkclip://latex` | Opens the formula image screen |
+| `corkclip://snippet` | New snippet |
+| `corkclip://stack/toggle` (`start`, `stop`) | Starts or ends the paste stack |
+| `corkclip://pause` (`?minutes=15`), `corkclip://resume` | Pauses or resumes capturing |
+| `corkclip://settings` | Opens the settings |
 
-`kobito://` の URL は、`open -b io.github.kobito-tools.corkclip "kobito://corkclip/…"` のようにアプリを指定して渡します。
+Other apps and web pages can open these URLs too. So when a URL asks to resume a paused capture, CorkClip asks you to confirm first. If you did not open it yourself, choose “再開しない” (Do not resume).
 
-CorkClip は、ほかのアプリの中には表示されず、起動情報（約束④）で起動するアプリとして名乗ります。名乗りには 📌 のアイコンとティール（teal）の色が付き、「履歴を開く」「今日残したクリップを見る」「定型文を作る」「数式画像を作る」「設定を開く」の操作を呼べます。
+### What is not saved, and when items expire
 
-### 保存しない物と消える期限
+| Rule | Details |
+|---|---|
+| Not saved | Copies from password managers (1Password, Bitwarden, Keychain Access and others), copies marked “do not save” (such as `org.nspasteboard.ConcealedType`), and copies made while paused. You can add more apps to skip in the settings |
+| Gone after 30 days | Every type, text included, is deleted 30 days after you last used it. Change the number of days per type in the “保存” (Storage) tab of the settings (0 means never) |
+| Limits | 50,000 items and 5 GB |
+| Never deleted | Pinned items, snippets and tagged items (you can change this in the settings) |
 
-- パスワード管理アプリ（1Password、Bitwarden、キーチェーンアクセスなど）からのコピー、「保存しないで」の印（`org.nspasteboard.ConcealedType` など）が付いたコピー、一時停止中のコピーは保存しません。取得しないアプリは設定で加えられます。
-- 画像・パワポなどのオブジェクトは最後に使ってから 30日、ファイルは 90日で消えます。テキストなどは無期限です。ほかに件数（5万件）と容量（5GB）の上限があります。
-- ピン留めと定型文、タグの付いた項目は消しません。いずれも設定で変えられます。
+- Passwords copied from browser extensions or Terminal are saved if they carry no “do not save” mark. That is why items expire after 30 days by default.
+- Deleted items are also overwritten inside the database. You can also exclude the history from Time Machine backups in the settings.
 
-### 終了する
+### Quit
 
-メニューバーのコルクボードのアイコンをクリックし、「CorkClip を終了」を選択します。
+Click the corkboard icon in the menu bar and choose “CorkClip を終了” (Quit CorkClip).
 
-## トラブルシューティング
+## Troubleshooting
 
-### `⏎` を押しても貼られない
+### Pressing `Enter` does not paste
 
-アクセシビリティの許可が無いと、選んだ項目をクリップボードに戻すだけになります。「システム設定」→「プライバシーとセキュリティ」→「アクセシビリティ」で CorkClip がオンになっているか確認してください。アプリを更新した後に動作しなくなった場合は、一覧から CorkClip を「－」で削除し、再度追加してください。
+Without Accessibility permission, CorkClip only puts the chosen item back on the clipboard. Make sure CorkClip is turned on in **System Settings → Privacy & Security → Accessibility**. If it stopped working after an update, select CorkClip in that list, remove it with **−**, and add it again.
 
-### ペーストスタックで `⌘V` を押しても次の項目にならない
+### `⌘V` does not move to the next item in the paste stack
 
-「システム設定」→「プライバシーとセキュリティ」→「入力監視」で CorkClip がオンになっているか確認してください。
+Make sure CorkClip is turned on in **System Settings → Privacy & Security → Input Monitoring**.
 
-### コピーした物が履歴に入らない
+### Copied items do not appear in the history
 
-- メニューバーのアイコンから、取得が一時停止になっていないか確認してください。
-- パスワード管理アプリからのコピーや、設定で「取得しないアプリ」に加えたアプリからのコピーは保存しません。
+- Check the menu bar icon to see whether capturing is paused.
+- Copies from password managers, and from apps you added to the skip list in the settings, are not saved.
 
-### `⌥⌘V` を押してもパネルが出ない
+### Pressing `⌥⌘V` does not show the board
 
-ほかのアプリが同じショートカットを使っている可能性があります。設定の「一般」で呼び出すキーを変えるか、ランチャーなどから `corkclip://open` で開いてください。
+Another app may use the same shortcut. Change the shortcut in the “一般” (General) tab of the settings, or open the board with `corkclip://open` from a launcher.
 
-## アンインストール
+## Uninstall
 
-1. メニューバーのアイコンから CorkClip を終了し、アプリケーションフォルダの `CorkClip.app` をゴミ箱へ移動します。
-2. 「システム設定」→「プライバシーとセキュリティ」の「アクセシビリティ」「入力監視」の一覧から CorkClip を選択し、「－」で削除します。
+1. Quit CorkClip from the menu bar icon.
+2. Move `CorkClip.app` to the Trash. It is in the `kobito-tools` folder in Applications, or in the source folder if you did not move it. You can then delete the source folder too.
+3. In **System Settings → Privacy & Security**, select CorkClip in the **Accessibility** and **Input Monitoring** lists and remove it with **−**.
 
-### 履歴の削除
+To remove the history as well, delete this folder:
 
-履歴も消す場合は、`~/Library/Application Support/CorkClip/` を削除してください。カードに残した物は、基準パスの `.kobito-tools/CorkClip/` にあります。
+- `~/Library/Application Support/CorkClip/`
 
-## プライバシー
+Items kept as cards are in `.kobito-tools/CorkClip/` in your base folder.
 
-CorkClip は外部と通信しません。履歴はこの Mac の `~/Library/Application Support/CorkClip/` だけに保存し、クラウドの基準パスには置きません。基準パスに書くのは、共有タグと、`⌘S` などでカードに残した物だけです。
+To also remove the launch info file (see [Working with other apps](#working-with-other-apps)), delete this file:
 
-## ライセンス
+- `~/Library/Application Support/kobito-tools/apps/corkclip.json`
 
-本ソフトウェアは [MIT License](LICENSE) のもとで提供されています。数式の描画に [KaTeX](https://katex.org/)（MIT License、`Resources/katex/LICENSE`）を同梱しています。
+## Privacy
 
-本ソフトウェアは現状のまま提供され、いかなる保証もありません。本ソフトウェアの使用によって生じたいかなる損害についても、作者は責任を負いません。詳細は [LICENSE](LICENSE) を参照してください。
+| Topic | Details |
+|---|---|
+| Network | CorkClip does not use the network. Formulas are drawn with the bundled KaTeX, and the drawing page loads only bundled files. Copied HTML is turned into text without loading the images or other files it points to |
+| Where the history lives | Only in `~/Library/Application Support/CorkClip/` on your Mac. It is never put in the base folder, even if that folder is in the cloud |
+| What goes in the base folder | Only shared tags and the items you keep as cards with `⌘S` and the like |
+| Protecting the permissions | The app is built with the Hardened Runtime, so other programs cannot load code into CorkClip to use the permissions you gave it (Accessibility and Input Monitoring) |
 
-## 開発について
+## For developers
 
-本ソフトウェアの開発には、ChatGPT（OpenAI）および Claude（Anthropic）を使用しています。本プロジェクトは個人によるものであり、OpenAI および Anthropic とは関係ありません。
+### Build details
 
-ビルド方法とソースコードの構成は [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)、機能の要件は [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) を参照してください。README のデモ（`docs/images/demo.gif`）は `scripts/demo.sh` で作り直せます。リポジトリの直下の `kobito-app.json` は、kobito シリーズのアプリであることを示す目印で、`kobito/` にアイコン（`icon.svg`・`icon-1024.png`）を置いています（`.app` で配るので `"kind": "native"`。決まりは `docs/kobito-spec/APP_PACKAGE.md`）。不具合の報告や要望は [Issues](../../issues) で受け付けています。
+To install, see [Install](#install). For build details and the source layout, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). For the feature requirements, see [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md). Both are in Japanese.
+
+### Working with other apps
+
+CorkClip connects to other apps only through the data formats (“contracts”) defined in `docs/kobito-spec/CONTRACTS.md`.
+
+| Contract | How CorkClip uses it |
+|---|---|
+| Shared tags (⓪-2) | Reads and writes `.kobito-tools/Tags/tags.json` in the base folder |
+| Cards (③) | Writes the items kept with `⌘S` as a clips-of-the-day card in `.kobito-tools/CorkClip/` in the base folder |
+| Launch info (④) | Each time it starts, writes how to launch it and how to show it (name, 📌 icon, teal color). CorkClip is a utility, so it does not show up inside other apps |
+
+- Launch info location: `~/Library/Application Support/kobito-tools/apps/corkclip.json`
+- From the launch info, other apps can call “open the history”, “see today’s kept clips”, “make a snippet”, “make a formula image” and “open the settings”.
+- To write the launch info without opening a window, run `CorkClip.app/Contents/MacOS/CorkClip --write-launch-info`. It writes the file and exits. `--metadata` prints the same content without writing the file.
+- `kobito-app.json` at the repository root marks this as a kobito-tools app. The icons (`icon.svg`, `icon-1024.png`) are in `kobito/`. It is shipped as an app, so its kind is `"native"` (see `docs/kobito-spec/APP_PACKAGE.md`).
+
+Apps in the series can open CorkClip with these `kobito://` URLs. Pass them to the app by its ID, like `open -b io.github.kobito-tools.corkclip "kobito://corkclip/…"`.
+
+| URL | What happens |
+|---|---|
+| `kobito://corkclip/day/2026-09-28` | Opens the history with the items kept on that day (from a card) |
+| `kobito://corkclip/open/123` | Opens the history with that item selected |
+| `kobito://corkclip/panel` | Opens the history |
+| `kobito://corkclip/snippet`, `latex`, `settings` | New snippet, the formula image screen, the settings |
+
+### Rebuild the demo
+
+The README demo (`docs/images/demo.gif`) is a drawn mock-up of the board in `scripts/demo/demo.html`, captured frame by frame with `scripts/demo.sh`. It needs Google Chrome, Node.js 22 or later, and ffmpeg.
+
+### Issues
+
+Bug reports and requests are welcome in [Issues](../../issues).
+
+### License
+
+CorkClip is released under the [MIT License](LICENSE). It bundles [KaTeX](https://katex.org/) (MIT License, `Resources/katex/LICENSE`) to draw formulas.
+
+The software is provided “as is”, without warranty of any kind. The author is not liable for any damage arising from its use. See [LICENSE](LICENSE) for details.

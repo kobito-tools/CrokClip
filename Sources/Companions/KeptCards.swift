@@ -48,10 +48,12 @@ enum KeptCards {
         guard try Dataset.read(basePath) != nil else { throw StoreError(status: 409, message: "基準パスに共有フォルダ（.kobito-tools）がありません。") }
         try withDatabase(basePath, schemaDirectory: schemaDirectory) { database in
             let day = Series.day(now), keptAt = Series.timestamp(now)
-            var saved: [String] = []
+            var saved: [String] = [], replaced: [String] = []
             defer { if !saved.isEmpty { saved.forEach { try? FileManager.default.removeItem(at: Dataset.uploadsDirectory(basePath).appendingPathComponent($0)) } } }
             try database.transaction {
                 for entry in entries {
+                    // 同じ項目をもう一度残すときは、前に残した画像を後で消す（置き換えた行から使われなくなるため）。
+                    if let old = try database.first("SELECT image FROM kept_clips WHERE id = ?", "\(DatasetLock.machineId)-\(entry.clipID)")?["image"] as? String { replaced.append(old) }
                     var imageName: String?
                     if let image = entry.image {
                         let name = "\(UUID().uuidString.lowercased()).png"
@@ -67,6 +69,21 @@ enum KeptCards {
                 }
             }
             saved.removeAll()
+            for name in replaced where !name.contains("/") { try? FileManager.default.removeItem(at: Dataset.uploadsDirectory(basePath).appendingPathComponent(name)) }
+            try writeCards(database, basePath: basePath)
+        }
+    }
+
+    /// カードから外す。このMacで残した物（<マシンID>-<履歴の項目ID>）を消し、画像も消してカードを書き直す。
+    static func remove(clipIDs: [Int], basePath: String, schemaDirectory: URL) throws {
+        guard !clipIDs.isEmpty else { return }
+        guard try Dataset.read(basePath) != nil else { throw StoreError(status: 409, message: "基準パスに共有フォルダ（.kobito-tools）がありません。") }
+        try withDatabase(basePath, schemaDirectory: schemaDirectory) { database in
+            let ids = clipIDs.map { "\(DatasetLock.machineId)-\($0)" }
+            let placeholders = ids.map { _ in "?" }.joined(separator: ", ")
+            let images = try database.rows("SELECT image FROM kept_clips WHERE id IN (\(placeholders))", ids).compactMap { $0["image"] as? String }
+            try database.transaction { _ = try database.rows("DELETE FROM kept_clips WHERE id IN (\(placeholders))", ids) }
+            for name in images where !name.contains("/") { try? FileManager.default.removeItem(at: Dataset.uploadsDirectory(basePath).appendingPathComponent(name)) }
             try writeCards(database, basePath: basePath)
         }
     }

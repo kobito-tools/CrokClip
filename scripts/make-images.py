@@ -1,7 +1,6 @@
 # CorkClip の絵を描き直す。Xcode Command Line Tools が必要。使い方: python3 scripts/make-images.py
 #   kobito/icon.svg・icon-1024.png        アイコン（コルクボードと画びょう、kobito-tools シリーズの小人）
 #   assets/kobito-cling.svg → Resources/kobito-cling.png   パネルの縁にしがみつく小人
-#   assets/dmg/background.svg → background.png・@2x       dmg を開いたときの背景
 # .app のアイコン（AppIcon.icns）は build.sh が kobito/icon-1024.png から作る。
 # 小人の描き方はシリーズ共通（元の座標系 viewBox 0 0 49 44 を translate + scale で置く）。
 import random
@@ -121,24 +120,6 @@ def cling():
     return f'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">{body}</svg>\n'
 
 
-# --- dmg を開いたときの背景（600×400pt）。左の CorkClip から右の Applications へ、小人が案内する ---
-def dmg_background():
-    arms = '<path d="M37 24 Q41 22 44.5 17"/><path d="M11.5 26 Q8.5 29 8 32.5"/>'
-    guide = kobito(300 - 24 * 1.9, 280, s=1.9, arms=arms, legs="walk", face="open")
-    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7F1E3"/><stop offset="1" stop-color="#EADFC8"/></linearGradient></defs>
-  <rect width="600" height="400" fill="url(#bg)"/>
-  <path d="M0 0 H600 V56 H0 Z" fill="{CORK}" opacity=".45"/>
-  <path d="M0 56 H600" stroke="#8B5E3A" stroke-width="3" opacity=".6"/>
-  <text x="300" y="36" text-anchor="middle" font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, sans-serif" font-size="17" font-weight="600" fill="{INK}">CorkClip を Applications フォルダへドラッグしてください</text>
-  <path d="M225 190 C265 160 335 160 375 190" fill="none" stroke="#8B5E3A" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 12"/>
-  <path d="M366 176 L380 193 L360 199" fill="none" stroke="#8B5E3A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  {guide}
-  <text x="300" y="384" text-anchor="middle" font-family="Hiragino Sans, sans-serif" font-size="11" fill="#7A817D">kobito-tools</text>
-</svg>
-'''
-
-
 def render(svg, png, width, height=None):
     # macOS の SVG 描画で PNG にする（scripts/render-svg.swift）。
     size = [str(width)] + ([str(height)] if height else [])
@@ -147,9 +128,7 @@ def render(svg, png, width, height=None):
 
 
 if __name__ == "__main__":
-    for path, draw in (("kobito/icon.svg", corkclip), ("assets/kobito-cling.svg", cling), ("assets/dmg/background.svg", dmg_background)):
+    for path, draw in (("kobito/icon.svg", corkclip), ("assets/kobito-cling.svg", cling)):
         (ROOT / path).write_text(draw())
     render("kobito/icon.svg", "kobito/icon-1024.png", 1024)
     render("assets/kobito-cling.svg", "Resources/kobito-cling.png", 192)  # 64pt を 3倍で
-    render("assets/dmg/background.svg", "assets/dmg/background.png", 600, 400)
-    render("assets/dmg/background.svg", "assets/dmg/background@2x.png", 1200, 800)

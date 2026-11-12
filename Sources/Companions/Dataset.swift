@@ -153,21 +153,17 @@ enum Dataset {
 }
 
 /// 同じ基準パスへ複数のPCの CorkClip が同時に書き出さないための使用中の印（.kobito-tools/CorkClip/lock.json）。
-/// 印は CorkClip/ の中に置くので、ほかのアプリの印とは干渉しない。
+/// 印は CorkClip/ の中に置くので、ほかのアプリの印とは干渉しない。どのMacかは machineId で見分け、ホスト名（利用者の名前が入りやすい）は書かない。
 final class DatasetLock {
     enum State {
         case free
         case mine
         case heldOnThisMac
-        case heldElsewhere(hostname: String)
+        case heldElsewhere
     }
 
     static let staleInterval: TimeInterval = 120
     static let heartbeatInterval: TimeInterval = 30
-    static let hostname: String = {
-        var buffer = [CChar](repeating: 0, count: 256)
-        return gethostname(&buffer, buffer.count) == 0 ? String(cString: buffer) : ProcessInfo.processInfo.hostName
-    }()
     static let machineId: String = {
         if let saved = UserDefaults.standard.string(forKey: "MachineId") { return saved }
         // 以前の名前（Pastephant・InGoodPaste）のときのIDがあれば引き継ぐ。
@@ -194,12 +190,12 @@ final class DatasetLock {
 
     func state(now: Date = Date()) -> State {
         guard let lock = current() else { return .free }
-        let pid = lock["pid"] as? Int ?? -1, host = lock["hostname"] as? String ?? ""
-        if lock["app"] as? String == "corkclip", host == Self.hostname, pid == Int(getpid()) { return .mine }
+        let pid = lock["pid"] as? Int ?? -1, sameMac = lock["machineId"] as? String == Self.machineId
+        if lock["app"] as? String == "corkclip", sameMac, pid == Int(getpid()) { return .mine }
         let heartbeat = (lock["heartbeatAt"] as? String).flatMap(Dataset.parseTimestamp) ?? .distantPast
         guard now.timeIntervalSince(heartbeat) < Self.staleInterval else { return .free }
-        if host == Self.hostname { return pid > 0 && (kill(pid_t(pid), 0) == 0 || errno == EPERM) ? .heldOnThisMac : .free }
-        return .heldElsewhere(hostname: host.isEmpty ? "不明なPC" : host)
+        if sameMac { return pid > 0 && (kill(pid_t(pid), 0) == 0 || errno == EPERM) ? .heldOnThisMac : .free }
+        return .heldElsewhere
     }
 
     var isMine: Bool { if case .mine = state() { return true } else { return false } }
@@ -209,8 +205,8 @@ final class DatasetLock {
         switch state() {
         case .mine: break
         case .free: try write()
-        case .heldOnThisMac: throw StoreError(status: 423, message: "この基準パスはこのMacの別の CorkClip が使用中です。", extra: ["lockHolder": ["hostname": Self.hostname, "samePc": true]])
-        case .heldElsewhere(let hostname): throw StoreError(status: 423, message: "この基準パスは「\(hostname)」の CorkClip が使用中です。", extra: ["lockHolder": ["hostname": hostname, "samePc": false]])
+        case .heldOnThisMac: throw StoreError(status: 423, message: "この基準パスはこのMacの別の CorkClip が使用中です。", extra: ["lockHolder": ["samePc": true]])
+        case .heldElsewhere: throw StoreError(status: 423, message: "この基準パスは別のMacの CorkClip が使用中です。少し待ってからもう一度お試しください。", extra: ["lockHolder": ["samePc": false]])
         }
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: Self.heartbeatInterval, repeats: true) { [weak self] _ in
@@ -221,7 +217,7 @@ final class DatasetLock {
 
     private func write() throws {
         if startedAt == nil { startedAt = Dataset.timestamp() }
-        let lock: [String: Any] = ["app": "corkclip", "machineId": Self.machineId, "hostname": Self.hostname, "pid": Int(getpid()), "startedAt": startedAt!, "heartbeatAt": Dataset.timestamp()]
+        let lock: [String: Any] = ["app": "corkclip", "machineId": Self.machineId, "pid": Int(getpid()), "startedAt": startedAt!, "heartbeatAt": Dataset.timestamp()]
         try Dataset.writeJSON(lock, to: file)
     }
 

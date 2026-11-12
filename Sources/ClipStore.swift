@@ -105,6 +105,16 @@ final class ClipStore: @unchecked Sendable {
         }
         database = try SQLiteDatabase(path: directory.appendingPathComponent("database/history.sqlite3").path, journal: .wal)
         try database.migrate(schemaDirectory: schemaDirectory)
+        // 全文検索の索引でも、消した文字をすぐに取り除く（SQLite 3.42 から。古い macOS では使えないので、整理のときの optimize に任せる）。
+        try? database.exec("INSERT INTO clip_search(clip_search, rank) VALUES('secure-delete', 1)")
+    }
+
+    /// 履歴のフォルダを Time Machine のバックアップから外すか（設定の「バックアップに含めない」）。
+    func setExcludedFromBackup(_ excluded: Bool) {
+        var url = directory
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = excluded
+        try? url.setResourceValues(values)
     }
 
     func locked<T>(_ body: () throws -> T) rethrows -> T {
@@ -264,6 +274,7 @@ final class ClipStore: @unchecked Sendable {
                     try? FileManager.default.removeItem(at: blobURL(hash))
                 }
             }
+            database.checkpoint()
         }
     }
 
@@ -278,9 +289,11 @@ final class ClipStore: @unchecked Sendable {
                 try delete(ids)
                 return ids.count
             }
-            for (kind, days) in settings.retentionDays where days > 0 {
+            for kind in ClipKind.allCases {
+                let days = settings.retention(for: kind)
+                guard days > 0 else { continue }
                 let limit = now.timeIntervalSince1970 - Double(days) * 86_400
-                report.removedClips += try remove(database.query("SELECT id FROM clips WHERE kind = ? AND last_used_at < ? AND \(deletable)", kind, limit))
+                report.removedClips += try remove(database.query("SELECT id FROM clips WHERE kind = ? AND last_used_at < ? AND \(deletable)", kind.rawValue, limit))
             }
             let count = try database.first("SELECT COUNT(*) AS n FROM clips")?["n"] as? Int ?? 0
             if count > settings.maxItems {
@@ -292,6 +305,11 @@ final class ClipStore: @unchecked Sendable {
                 if removed == 0 { break }
             }
             report.removedBlobs = try collectGarbage()
+            if report.removedClips > 0 {
+                // 索引の断片をまとめ直し、消した項目の文字を索引から取り除く。
+                try? database.exec("INSERT INTO clip_search(clip_search) VALUES('optimize')")
+                database.checkpoint()
+            }
             return report
         }
     }

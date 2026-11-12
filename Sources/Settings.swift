@@ -64,13 +64,15 @@ struct Settings: Codable, Equatable {
     /// 取得しないアプリ（F-02）。
     var excludedBundleIDs: [String] = Settings.defaultExcludedBundleIDs
     var autoTagRules: [AutoTagRule] = []
-    /// 種類ごとの保存日数。無い種類は無期限（F-15）。
-    var retentionDays: [String: Int] = ["image": 30, "office": 30, "file": 90]
+    /// 種類ごとの保存日数（F-15）。0 は無期限。初期値はどの種類も30日（パスワードなどを長く残さないため）。
+    var retentionDays: [String: Int] = Settings.defaultRetentionDays
     var maxItems = 50_000
     var maxTotalBytes = 5 * 1024 * 1024 * 1024
     var maxItemBytes = 100 * 1024 * 1024
     /// タグの付いた項目も期限で消すか。
     var expireTagged = false
+    /// 履歴のフォルダを Time Machine のバックアップに含めないか。
+    var excludeHistoryFromBackup = false
     var transformCombos: [TransformCombo] = []
     var latexPresets: [LatexPreset] = LatexPreset.defaults
     /// 最後に使った数式の描き方。
@@ -85,8 +87,14 @@ struct Settings: Codable, Equatable {
     var keepCards = true
     /// このタグが付いたら、カードに自動で残す（F-17）。
     var autoExportTags: [String] = []
-    /// 最後に使った送り先（「アプリID/口のID」。F-16）。⌥⇧⌘N で一覧を出さずにここへ送る。
-    var lastShareTarget: String?
+    /// 最後に使った「そのまま」以外の貼り方。⌃⏎ でこの貼り方で貼る。
+    var lastPasteMethod: PasteMethod?
+
+    static let defaultRetention = 30
+    static let defaultRetentionDays = Dictionary(uniqueKeysWithValues: ClipKind.allCases.map { ($0.rawValue, defaultRetention) })
+
+    /// その種類の保存日数。設定に無い種類（以前の版で無期限の印だった物と、新しく増えた種類）は初期値にする。
+    func retention(for kind: ClipKind) -> Int { retentionDays[kind.rawValue] ?? Self.defaultRetention }
 
     static let defaultExcludedBundleIDs = [
         "com.apple.keychainaccess", "com.apple.Passwords",
@@ -104,13 +112,14 @@ struct Settings: Codable, Equatable {
         read(.openPanelHotKey, &s.openPanelHotKey); read(.stackHotKey, &s.stackHotKey); read(.sortOrder, &s.sortOrder)
         read(.restoreClipboardAfterPaste, &s.restoreClipboardAfterPaste); read(.keepParagraphBreaks, &s.keepParagraphBreaks)
         read(.excludedBundleIDs, &s.excludedBundleIDs); read(.autoTagRules, &s.autoTagRules)
-        read(.retentionDays, &s.retentionDays); read(.maxItems, &s.maxItems); read(.maxTotalBytes, &s.maxTotalBytes); read(.maxItemBytes, &s.maxItemBytes)
-        read(.expireTagged, &s.expireTagged); read(.transformCombos, &s.transformCombos)
+        if let saved = try? c.decode([String: Int].self, forKey: .retentionDays) { s.retentionDays.merge(saved) { _, saved in saved } }
+        read(.maxItems, &s.maxItems); read(.maxTotalBytes, &s.maxTotalBytes); read(.maxItemBytes, &s.maxItemBytes)
+        read(.expireTagged, &s.expireTagged); read(.excludeHistoryFromBackup, &s.excludeHistoryFromBackup); read(.transformCombos, &s.transformCombos)
         read(.latexPresets, &s.latexPresets); read(.latexOptions, &s.latexOptions); read(.latexMacros, &s.latexMacros)
         read(.reverseStack, &s.reverseStack); read(.keepCards, &s.keepCards); read(.autoExportTags, &s.autoExportTags)
         if !c.contains(.keepCards), let legacy = try? decoder.container(keyedBy: LegacyCodingKeys.self).decode(Bool.self, forKey: .workspaceKeep) { s.keepCards = legacy }
         s.basePath = try? c.decode(String.self, forKey: .basePath)
-        s.lastShareTarget = try? c.decode(String.self, forKey: .lastShareTarget)
+        s.lastPasteMethod = try? c.decode(PasteMethod.self, forKey: .lastPasteMethod)
         self = s
     }
 

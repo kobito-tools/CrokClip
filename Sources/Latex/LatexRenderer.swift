@@ -100,7 +100,8 @@ final class LatexRenderer: NSObject, WKNavigationDelegate {
         guard ready, let webView else { throw LatexError(message: "数式を描く準備ができませんでした。\(loadError ?? "")") }
         let source = LatexSource.stripDelimiters(latex.source)
         guard !source.isEmpty else { throw LatexError(message: "式を入力してください。") }
-        let options = latex.options
+        // 入力中の色の欄など、形の違う値はここでも捨てる（描画のページには #RRGGBB と範囲内の数だけを渡す）。
+        let options = latex.options.sanitized
         let result = try await webView.callAsyncJavaScript(
             "return await render(source, macros, displayMode, color, background, fontSize, padding);",
             arguments: ["source": source, "macros": macros, "displayMode": options.displayMode, "color": options.color, "background": options.background ?? "",

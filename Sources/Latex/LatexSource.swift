@@ -23,6 +23,25 @@ struct LatexOptions: Codable, Equatable {
         background = try? c.decode(String.self, forKey: .background)
         displayMode = (try? c.decode(Bool.self, forKey: .displayMode)) ?? d.displayMode
         padding = (try? c.decode(Double.self, forKey: .padding)) ?? d.padding
+        // ほかのアプリがクリップボードに載せた物からも読むので、形の違う値はここで捨てる。
+        self = sanitized
+    }
+
+    static let fontSizeRange = 8.0...144.0
+    static let paddingRange = 0.0...40.0
+
+    /// #RRGGBB の形か。CSS の url(…) などを描画のページに渡さないため、これ以外の色は使わない。
+    static func isHexColor(_ value: String) -> Bool { value.range(of: "^#[0-9A-Fa-f]{6}$", options: .regularExpression) != nil }
+
+    /// 描くときに使ってよい値だけにしたもの。色の形が違えば初期値（背景は透明）、大きさと余白は範囲に収める。
+    var sanitized: LatexOptions {
+        var options = self
+        let d = LatexOptions()
+        if !Self.isHexColor(color) { options.color = d.color }
+        if let background, !Self.isHexColor(background) { options.background = nil }
+        options.fontSize = fontSize.isFinite ? min(max(fontSize, Self.fontSizeRange.lowerBound), Self.fontSizeRange.upperBound) : d.fontSize
+        options.padding = padding.isFinite ? min(max(padding, Self.paddingRange.lowerBound), Self.paddingRange.upperBound) : d.padding
+        return options
     }
 }
 
