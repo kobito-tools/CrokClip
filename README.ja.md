@@ -10,7 +10,7 @@ CorkClip は、コピーした物をコルクボードにピンで留めるよ�
 
 CorkClip は、小さな Mac アプリのシリーズ [kobito-tools](https://github.com/kobito-tools) の1つです。
 
-![デモ](docs/images/demo.gif)
+![デモ](docs/images/demo.ja.gif)
 
 ## できること
 
@@ -346,7 +346,7 @@ CorkClip は、`docs/kobito-spec/CONTRACTS.md` に決めたデータの形（約
 
 ### デモの作り直し
 
-README のデモ（`docs/images/demo.gif`）は、`scripts/demo/demo.html` に描いた合成の画面を `scripts/demo.sh` でコマ撮りして作ります。Google Chrome、Node.js 22 以降、ffmpeg を使います。
+README のデモ（英語版 `docs/images/demo.gif`・日本語版 `docs/images/demo.ja.gif`）は、`scripts/demo/demo.html` に描いた合成の画面を `scripts/demo.sh` でコマ撮りして作ります。Google Chrome、Node.js 22 以降、ffmpeg を使います。
 
 ### 不具合の報告
 

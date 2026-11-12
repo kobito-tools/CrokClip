@@ -11,8 +11,8 @@ Xcode Command Line Tools（`xcode-select --install`）が必要です。
 ./tests/run.sh                             # 取得から書き戻し・検索・タグ・変換・文字認識・数式・シリーズの約束（起動情報・カード・目印）までのテスト
 ./scripts/preview.sh [書き出す先]          # パネル・設定の画面・メニューバーのアイコンを、アプリを起動せずに PNG に書き出す（既定 .build/preview）
 python3 scripts/make-images.py             # 絵を描き直す（アイコン・パネルの小人。SVG と PNG を書き出す）
-./scripts/social-preview.sh <フォント>     # GitHub の紹介画像（assets/social-preview.png）を作り直す（Google Chrome と Noto Sans JP を使う）
-./scripts/demo.sh [コマ/秒]                # README のデモ（docs/images/demo.gif）を作り直す（Google Chrome・Node.js 22 以降・ffmpeg を使う）
+./scripts/social-preview.sh <フォント>     # GitHub の紹介画像（英語版 assets/social-preview.png・日本語版 social-preview.ja.png）を作り直す（Google Chrome と Noto Sans JP を使う）
+./scripts/demo.sh [コマ/秒]                # README のデモ（英語版 docs/images/demo.gif・日本語版 demo.ja.gif）を作り直す（Google Chrome・Node.js 22 以降・ffmpeg を使う）
 ```
 
 版番号は `build.sh` の `VERSION` で指定し、`kobito-app.json` の `version` も同じにします（`tests/run.sh` が確かめます）。ソースから使う人向けの入口は `setup.sh` です（同じアプリIDのリポジトリが別の場所に記されていないかの確かめ・ビルド・アプリケーションフォルダの `kobito-tools` フォルダへ移すかの確認・起動情報の書き出し・PC 固有領域の `repos/corkclip` へのリンク・許可と起動の案内。`--yes`・`--dry-run`・`--help` を受け付けます）。引数の読み方・表示・尋ね方は、シリーズ共通の `docs/kobito-spec/setup.zsh` を読み込んで使います。入れ方は「ソースを入手して `./setup.sh` を実行する」形だけで、Releases でビルドしたもの（dmg・zip）は配りません。移すと答えたときだけ、`/Applications/kobito-tools` を用意します（無ければ作ってアイコンを付ける。アイコンの無い同名のフォルダがあれば、別のアプリの物とみなして止まる）。`/Applications` の直下の古い `CorkClip.app` には触りません（残っていれば知らせるだけ）。試すときは `KOBITO_APPLICATIONS_DIR`・`KOBITO_CONFIG_DIR` に一時フォルダを指すと、実際のアプリケーションフォルダと PC 固有領域に触れません。
@@ -23,7 +23,7 @@ python3 scripts/make-images.py             # 絵を描き直す（アイコン�
 |---|---|
 | `kobito/icon.svg`・`kobito/icon-1024.png` | アイコンの元と、その 1024px の書き出し（シリーズの決まった場所）。`build.sh` が、`.app` のアイコン（`AppIcon.icns`）を `icon-1024.png` から作り、`icon.svg` を `.app` の `Contents/Resources/kobito/icon.svg` に入れる |
 | `assets/kobito-cling.svg` → `Resources/kobito-cling.png` | パネルの縁にしがみつく小人 |
-| `assets/social-preview.png` | GitHub のリポジトリの紹介画像（1280×640） |
+| `assets/social-preview.png`・`social-preview.ja.png` | GitHub のリポジトリの紹介画像（1280×640。英語版・日本語版） |
 
 `scripts/make-images.py` が、アイコン・小人の SVG を描き、`scripts/render-svg.swift`（macOS の SVG 描画）で PNG にします。
 

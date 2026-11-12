@@ -1,6 +1,6 @@
 #!/bin/zsh
-# シリーズの紹介画像（1280×640。作りはシリーズ共通）を
-# assets/social-preview.png に書き出す。Google Chrome と Noto Sans JP のフォントファイルが必要。
+# シリーズの紹介画像（1280×640。作りはシリーズ共通）を、英語版 assets/social-preview.png と
+# 日本語版 assets/social-preview.ja.png に書き出す。Google Chrome と Noto Sans JP のフォントファイルが必要。
 # 使い方: scripts/social-preview.sh <NotoSansJP.ttf のパス>
 set -euo pipefail
 cd "${0:A:h}/.."
@@ -10,20 +10,26 @@ font="${1:A}"
 chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-cat > "$work/og.html" <<HTML
-<html><head><style>
+
+# render <言語> <説明（HTML）> <出力先>
+render() {
+  cat > "$work/og-$1.html" <<HTML
+<html lang="$1"><head><style>
 @font-face{font-family:Noto;src:url(file://$font)}
 html,body{margin:0;width:1280px;height:640px;overflow:hidden}
 body{background:linear-gradient(180deg,#9C6E45,#7A512E);font-family:Noto,sans-serif;color:#F7F4EC;position:relative}
 img{position:absolute;left:80px;top:100px;width:440px;height:440px}
 .text{position:absolute;left:560px;right:64px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center}
 h1{margin:0;font-weight:700;font-size:84px;letter-spacing:-.01em;line-height:1}
-.ja{margin-top:30px;font-size:30px;white-space:nowrap;font-weight:500;line-height:1.5}
-.en{margin-top:10px;font-size:24px;opacity:.78}
+.tagline{margin-top:30px;font-size:34px;white-space:nowrap;font-weight:500;line-height:1.45}
 .org{position:absolute;right:64px;bottom:48px;font-size:22px;letter-spacing:.06em;opacity:.7}
-</style></head><body><img src="file://${PWD}/kobito/icon.svg"><div class="text"><h1>CorkClip</h1><div class="ja">コルクボードに留める、<br>クリップボード履歴</div><div class="en">A clipboard history pinned to a corkboard.</div></div><div class="org">kobito-tools</div></body></html>
+</style></head><body><img src="file://${PWD}/kobito/icon.svg"><div class="text"><h1>CorkClip</h1><div class="tagline">$2</div></div><div class="org">kobito-tools</div></body></html>
 HTML
-"$chrome" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1280,640 \
-  --screenshot="$work/og.png" "file://$work/og.html" >/dev/null 2>&1
-cp "$work/og.png" assets/social-preview.png
-echo assets/social-preview.png
+  "$chrome" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1280,640 \
+    --screenshot="$work/og-$1.png" "file://$work/og-$1.html" >/dev/null 2>&1
+  cp "$work/og-$1.png" "$3"
+  echo "$3"
+}
+
+render en "A clipboard history<br>pinned to a corkboard." assets/social-preview.png
+render ja "コルクボードに留める、<br>クリップボード履歴" assets/social-preview.ja.png
